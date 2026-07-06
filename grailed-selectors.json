@@ -1,0 +1,242 @@
+{
+  "_meta": {
+    "capturedFrom": "https://www.grailed.com/sell/new",
+    "capturedAt": "2026-07-03",
+    "method": "phase0b-form-probe.js (read-only CDP inventory)",
+    "notes": [
+      "Radix dropdown trigger ids (radix-:rX:) and other :rN: ids are React-generated and NOT stable across renders/sessions — locate dropdowns by visible trigger text, never by id.",
+      "name= and stable id= selectors below are safe to use directly.",
+      "The app NEVER submits — the user manually reviews and clicks submit (CLAUDE.md)."
+    ]
+  },
+  "sellForm": {
+    "_note": "Chrome status probe config (ui/chrome-status.js). The probe is READ-ONLY: one HTTP GET of :9222/json/list — no WebSocket to a page target, no Runtime.enable, no page script. urlPattern marks a tab as a fresh Sell form; loginUrlPatterns mark a Grailed tab sitting on a signup/login route (public URL signal only — the probe never reads cookies or credentials, login stays manual per PRD §8.2).",
+    "url": "https://www.grailed.com/sell/new",
+    "urlPattern": "grailed\\.com/sell/new",
+    "grailedUrlPattern": "grailed\\.com",
+    "loginUrlPatterns": [
+      "grailed\\.com/users/sign_up",
+      "grailed\\.com/(log[_-]?in|sign[_-]?in|users/sign_in|signup)"
+    ]
+  },
+  "textFields": {
+    "title": {
+      "selector": "input[name=\"title\"]",
+      "kind": "native-setter",
+      "maxLen": null
+    },
+    "price": {
+      "selector": "input[name=\"price\"]",
+      "kind": "native-setter",
+      "note": "type=tel; digits only"
+    },
+    "description": {
+      "selector": "textarea[name=\"description\"]",
+      "kind": "native-setter"
+    }
+  },
+  "autocompletes": {
+    "designer": {
+      "selector": "#designer-autocomplete",
+      "kind": "autocomplete",
+      "note": "disabled until a category is chosen",
+      "technique": "PROVEN (2026-07-03, via fillListing live run): identical to countryOfOrigin — clear + focus, REAL typing via Input.insertText, REAL mouse click on the suggestion li. 'Carhartt' typed → suggestion clicked → value persisted past blur."
+    },
+    "countryOfOrigin": {
+      "selector": "#country-of-origin",
+      "kind": "autocomplete",
+      "technique": "PROVEN (2026-07-03): free-text set does NOT persist (React wipes it on blur) and synthetic pointer events on the suggestion do nothing. What works: clear + focus the input, type the country via REAL CDP Input.insertText, wait ~900ms for the suggestion <li> (inside the field's div.section container, class CountryOfOrigin-module__menuItem — match by text, not class), scrollIntoView, then a REAL CDP Input mouse click at the li's center. Value then persists past blur."
+    }
+  },
+  "dropdowns": {
+    "_technique": "PROVEN (step 7): locate the trigger button by visible text; open with dispatched pointerdown+pointerup (a plain .click() does NOT open Radix); the menu is role=menu with role=menuitem options; select by dispatching pointerdown+pointerup+click on the menuitem whose text matches. Trigger ids are dynamic — after selecting, re-read the trigger by its session id to confirm its label updated. Do NOT match [data-radix-collection-item] (that also matches the site's top-nav menu). Once a value is selected the trigger's visible text BECOMES that value (placeholder gone) — locate triggers by placeholder OR any known option value, preferring exact text matches.",
+    "_dependentFieldsPolicy": "A1 IN PROGRESS (2026-07-03): the nested category mechanism is now PROVEN (see category.technique) and being automated behind STAGED CONFIRMATION — the app suggests a department/category from attributes, the USER confirms it, and only then are subcategory/size/designer filled. Rationale unchanged: category gates the rest and a wrong category cascades into wrong sizes, so the cascade is never blind-filled. Title/description/price/condition + photos remain the always-safe autofill set.",
+    "category": {
+      "triggerText": "Department / Category",
+      "kind": "radix-nested",
+      "topLevel": [
+        "Menswear",
+        "Womenswear"
+      ],
+      "technique": "PROVEN (2026-07-03, phase0b-category-probe.js): an IN-PLACE two-click drill, NOT a hover submenu (top-level items have aria-haspopup=null; hover reveals nothing). (1) Open the trigger with the proven synthetic pointerdown+pointerup+click (Radix opens on pointerdown). The field sits above the fold (negative viewport y) — use SYNTHETIC events, not CDP real-mouse clicks, which need on-screen coords. (2) Click the department menuitem (Menswear/Womenswear) — the SAME role=menu container re-renders in place into the category list (department items gone; no 'back' menuitem). (3) Click the category menuitem — the menu CLOSES, the trigger label becomes 'Department / Category' (e.g. 'Menswear / Outerwear'), and subcategory/size/designer flip from disabled to enabled (the cascade). Idempotency: if the trigger already shows the wanted 'Dept / Cat', skip. State: a menu left open from a prior action makes a trigger click TOGGLE it shut — send Escape first to reset. Zero detection signals across probe runs (§8.5 caveat still applies).",
+      "tree": {
+        "_note": "Menswear captured live 2026-07-03. Womenswear is a BEST-EFFORT list, NOT yet verified against the live menu — the driver doesn't validate against this tree (a wrong entry fails gracefully with Grailed's actual options), it only feeds the app's category picker UI. Verify + correct on first Womenswear listing.",
+        "Menswear": [
+          "Tops",
+          "Bottoms",
+          "Outerwear",
+          "Footwear",
+          "Tailoring",
+          "Accessories"
+        ],
+        "Womenswear": [
+          "Tops",
+          "Bottoms",
+          "Outerwear",
+          "Dresses",
+          "Footwear",
+          "Accessories",
+          "Bags & Luggage",
+          "Jewelry"
+        ]
+      }
+    },
+    "subcategory": {
+      "triggerTextIncludes": "Sub-category",
+      "kind": "radix",
+      "note": "flat radix dropdown; disabled until a category is chosen, then enabled + repopulated from it. PROVEN live 2026-07-03 via selectDropdown. CAVEAT: option match is exact-then-substring, and Grailed's labels are specific ('Long Sleeve T-Shirts', 'Short Sleeve T-Shirts') — a vague app value like 'T-Shirt' matches the FIRST substring hit. The pipeline's free-text subcategory ('graphic t-shirt', 'sweatshirt') usually matches NOTHING (found live 2026-07-04) — appValueRules below translate it before the fill; unmatched values pass through raw and the fill result reports what was actually clicked.",
+      "appValueRules": {
+        "_note": "app free-text subcategory → Grailed option label, keyed by the CONFIRMED Grailed category. Applied in ui/main.js before autofill:fill; first matching case-insensitive regex wins; no key / no match = raw value passes through (driver fails cleanly listing what WAS available). Tops option list captured live 2026-07-04; add other categories as they come up. Outerwear list added 2026-07-04 (real run: 'light jacket' passed through raw and matched nothing) — labels are BEST-EFFORT, not captured live; a wrong label fails cleanly listing Grailed's actual options.",
+        "Tops": [
+          [
+            "long[- ]?sleeve.*(t[- ]?shirt|tee)",
+            "Long Sleeve T-Shirts"
+          ],
+          [
+            "polo",
+            "Polos"
+          ],
+          [
+            "jersey",
+            "Jerseys"
+          ],
+          [
+            "hoodie|sweatshirt|crew[- ]?neck|pullover",
+            "Sweatshirts & Hoodies"
+          ],
+          [
+            "sweater|knit|cardigan",
+            "Sweaters & Knitwear"
+          ],
+          [
+            "tank|sleeveless",
+            "Tank Tops & Sleeveless"
+          ],
+          [
+            "button[- ]?(up|down)|oxford|flannel|dress shirt",
+            "Shirts (Button Ups)"
+          ],
+          [
+            "t[- ]?shirt|\\btee\\b",
+            "Short Sleeve T-Shirts"
+          ]
+        ],
+        "Outerwear": [
+          [
+            "bomber|ma-?1|flight jacket",
+            "Bombers"
+          ],
+          [
+            "denim jacket|trucker|jean jacket",
+            "Denim Jackets"
+          ],
+          [
+            "leather jacket|moto(rcycle)? jacket|biker jacket",
+            "Leather Jackets"
+          ],
+          [
+            "parka",
+            "Parkas"
+          ],
+          [
+            "rain(coat| jacket|wear)|anorak",
+            "Raincoats"
+          ],
+          [
+            "vest|gilet",
+            "Vests"
+          ],
+          [
+            "puffer|down jacket|heavy coat|overcoat|wool coat|pea ?coat|trench",
+            "Heavy Coats"
+          ],
+          [
+            "light( ?weight)? jacket|windbreaker|coach(es)? jacket|harrington|track jacket|shell|zip[- ]?up jacket|shirt jacket|chore|work(wear)? jacket|fleece|\\bjacket\\b|\\bcoat\\b",
+            "Light Jackets"
+          ]
+        ]
+      }
+    },
+    "size": {
+      "triggerTextIncludes": "Select Size",
+      "kind": "radix",
+      "note": "flat radix dropdown; disabled until a category is chosen, then enabled + repopulated from it. PROVEN live 2026-07-03. Option labels are COMPOUND: 'US M / EU 48-50 / 2' (tops) — match with the anchored 'US {size} /' form first (a raw 'S' substring-hits 'US XS…'), falling back to raw text; the driver does this. Once set, the trigger label becomes the option text (placeholder gone) — the 'US {size} /' candidate re-finds it."
+    },
+    "color": {
+      "triggerText": "Select a Color",
+      "kind": "radix",
+      "options": [
+        "Black",
+        "White",
+        "Gray",
+        "Brown",
+        "Beige",
+        "Yellow",
+        "Red",
+        "Orange",
+        "Pink",
+        "Purple",
+        "Blue",
+        "Green",
+        "Multi",
+        "Silver",
+        "Gold"
+      ]
+    },
+    "condition": {
+      "triggerText": "Item Condition",
+      "kind": "radix",
+      "options": [
+        "New/Never Worn",
+        "Gently Used",
+        "Used",
+        "Very Worn"
+      ],
+      "appValueMap": {
+        "_note": "Keys are matched case-insensitively; covers both the UI's CONDITIONS list and pipeline/vision.js's condition_rating enum. null = leave for manual selection.",
+        "New with tags": "New/Never Worn",
+        "Gently used": "Gently Used",
+        "new": "New/Never Worn",
+        "like new": "Gently Used",
+        "excellent": "Gently Used",
+        "very good": "Gently Used",
+        "good": "Used",
+        "used": "Used",
+        "fair": "Used",
+        "poor": "Very Worn",
+        "unclear": null
+      }
+    },
+    "style": {
+      "triggerText": "Select a Style",
+      "kind": "radix",
+      "options": [
+        "None",
+        "Luxury",
+        "Vintage",
+        "Avant-Garde",
+        "Streetwear",
+        "Workwear",
+        "Gorpcore",
+        "Sportswear",
+        "Basics",
+        "Western"
+      ]
+    }
+  },
+  "checkboxes": {
+    "makeOffer": "input[name=\"makeOffer\"]",
+    "smartPricingEnabled": "input[name=\"smartPricing.enabled\"]",
+    "smartPricingFloor": "input[name=\"smartPricing.minimumPrice\"]"
+  },
+  "photos": {
+    "fileInputs": "input[type=\"file\"][id^=\"photo_input_\"]",
+    "slotIdPattern": "photo_input_{n}",
+    "slots": 9,
+    "kind": "setFileInputFiles",
+    "note": "one file input per slot (photo_input_0..8, aria-label 'Upload photo'); use CDP DOM.setFileInputFiles per input — no drag/drop"
+  },
+  "submit": {
+    "note": "NOT automated. Left to the user by design (PRD §4/§5.5, CLAUDE.md)."
+  }
+}

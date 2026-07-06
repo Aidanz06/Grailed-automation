@@ -1,0 +1,18 @@
+# Secrets & live sessions — NEVER commit these
+.env.local
+.chrome-profile/
+
+# Personal local data (SQLite DB, logs)
+data/
+*.log
+
+# Large personal photo test sets
+grailed-vision-test/
+
+# Dependencies & build output
+node_modules/
+ui/dist/
+
+# OS / tooling
+.DS_Store
+.claude/settings.local.json
