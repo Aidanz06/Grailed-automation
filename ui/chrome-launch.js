@@ -18,6 +18,7 @@
 
 const { spawn } = require('child_process');
 const fs = require('fs');
+const http = require('http');
 const path = require('path');
 const { portUp, PORT } = require('./autofill-driver');
 
@@ -90,7 +91,66 @@ async function launchChrome() {
   };
 }
 
-module.exports = { launchChrome, PROFILE, CHROME };
+// ---------------------------------------------------------------- open Sell tab
+
+// The Sell-form URL is configuration (grailed-selectors.json sellForm.url),
+// not a magic string; fall back to the shipped value if the JSON is older.
+function sellFormUrl() {
+  try {
+    const sel = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'grailed-selectors.json'), 'utf8'));
+    return sel.sellForm?.url || 'https://www.grailed.com/sell/new';
+  } catch {
+    return 'https://www.grailed.com/sell/new';
+  }
+}
+
+// One request against the DevTools HTTP endpoint (never a page connection).
+function devtoolsRequest(method, pathname) {
+  return new Promise((resolve, reject) => {
+    const req = http.request({ host: '127.0.0.1', port: PORT, method, path: pathname }, (res) => {
+      let body = '';
+      res.on('data', (c) => (body += c));
+      res.on('end', () => {
+        if (res.statusCode && res.statusCode >= 400) return reject(new Error(`HTTP ${res.statusCode}: ${body.slice(0, 120)}`));
+        try { resolve(body ? JSON.parse(body) : null); } catch { resolve(body); }
+      });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+/*
+ * Open a NEW tab on the Sell form in the launched Chrome, via the DevTools
+ * HTTP endpoint's /json/new (PUT on current Chrome; GET fallback for older
+ * builds) + /json/activate to focus it. This creates a tab — it never
+ * navigates or touches an existing one, runs no page script, and if the user
+ * isn't signed in Grailed will show its own login page there (which they
+ * complete manually, PRD §8.2). Never throws; resolves { ok, message }.
+ */
+async function openSellTab() {
+  if (!(await portUp())) {
+    return { ok: false, message: 'Chrome isn’t running with the app connection — launch it first.' };
+  }
+  const url = sellFormUrl();
+  let target = null;
+  try {
+    target = await devtoolsRequest('PUT', `/json/new?${encodeURIComponent(url)}`);
+  } catch {
+    try {
+      target = await devtoolsRequest('GET', `/json/new?${encodeURIComponent(url)}`); // pre-111 Chrome
+    } catch (err) {
+      return { ok: false, message: `Couldn’t open the tab: ${err.message}` };
+    }
+  }
+  if (target && target.id) await devtoolsRequest('GET', `/json/activate/${target.id}`).catch(() => {});
+  return {
+    ok: true,
+    message: 'Opened a Sell-form tab in Chrome. If Grailed asks you to sign in there, do that first (always manual).',
+  };
+}
+
+module.exports = { launchChrome, openSellTab, PROFILE, CHROME };
 
 // ---------------------------------------------------------------- CLI test mode
 if (require.main === module) {

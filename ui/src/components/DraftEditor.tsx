@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, RefreshCw } from 'lucide-react';
 import type { DescProfile, Item } from '@/types';
-import { api, type AutofillOptions, type ChromeStatus } from '@/lib/api';
+import { api, type AutofillOptions, type ChromeStatus, type FillChanges } from '@/lib/api';
 import { suggestGrailedCategory } from '@/lib/grailedCategory';
 import { measureFields, measurementLines } from '@/lib/measurements';
 import { assembleDescription, effectiveProfile } from '@/lib/description';
@@ -17,6 +17,8 @@ import { DetailPanel } from '@/components/DetailPanel';
 import { PricePanel } from '@/components/PricePanel';
 import { ListingChecklist } from '@/components/ListingChecklist';
 import { FillProgressCard, applyFillProgress, emptyFillRun, type FillRunState } from '@/components/FillProgressCard';
+import { FillChangesCard } from '@/components/FillChangesCard';
+import { useOpenSellTab } from '@/components/ChromeStatusChip';
 
 const money = (n: number | null | undefined) => (n == null ? '—' : '$' + n);
 const CONDITIONS = ['New with tags', 'Gently used', 'Used', 'Unclear'];
@@ -288,13 +290,40 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
     setFillBlocked(null);
     setArmed(false);
   }, [item.id]);
-  const startFill = () => {
+  // Changes since the last fill (main-process diff vs the persisted snapshot).
+  // Refetched when the item switches, a debounced save lands (lastSavedAt), or
+  // a fill finishes (the snapshot advanced). null = never autofilled / loading.
+  const [fillChanges, setFillChanges] = useState<FillChanges | null>(null);
+  useEffect(() => {
+    let alive = true;
+    api
+      .getFillChanges(item.id)
+      .then((c) => {
+        if (alive) setFillChanges(c);
+      })
+      .catch(() => {
+        if (alive) setFillChanges(null); // informational — never block the editor
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.id, lastSavedAt, filling]);
+  // A re-fill targets only the edited fields when a snapshot exists and the
+  // diff is non-empty (photo changes aren't tracked — Grailed-form territory).
+  const changedFill = !!fillChanges?.lastFillAt && fillChanges.changes.length > 0;
+  const changedCount = fillChanges?.changes.length ?? 0;
+  const startFill = (changedOnly = false) => {
     setFilling(true);
     setFillRun(emptyFillRun());
-    toast('Filling the form in Chrome — human-paced, takes ~20s…');
+    toast(
+      changedOnly
+        ? `Updating ${changedCount} changed field${changedCount === 1 ? '' : 's'} in Chrome — everything else stays as filled…`
+        : 'Filling the form in Chrome — human-paced, takes ~20s…'
+    );
     api
       .saveItem(item.id, editsOf(item))
-      .then(() => api.fillListing(item.id))
+      .then(() => api.fillListing(item.id, changedOnly ? { changedOnly: true } : undefined))
       .then((res) => {
         const filled: string[] = [];
         const issues: string[] = [];
@@ -340,7 +369,7 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
   // anyway" escape hatch (proceeds exactly as before the gate existed). A
   // probe IPC failure never blocks a deliberate click — fail open, the driver
   // still reports per-field what it actually found.
-  const fillListing = async (force = false) => {
+  const fillListing = async ({ force = false, changedOnly = false } = {}) => {
     if (!force) {
       let status: ChromeStatus | null = null;
       try {
@@ -355,7 +384,7 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
     }
     setFillBlocked(null);
     setArmed(false);
-    startFill();
+    startFill(changedOnly);
   };
 
   const recheckChrome = () => {
@@ -368,6 +397,14 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
         } else setFillBlocked(s);
       })
       .catch(() => toast('Could not check Chrome — is the app connected?'));
+  };
+
+  // Blocked-card "Open Sell form": create the missing tab right here, then
+  // re-probe once it has had a moment to load (the card clears when ready).
+  const { opening: openingSellTab, openSellTab } = useOpenSellTab(toast);
+  const openSellTabAndRecheck = () => {
+    openSellTab();
+    setTimeout(recheckChrome, 2500);
   };
 
   // In-app Chrome launcher for the not-connected case (spawn only — sign-in
@@ -829,20 +866,42 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
           <span
             className="block"
             title={
-              confirmed
-                ? "Fills title, description, price, condition, photos + the confirmed category with size/sub-category/designer into Grailed's sell form in the launched Chrome. Never submits."
-                : "Fills title, description, price, condition + photos into Grailed's sell form in the launched Chrome. Category/size/designer stay manual until you confirm the category. Never submits."
+              changedFill && !armed
+                ? 'Updates only the fields you edited since the last fill, in the same Sell form (still open in Chrome). Never submits.'
+                : confirmed
+                  ? "Fills title, description, price, condition, photos + the confirmed category with size/sub-category/designer into Grailed's sell form in the launched Chrome. Never submits."
+                  : "Fills title, description, price, condition + photos into Grailed's sell form in the launched Chrome. Category/size/designer stay manual until you confirm the category. Never submits."
             }
           >
-            <Button className={cn('w-full', !filling && 'glow-primary')} disabled={filling} onClick={() => fillListing()}>
+            <Button
+              className={cn('w-full', !filling && 'glow-primary')}
+              disabled={filling}
+              onClick={() => fillListing({ changedOnly: changedFill && !armed })}
+            >
               <ArrowUpRight />
               {filling
                 ? 'Filling…'
                 : armed
                   ? 'Chrome ready on a new Sell form? — Fill this draft'
-                  : 'Fill listing in Chrome'}
+                  : changedFill
+                    ? `Fill ${changedCount} change${changedCount === 1 ? '' : 's'} in Chrome`
+                    : 'Fill listing in Chrome'}
             </Button>
           </span>
+          {/* Changed-only is the default re-fill; the full pass stays one click
+              away for the fresh-form case (page reloaded/republishing — the
+              old values are gone, so a diff against them would fill too little). */}
+          {changedFill && !armed && !filling && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2 w-full"
+              title="Types every field again. Use this when the Sell form is fresh/empty (e.g. the page was reloaded) — filling a form that already has photos would duplicate them."
+              onClick={() => fillListing()}
+            >
+              Fill everything again (fresh form)
+            </Button>
+          )}
           {/* Fresh-Sell-form gate (audit §3.1): a probe said Chrome isn't on
               a fresh Sell form, so the fill did NOT fire. Persistent (same
               stakes as the not-saved banner) until Recheck passes, the item
@@ -855,7 +914,7 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
                   ? 'No app-connected Chrome is running. Launch it below, sign in to Grailed there yourself (login is always manual), open grailed.com/sell/new, then Recheck.'
                   : fillBlocked.loggedIn === false
                     ? 'That Chrome is on a Grailed login page — sign in there yourself (login is always manual), open grailed.com/sell/new, then Recheck.'
-                    : 'Open grailed.com/sell/new in the launched Chrome, then Fill. Filling now would type into whatever page Chrome is showing.'}
+                    : 'No Sell-form tab is open — open one below, then Fill. Filling now would type into whatever page Chrome is showing.'}
               </div>
               <div className="mt-2.5 flex gap-2">
                 {!fillBlocked.connected && (
@@ -863,15 +922,25 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
                     {launchingChrome ? 'Launching…' : 'Launch Chrome'}
                   </Button>
                 )}
+                {fillBlocked.connected && fillBlocked.loggedIn !== false && (
+                  <Button size="sm" className="flex-1" disabled={openingSellTab} onClick={openSellTabAndRecheck}>
+                    {openingSellTab ? 'Opening…' : 'Open Sell form'}
+                  </Button>
+                )}
                 <Button
                   size="sm"
-                  variant={fillBlocked.connected ? 'default' : 'outline'}
+                  variant={fillBlocked.connected && fillBlocked.loggedIn === false ? 'default' : 'outline'}
                   className="flex-1"
                   onClick={recheckChrome}
                 >
                   Recheck
                 </Button>
-                <Button variant="outline" size="sm" className="flex-1" onClick={() => fillListing(true)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => fillListing({ force: true, changedOnly: changedFill && !armed })}
+                >
                   Fill anyway
                 </Button>
               </div>
@@ -908,6 +977,15 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
             chip up top; you review and publish in Chrome.
           </p>
         </section>
+
+        {/* Edits made since the last fill — what a re-fill will touch, with
+            live status; photo changes are flagged as manual. */}
+        <FillChangesCard
+          changes={fillChanges?.changes ?? []}
+          lastFillAt={fillChanges?.lastFillAt ?? null}
+          run={fillRun}
+          filling={filling}
+        />
 
         {/* S3: live per-field checklist during (and after) a fill run. */}
         <FillProgressCard run={fillRun} filling={filling} />

@@ -40,7 +40,10 @@ contextBridge.exposeInMainWorld('tailor', {
   reviewSplit: (id, photoIds) => ipcRenderer.invoke('review:split', id, photoIds),
   reviewAssign: (id, photoIds, targetId) => ipcRenderer.invoke('review:assign', id, photoIds, targetId),
   // Slice 6: autofill the sell form in the driven real Chrome (never submits).
-  fillListing: (id) => ipcRenderer.invoke('autofill:fill', id),
+  // opts.changedOnly = re-fill only the fields edited since the last fill.
+  fillListing: (id, opts) => ipcRenderer.invoke('autofill:fill', id, opts),
+  // What a re-fill would change (diff vs the last-fill snapshot). Read-only.
+  getFillChanges: (id) => ipcRenderer.invoke('autofill:changes', id),
   // S3: per-field fill progress (plan + filling/ok/failed/skipped per field).
   // Returns an unsubscribe function for the editor's unmount cleanup.
   onFillProgress: (cb) => {
@@ -56,6 +59,8 @@ contextBridge.exposeInMainWorld('tailor', {
   // Launch the dedicated CDP Chrome from the app (spawn in main; no-op if a
   // connected Chrome is already up). Sign-in stays manual in that window.
   launchChrome: () => ipcRenderer.invoke('chrome:launch'),
+  // Open a fresh Sell-form tab in the launched Chrome (new tab only).
+  openSellTab: () => ipcRenderer.invoke('chrome:openSellTab'),
   // §5.5 window docking: snap the real Chrome window against the app window.
   // onDockStopped returns an unsubscribe function (fires if Chrome quits).
   startDock: () => ipcRenderer.invoke('dock:start'),

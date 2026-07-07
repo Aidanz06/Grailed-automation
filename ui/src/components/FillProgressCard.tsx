@@ -39,7 +39,7 @@ export function applyFillProgress(run: FillRunState, p: FillProgress): FillRunSt
   };
 }
 
-const FIELD_LABEL: Record<string, string> = {
+export const FIELD_LABEL: Record<string, string> = {
   title: 'Title',
   description: 'Description',
   price: 'Price',

@@ -294,15 +294,14 @@ ipcMain.handle('review:assign', (_e, itemId, photoIds, targetItemId) => {
 // the v1 field set — title/description/price/condition + photos; category/
 // size/designer stay manual (grailed-selectors.json _dependentFieldsPolicy).
 // The driver refuses when the §8.1 breaker is open and NEVER submits.
-ipcMain.handle('autofill:fill', async (e, id) => {
-  const { fillListing } = require('./autofill-driver');
-  // S3: stream the driver's per-field events to the renderer's live checklist.
-  const wc = e.sender;
-  const onProgress = (p) => {
-    if (!wc.isDestroyed()) wc.send('autofill:progress', p);
-  };
-  const item = getStore().getItem(id);
-  if (!item) throw new Error(`Item ${id} not found.`);
+/*
+ * Map a stored item onto the driver's fill payload. Shared by the fill itself
+ * and the changes-since-last-fill diff so the two can never disagree.
+ * Returns { fields, photoPaths }: `fields` are the app-level values the
+ * driver receives (also what the last-fill snapshot stores). Photos ride
+ * separately — they're filled but never diffed/re-filled (see below).
+ */
+function buildFillPayload(item) {
   const listing = item.listing || {};
   const content = listing.content || {};
   // Same path resolution as the tailor-photo:// protocol: seeded items store
@@ -343,22 +342,96 @@ ipcMain.handle('autofill:fill', async (e, id) => {
     }
   }
 
-  return fillListing({
-    title: content.title ?? listing.title ?? null,
-    description: content.description ?? listing.description ?? null,
-    price: listing.price_range?.median ?? null,
-    condition: attrs.condition_rating || null,
-    // User-selected Grailed details (optional attributes_json fields):
-    color: attrs.grailed_color || null,
-    style: attrs.grailed_style || null,
-    countryOfOrigin: attrs.country_of_origin || null,
-    department: confirmed ? attrs.grailed_department : null,
-    category: confirmed ? attrs.grailed_category : null,
-    size,
-    subcategory,
-    designer,
+  return {
+    fields: {
+      title: content.title ?? listing.title ?? null,
+      description: content.description ?? listing.description ?? null,
+      price: listing.price_range?.median ?? null,
+      condition: attrs.condition_rating || null,
+      // User-selected Grailed details (optional attributes_json fields):
+      color: attrs.grailed_color || null,
+      style: attrs.grailed_style || null,
+      countryOfOrigin: attrs.country_of_origin || null,
+      department: confirmed ? attrs.grailed_department : null,
+      category: confirmed ? attrs.grailed_category : null,
+      size,
+      subcategory,
+      designer,
+    },
     photoPaths,
-  }, onProgress);
+  };
+}
+
+/*
+ * Diff the would-be payload against the item's last-fill snapshot.
+ * Returns [{ field, from, to }]. Photos are deliberately NOT diffed or
+ * reported (owner decision 2026-07-06): photo changes are handled directly on
+ * the Grailed form — re-running the upload would only ADD duplicates.
+ */
+function diffAgainstLastFill(payload, lastFill) {
+  const prev = lastFill?.fields || {};
+  const changes = [];
+  for (const [field, to] of Object.entries(payload.fields)) {
+    const from = prev[field] ?? null;
+    if (String(from ?? '') !== String(to ?? '')) changes.push({ field, from, to });
+  }
+  return changes;
+}
+
+// Changes since the last fill (renderer's "what will a re-fill do" card).
+// Read-only: builds the same payload the fill would and diffs it.
+ipcMain.handle('autofill:changes', (_e, id) => {
+  const item = getStore().getItem(id);
+  if (!item) throw new Error(`Item ${id} not found.`);
+  const lastFill = item.last_fill || null;
+  return {
+    lastFillAt: lastFill?.at ?? null,
+    changes: lastFill ? diffAgainstLastFill(buildFillPayload(item), lastFill) : [],
+  };
+});
+
+ipcMain.handle('autofill:fill', async (e, id, opts = {}) => {
+  const { fillListing } = require('./autofill-driver');
+  // S3: stream the driver's per-field events to the renderer's live checklist.
+  const wc = e.sender;
+  const onProgress = (p) => {
+    if (!wc.isDestroyed()) wc.send('autofill:progress', p);
+  };
+  const store = getStore();
+  const item = store.getItem(id);
+  if (!item) throw new Error(`Item ${id} not found.`);
+  const payload = buildFillPayload(item);
+  const lastFill = item.last_fill || null;
+
+  // Change-aware re-fill: only the fields edited since the last fill are sent
+  // (the same Sell form is assumed still open with the earlier values in it).
+  // Photos are NEVER re-sent in this mode — the driver's upload appends, so a
+  // reorder/delete must be mirrored by hand in Chrome (reported as `manual`).
+  let fields = { ...payload.fields };
+  let photoPaths = payload.photoPaths;
+  if (opts.changedOnly && lastFill) {
+    const changed = new Set(diffAgainstLastFill(payload, lastFill).map((c) => c.field));
+    for (const k of Object.keys(fields)) if (!changed.has(k)) fields[k] = null;
+    photoPaths = null;
+  }
+
+  const result = await fillListing({ ...fields, photoPaths }, onProgress);
+
+  // Merge this run into the snapshot: a field's stored value advances only
+  // when the driver reported ok, so failed/skipped fields keep showing up as
+  // pending changes on the next diff.
+  const snap = { at: new Date().toISOString(), fields: { ...(lastFill?.fields || {}) }, results: { ...(lastFill?.results || {}) } };
+  for (const [field, r] of Object.entries(result.results || {})) {
+    snap.results[field] = r;
+    if (!r || r.skipped || !r.ok) continue;
+    if (field in payload.fields) snap.fields[field] = payload.fields[field];
+  }
+  try {
+    store.setLastFill(id, snap);
+  } catch (err) {
+    console.error('[autofill] failed to persist last-fill snapshot:', err.message);
+  }
+  return result;
 });
 
 // §5.5 window choreography ("dock Chrome"): make the two windows feel like
@@ -460,6 +533,15 @@ ipcMain.handle('chrome:status', () => {
 ipcMain.handle('chrome:launch', () => {
   const { launchChrome } = require('./chrome-launch');
   return launchChrome();
+});
+
+// Open a NEW tab on the Sell form in the launched Chrome (DevTools HTTP
+// /json/new — creates a tab, never navigates an existing one, no page
+// script). User-triggered from the status notifier / fill-blocked card when
+// Chrome is connected but no Sell form is open. Sign-in stays manual.
+ipcMain.handle('chrome:openSellTab', () => {
+  const { openSellTab } = require('./chrome-launch');
+  return openSellTab();
 });
 
 // §8.1 breaker state for the renderer's warning banner (polled by App.tsx).

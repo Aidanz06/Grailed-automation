@@ -90,6 +90,10 @@ function openStore(dbPath = DEFAULT_DB, opts = {}) {
   // reach the DB or autofill uploads the stale set (found in a real run:
   // a deleted duplicate photo was still uploaded). NULL sorts by id (legacy).
   try { db.exec('ALTER TABLE photos ADD COLUMN position INTEGER'); } catch {}
+  // Last-autofill snapshot (ui/main.js): the app-level field values sent in the
+  // most recent fill + per-field results, so a re-fill can target only what the
+  // user changed since. NULL = never filled.
+  try { db.exec('ALTER TABLE items ADD COLUMN last_fill_json TEXT'); } catch {}
   const now = () => (opts.now ? new Date(opts.now).toISOString() : new Date().toISOString());
 
   const api = {
@@ -158,6 +162,7 @@ function openStore(dbPath = DEFAULT_DB, opts = {}) {
       return {
         ...item,
         attributes: item.attributes_json ? JSON.parse(item.attributes_json) : null,
+        last_fill: item.last_fill_json ? JSON.parse(item.last_fill_json) : null,
         photos: db
           .prepare('SELECT id, file_path, cluster_confidence FROM photos WHERE item_id = ? ORDER BY COALESCE(position, id), id')
           .all(id),
@@ -415,6 +420,14 @@ function openStore(dbPath = DEFAULT_DB, opts = {}) {
     markSubmitted(itemId) {
       db.prepare('UPDATE listings SET submitted_at = ? WHERE item_id = ?').run(now(), itemId);
       db.prepare("UPDATE items SET status = 'submitted' WHERE id = ?").run(itemId);
+    },
+    /** Persist the last-autofill snapshot ({ at, fields, results }) — see
+     * ui/main.js. null clears it. Stored whole; callers own the merge. */
+    setLastFill(itemId, lastFill) {
+      db.prepare('UPDATE items SET last_fill_json = ? WHERE id = ?').run(
+        lastFill ? JSON.stringify(lastFill) : null,
+        itemId
+      );
     },
   };
   return api;

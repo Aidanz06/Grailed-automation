@@ -163,8 +163,32 @@ Home and workspace never mount together) → ChromeNotifier.tsx, a
 full-width status row at the top of Home (not running w/ Launch
 button / sign in / open-a-Sell-form / ready) fed by App's toast;
 preview-verified across all four states incl. the launch →
-open-a-Sell-form transition.
-Remaining: docs/REMAINING-WORK.md §B/§D2.
+open-a-Sell-form transition. 2026-07-06: OPEN-SELL-TAB +
+CHANGE-AWARE RE-FILL BUILT. openSellTab (ui/chrome-launch.js):
+one DevTools-HTTP PUT /json/new (GET fallback) + /json/activate —
+creates a NEW tab on sellForm.url from grailed-selectors.json,
+never navigates existing tabs, no page script; chrome:openSellTab
+IPC → "Open Sell form" button on the Home ChromeNotifier and the
+DraftEditor fill-blocked card (opens then auto-Rechecks);
+LIVE-verified CLI (real Chrome: no-sell-form → ready). Re-fill:
+items.last_fill_json (try/catch migration + store.setLastFill,
+roundtrip-tested) snapshots app-level field values per fill,
+advancing per-field only on driver ok; ui/main.js buildFillPayload
+(extracted — fill + diff share it), autofill:changes IPC diffs
+current vs snapshot; fillListing(id,{changedOnly}) nulls unchanged
+fields and NEVER re-sends photos (upload appends → duplicates).
+Photo changes are NOT tracked/diffed at all (owner decision
+2026-07-06 — photos are adjusted directly on the Grailed form; the
+card's footer says so). DraftEditor: FillChangesCard (was→now rows
++ status words; live statuses only DURING a run, only `failed`
+persists after — an older run's ok must not label a fresh edit
+"filled"), primary button becomes "Fill N change(s)
+in Chrome" (changed-only) with "Fill everything again (fresh
+form)" secondary — full fill stays default for armed/fill-next
+(fresh form, no old values to diff against). Preview-verified
+full cycle (fill → edit demo diff → changed-only fill → card
+clears); real changed-only fill against a live form pending
+eyes-on.
 
 ## Non-negotiable rules
 - Never apply navigator/fingerprint/UA spoofing anywhere in this

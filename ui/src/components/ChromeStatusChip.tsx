@@ -56,6 +56,22 @@ export function useLaunchChrome(toast?: (msg: string) => void) {
   return { launching, launchChrome };
 }
 
+/** Open-a-Sell-form-tab button state (chrome:openSellTab — creates a NEW tab
+ * via the DevTools HTTP endpoint; never navigates an existing one). The
+ * status poll picks up the new tab within one cycle. */
+export function useOpenSellTab(toast?: (msg: string) => void) {
+  const [opening, setOpening] = useState(false);
+  const openSellTab = () => {
+    setOpening(true);
+    api
+      .openSellTab()
+      .then((r) => toast?.(r.message))
+      .catch((err) => toast?.(`Couldn’t open the tab: ${errorMessage(err)}`))
+      .finally(() => setOpening(false));
+  };
+  return { opening, openSellTab };
+}
+
 export function ChromeStatusChip({ toast }: { toast?: (msg: string) => void }) {
   const status = useChromeStatus();
   const { launching, launchChrome } = useLaunchChrome(toast);

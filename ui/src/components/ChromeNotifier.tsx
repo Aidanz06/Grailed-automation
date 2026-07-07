@@ -1,7 +1,7 @@
-import { AlertTriangle, CheckCircle2, Play, Unplug } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ExternalLink, Play, Unplug } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useChromeStatus, useLaunchChrome } from '@/components/ChromeStatusChip';
+import { useChromeStatus, useLaunchChrome, useOpenSellTab } from '@/components/ChromeStatusChip';
 
 /* Home-screen Chrome notifier: the same read-only probe as the workspace
  * header chip (shared useChromeStatus — 4s poll while mounted; the two never
@@ -13,6 +13,7 @@ import { useChromeStatus, useLaunchChrome } from '@/components/ChromeStatusChip'
 export function ChromeNotifier({ toast }: { toast?: (msg: string) => void }) {
   const status = useChromeStatus();
   const { launching, launchChrome } = useLaunchChrome(toast);
+  const { opening, openSellTab } = useOpenSellTab(toast);
 
   if (!status) return null; // first probe still in flight
 
@@ -35,7 +36,7 @@ export function ChromeNotifier({ toast }: { toast?: (msg: string) => void }) {
             cls: 'border-warning/40 bg-warning/5',
             icon: <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />,
             label: 'Chrome connected — open a Sell form',
-            desc: 'Open grailed.com/sell/new in that window so Fill has a fresh form to type into.',
+            desc: 'Fill needs a fresh grailed.com/sell/new tab to type into. Open one here or in that Chrome window.',
           }
         : {
             cls: 'border-success/30 bg-success/10',
@@ -61,6 +62,18 @@ export function ChromeNotifier({ toast }: { toast?: (msg: string) => void }) {
         >
           <Play className="h-3.5 w-3.5" />
           {launching ? 'Launching…' : 'Launch Chrome'}
+        </Button>
+      )}
+      {status.connected && status.loggedIn !== false && !status.ready && (
+        <Button
+          size="sm"
+          className="shrink-0"
+          disabled={opening}
+          onClick={openSellTab}
+          title="Opens a new grailed.com/sell/new tab in the launched Chrome. Your other tabs are untouched; if Grailed asks you to sign in there, that stays manual."
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          {opening ? 'Opening…' : 'Open Sell form'}
         </Button>
       )}
     </div>

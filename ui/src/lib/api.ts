@@ -241,12 +241,14 @@ interface TailorBridge {
   pickBatchFolder(): Promise<string | null>;
   processBatch(folder: string): Promise<BatchResult>;
   onBatchProgress(cb: (p: BatchProgress) => void): () => void;
-  fillListing(id: number): Promise<FillResult>;
+  fillListing(id: number, opts?: FillOpts): Promise<FillResult>;
+  getFillChanges(id: number): Promise<FillChanges>;
   onFillProgress(cb: (p: FillProgress) => void): () => void;
   getAutofillOptions(): Promise<AutofillOptions>;
   getGuardStatus(): Promise<GuardStatus>;
   getChromeStatus(): Promise<ChromeStatus>;
   launchChrome(): Promise<ChromeLaunchResult>;
+  openSellTab(): Promise<ChromeLaunchResult>;
   startDock(): Promise<DockStart>;
   stopDock(): Promise<boolean>;
   onDockStopped(cb: (info: DockStopped) => void): () => void;
@@ -267,6 +269,28 @@ export interface ChromeStatus {
   sellFormTabs: number;
   activeUrl: string | null;
   ready: boolean;
+}
+
+/** Re-fill options: changedOnly sends only the fields edited since the last
+ * fill (assumes the same Sell form is still open; photos are never re-sent —
+ * the upload appends, so photo changes stay manual). */
+export interface FillOpts {
+  changedOnly?: boolean;
+}
+
+/** One field edited since the last fill. Photo changes are never tracked —
+ * those are handled directly on the Grailed form (re-uploading duplicates). */
+export interface FillChange {
+  field: string;
+  from: unknown;
+  to: unknown;
+}
+
+/** Diff vs the item's last-fill snapshot (ui/main.js autofill:changes).
+ * lastFillAt null = this item has never been autofilled. */
+export interface FillChanges {
+  lastFillAt: string | null;
+  changes: FillChange[];
 }
 
 /** Result of the in-app Chrome launcher (ui/chrome-launch.js — spawns the
@@ -313,8 +337,11 @@ export interface Api {
   processBatch(folder: string): Promise<BatchResult>;
   /** Live stage/counts during processBatch; returns an unsubscribe fn. */
   onBatchProgress(cb: (p: BatchProgress) => void): () => void;
-  /** Slice 6: autofill the sell form in the driven Chrome. Never submits. */
-  fillListing(id: number): Promise<FillResult>;
+  /** Slice 6: autofill the sell form in the driven Chrome. Never submits.
+   * opts.changedOnly re-fills only what changed since the last fill. */
+  fillListing(id: number, opts?: FillOpts): Promise<FillResult>;
+  /** What a re-fill would change (diff vs the last-fill snapshot). */
+  getFillChanges(id: number): Promise<FillChanges>;
   /** S3: live per-field events during fillListing; returns an unsubscribe fn. */
   onFillProgress(cb: (p: FillProgress) => void): () => void;
   getAutofillOptions(): Promise<AutofillOptions>;
@@ -324,6 +351,8 @@ export interface Api {
   getChromeStatus(): Promise<ChromeStatus>;
   /** Launch the dedicated CDP Chrome (no-op if already up). Login stays manual. */
   launchChrome(): Promise<ChromeLaunchResult>;
+  /** Open a NEW Sell-form tab in the launched Chrome (never touches existing tabs). */
+  openSellTab(): Promise<ChromeLaunchResult>;
   /** §5.5 window docking: snap/unsnap the real Chrome window against the app. */
   startDock(): Promise<DockStart>;
   stopDock(): Promise<void>;
@@ -627,12 +656,16 @@ const mockApi: Api = {
   // No CDP / driven Chrome in the browser preview — simulate a successful fill
   // (like the other mock endpoints synthesize results) so the post-fill UI
   // (per-field toast, persistent not-saved banner) is previewable.
-  async fillListing(id) {
+  async fillListing(id, opts) {
     console.log(`[mock] fillListing #${id} — simulated; real autofill needs the desktop app + launched Chrome`);
+    // Track a fake last-fill so the changes-since-last-fill card is previewable:
+    // first fill arms it, a changedOnly re-fill consumes the demo changes.
+    if (opts?.changedOnly) mockChangesConsumed.add(id);
+    mockLastFillAt.set(id, new Date().toISOString());
     // Simulate the S3 per-field stream so the live fill checklist is previewable.
     const emit = (p: FillProgress) => mockFillSubs.forEach((cb) => cb(p));
     const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    const fields = ['title', 'description', 'price', 'condition', 'photos'];
+    const fields = opts?.changedOnly ? ['price', 'condition'] : ['title', 'description', 'price', 'condition', 'photos'];
     emit({ kind: 'plan', fields });
     for (const field of fields.slice(0, 4)) {
       emit({ kind: 'field', field, status: 'filling' });
@@ -654,6 +687,19 @@ const mockApi: Api = {
   onFillProgress(cb) {
     mockFillSubs.add(cb);
     return () => mockFillSubs.delete(cb);
+  },
+  // No last-fill snapshot in the preview — synthesize a small diff after the
+  // first mock fill so the changes card renders.
+  async getFillChanges(id) {
+    const lastFillAt = mockLastFillAt.get(id) ?? null;
+    if (!lastFillAt || mockChangesConsumed.has(id)) return { lastFillAt, changes: [] };
+    return {
+      lastFillAt,
+      changes: [
+        { field: 'price', from: 95, to: 90 },
+        { field: 'condition', from: 'Gently used', to: 'New with tags' },
+      ],
+    };
   },
   // No pipeline/disk in the browser preview — breaker always reads closed.
   async getGuardStatus() {
@@ -682,6 +728,15 @@ const mockApi: Api = {
         ? 'Chrome is already running and connected to the app. Sign in to Grailed there yourself if asked, then open grailed.com/sell/new. (Mock — no real Chrome in the preview.)'
         : 'Chrome is up. Sign in to Grailed there yourself if asked (login is always manual), then open grailed.com/sell/new. (Mock — no real Chrome in the preview.)',
     };
+  },
+  // No real tabs in the browser preview — advance the walkthrough state.
+  async openSellTab() {
+    console.log('[mock] openSellTab — real tabs need the desktop app');
+    await new Promise((r) => setTimeout(r, 400));
+    if (mockChromeState === 'disconnected')
+      return { ok: false, alreadyRunning: false, message: 'Chrome isn’t running — launch it first. (Mock.)' };
+    mockChromeState = 'ready';
+    return { ok: true, alreadyRunning: true, message: 'Opened a Sell-form tab in Chrome. (Mock — no real Chrome in the preview.)' };
   },
   // No CDP / native windows in the browser preview.
   async startDock() {
@@ -752,6 +807,9 @@ const mockApi: Api = {
 // Subscribers for the mock progress streams (browser preview only).
 const mockProgressSubs = new Set<(p: BatchProgress) => void>();
 const mockFillSubs = new Set<(p: FillProgress) => void>();
+// Preview-only last-fill bookkeeping for the changes-since-last-fill card.
+const mockLastFillAt = new Map<number, string>();
+const mockChangesConsumed = new Set<number>();
 
 function realApi(bridge: TailorBridge): Api {
   return {
@@ -808,8 +866,11 @@ function realApi(bridge: TailorBridge): Api {
     onBatchProgress(cb) {
       return bridge.onBatchProgress(cb);
     },
-    async fillListing(id) {
-      return bridge.fillListing(id);
+    async fillListing(id, opts) {
+      return bridge.fillListing(id, opts);
+    },
+    async getFillChanges(id) {
+      return bridge.getFillChanges(id);
     },
     onFillProgress(cb) {
       return bridge.onFillProgress(cb);
@@ -825,6 +886,9 @@ function realApi(bridge: TailorBridge): Api {
     },
     async launchChrome() {
       return bridge.launchChrome();
+    },
+    async openSellTab() {
+      return bridge.openSellTab();
     },
     async startDock() {
       return bridge.startDock();
