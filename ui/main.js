@@ -544,6 +544,15 @@ ipcMain.handle('chrome:openSellTab', () => {
   return openSellTab();
 });
 
+// Preflight config check (friend-beta Part E): READ-ONLY booleans about
+// whether the keys this build needs are present — a keyless copy should say
+// so calmly on launch instead of failing deep in the first import. The key
+// VALUES never cross the IPC boundary; no other behavior, no side effects.
+ipcMain.handle('config:status', () => ({
+  hasAnthropicKey: !!process.env.ANTHROPIC_API_KEY,
+  hasCompsKey: !!process.env.GRAILED_ALGOLIA_KEY,
+}));
+
 // §8.1 breaker state for the renderer's warning banner (polled by App.tsx).
 ipcMain.handle('guard:status', () => {
   const { isCircuitOpen } = require('../pipeline/compGuard');

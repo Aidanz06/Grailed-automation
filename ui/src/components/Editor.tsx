@@ -27,9 +27,11 @@ interface EditorProps {
   autoFillId: number | null;
   onAutoFillConsumed: () => void;
   onMarkListedAndNext: (nextId: number) => void;
+  /** R3 fill hotkey signal — passed through to the DraftEditor. */
+  fillSignal: number;
 }
 
-export function Editor({ selection, item, defaultProfile, setDefaultProfile, updateItem, toast, onImported, onOpenItem, onReviewResolved, nextDraft, autoFillId, onAutoFillConsumed, onMarkListedAndNext, autoPickImport, onAutoPickConsumed }: EditorProps) {
+export function Editor({ selection, item, defaultProfile, setDefaultProfile, updateItem, toast, onImported, onOpenItem, onReviewResolved, nextDraft, autoFillId, onAutoFillConsumed, onMarkListedAndNext, autoPickImport, onAutoPickConsumed, fillSignal }: EditorProps) {
   let content: ReactNode;
   if (selection === 'import') {
     content = <ImportScreen toast={toast} onImported={onImported} onOpenItem={onOpenItem} autoPick={autoPickImport} onAutoPickConsumed={onAutoPickConsumed} />;
@@ -49,6 +51,7 @@ export function Editor({ selection, item, defaultProfile, setDefaultProfile, upd
         autoFill={autoFillId === item.id}
         onAutoFillConsumed={onAutoFillConsumed}
         onMarkListedAndNext={onMarkListedAndNext}
+        fillSignal={fillSignal}
       />
     );
   }

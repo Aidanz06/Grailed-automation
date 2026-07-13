@@ -21,7 +21,18 @@ import { FillChangesCard } from '@/components/FillChangesCard';
 import { useOpenSellTab } from '@/components/ChromeStatusChip';
 
 const money = (n: number | null | undefined) => (n == null ? '—' : '$' + n);
-const CONDITIONS = ['New with tags', 'Gently used', 'Used', 'Unclear'];
+// Shared with FinishScreen's inline condition picker (R2).
+export const CONDITIONS = ['New with tags', 'Gently used', 'Used', 'Unclear'];
+
+// Beta Part F: the very first fill ever shows a one-time heads-up.
+const FIRST_FILL_KEY = 'tailor.firstFillConfirmed';
+function firstFillSeen(): boolean {
+  try {
+    return localStorage.getItem(FIRST_FILL_KEY) === '1';
+  } catch {
+    return true; // storage unavailable — never block the fill over it
+  }
+}
 // Step headings for the middle column — sized to read as the SAME steps the
 // right-rail checklist lists (Photos / Title / Description / …), so scanning
 // checklist → form is a straight visual match. Field-level labels inside a
@@ -43,13 +54,18 @@ interface Props {
   onAutoFillConsumed: () => void;
   /** Current item was marked listed — advance to nextId and fill it. */
   onMarkListedAndNext: (nextId: number) => void;
+  /** R3 "F" shortcut: increments each time the user presses Fill's hotkey —
+   * runs the exact same gated fillListing path as the button (never submits;
+   * blocked with the warning card when Chrome isn't on a fresh Sell form). */
+  fillSignal?: number;
 }
 
 // Everything a save persists — INCLUDING the photo list (order + membership):
 // editor deletes/reorders must reach the DB or autofill uploads the stale set
 // (real-run find 2026-07-04: a removed duplicate photo was still uploaded).
-// Non-numeric ids (mock/preview-only tiles) are filtered out.
-function editsOf(item: Item) {
+// Non-numeric ids (mock/preview-only tiles) are filtered out. Exported so
+// App's save-and-next shortcut (R3) persists exactly what a debounced save would.
+export function editsOf(item: Item) {
   return {
     content: item.content,
     range: item.range,
@@ -60,7 +76,7 @@ function editsOf(item: Item) {
   };
 }
 
-export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, toast, nextDraft, autoFill, onAutoFillConsumed, onMarkListedAndNext }: Props) {
+export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, toast, nextDraft, autoFill, onAutoFillConsumed, onMarkListedAndNext, fillSignal = 0 }: Props) {
   const content = item.content!;
   const attrs = item.attributes;
   const eff = effectiveProfile(item, defaultProfile);
@@ -289,6 +305,7 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
     setFillRun(emptyFillRun());
     setFillBlocked(null);
     setArmed(false);
+    setFirstFillPrompt(null);
   }, [item.id]);
   // Changes since the last fill (main-process diff vs the persisted snapshot).
   // Refetched when the item switches, a debounced save lands (lastSavedAt), or
@@ -358,9 +375,25 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
       })
       .catch((err) => {
         console.error('[api] fillListing failed', err);
-        toast(errorMessage(err));
+        toast(`The fill didn’t finish — ${errorMessage(err)}. Nothing was submitted; check the Chrome window.`);
       })
       .finally(() => setFilling(false));
+  };
+
+  // Beta Part F: a brief one-time heads-up before the very FIRST fill ever
+  // (localStorage-gated) restating the contract — types into Chrome, never
+  // submits, you publish. Repeat fills are untouched; behavior is unchanged
+  // either way (the prompt only defers the same click).
+  const [firstFillPrompt, setFirstFillPrompt] = useState<{ force: boolean; changedOnly: boolean } | null>(null);
+  const confirmFirstFill = () => {
+    const opts = firstFillPrompt;
+    setFirstFillPrompt(null);
+    try {
+      localStorage.setItem(FIRST_FILL_KEY, '1');
+    } catch {
+      /* private mode — the heads-up may show once more, harmless */
+    }
+    if (opts) fillListing({ ...opts, confirmed: true });
   };
 
   // Gate before any fill (audit §3.1): probe the launched Chrome (read-only
@@ -369,7 +402,11 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
   // anyway" escape hatch (proceeds exactly as before the gate existed). A
   // probe IPC failure never blocks a deliberate click — fail open, the driver
   // still reports per-field what it actually found.
-  const fillListing = async ({ force = false, changedOnly = false } = {}) => {
+  const fillListing = async ({ force = false, changedOnly = false, confirmed = false } = {}) => {
+    if (!confirmed && !firstFillSeen()) {
+      setFirstFillPrompt({ force, changedOnly });
+      return;
+    }
     if (!force) {
       let status: ChromeStatus | null = null;
       try {
@@ -447,6 +484,18 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
       .catch(() => setArmed(true)); // can't verify → never auto-fire blind
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.id, autoFill]);
+
+  // R3: the F hotkey mirrors the primary Fill button exactly — same gated
+  // path (fresh-Sell-form probe, blocked card, changed-only default), one
+  // manual keypress per item. The ref skips the mount-time value so an old
+  // signal never fires on item switch.
+  const fillSignalSeen = useRef(fillSignal);
+  useEffect(() => {
+    if (fillSignal === fillSignalSeen.current) return;
+    fillSignalSeen.current = fillSignal;
+    if (!filling) fillListing({ changedOnly: changedFill && !armed });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fillSignal]);
 
   // One large post-publish action (batch posting flow): mark THIS item listed,
   // advance to the next draft, and fill it — all from the single click that
@@ -888,6 +937,25 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
                     : 'Fill listing in Chrome'}
             </Button>
           </span>
+          {/* Beta Part F: one-time first-fill heads-up (localStorage-gated).
+              Confirm proceeds with the exact click that was deferred. */}
+          {firstFillPrompt && !filling && (
+            <div className="mt-2.5 rounded-md border border-l-[3px] border-l-primary bg-secondary/40 p-3 text-[13px]">
+              <div className="font-medium">Quick heads-up before your first fill</div>
+              <div className="mt-0.5 text-muted-foreground">
+                Tailor will type this listing into your Chrome Sell form. It will <span className="font-medium text-foreground">not</span>{' '}
+                submit — you review everything there and click Publish yourself.
+              </div>
+              <div className="mt-2.5 flex gap-2">
+                <Button size="sm" className="flex-1" onClick={confirmFirstFill}>
+                  Fill
+                </Button>
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => setFirstFillPrompt(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
           {/* Changed-only is the default re-fill; the full pass stays one click
               away for the fresh-form case (page reloaded/republishing — the
               old values are gone, so a diff against them would fill too little). */}

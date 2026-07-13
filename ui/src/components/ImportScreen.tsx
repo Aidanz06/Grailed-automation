@@ -99,7 +99,16 @@ export function ImportScreen({ toast, onImported, onOpenItem, autoPick, onAutoPi
     } catch (e) {
       console.error('[batch] import failed', e);
       const msg = errorMessage(e);
-      toast(msg.includes('grouping failed') ? msg : `Import failed — ${msg}`);
+      // Beta Part D/E: a keyless build fails here first — route that to the
+      // friendly setup message instead of a raw pipeline error.
+      const cfg = await api.getConfigStatus().catch(() => null);
+      if (cfg && !cfg.hasAnthropicKey) {
+        toast(
+          'This copy isn’t finished setting up (it’s missing an API key), so importing can’t work yet — reach out to whoever shared it with you.'
+        );
+      } else {
+        toast(msg.includes('grouping failed') ? `The import didn’t finish — ${msg}` : `The import didn’t finish — ${msg}. Try the folder again; nothing was posted to Grailed.`);
+      }
     } finally {
       setBusy(false);
       busyRef.current = false;
@@ -319,8 +328,8 @@ export function ImportScreen({ toast, onImported, onOpenItem, autoPick, onAutoPi
           <>
             <div className="mt-1 text-sm">Click to browse for a batch folder</div>
             <div className="mx-auto mt-4 max-w-md text-xs text-muted-foreground/80">
-              Photos are clustered into per-item groups (§5.1); high-confidence groups are auto-accepted and priced,
-              low-confidence ones are flagged for your review. Nothing is submitted to Grailed.
+              Tailor groups the photos by item, then prices and writes a draft for each group it’s confident about —
+              anything uncertain is set aside for your review instead of guessed. Nothing is posted to Grailed.
             </div>
           </>
         )}

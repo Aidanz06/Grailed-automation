@@ -84,7 +84,7 @@ export function PricePanel({ item, update, toast }: Props) {
         const msg = errorMessage(err);
         toast(
           /circuit/i.test(msg)
-            ? 'Comp scraping is disabled — circuit breaker open (PRD §8.1).'
+            ? 'Pricing is paused as a safety precaution (see the banner up top) — set the price yourself for now.'
             : `Recompute failed: ${msg}`
         );
       })

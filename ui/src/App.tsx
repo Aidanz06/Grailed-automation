@@ -1,20 +1,27 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, Link2, Ruler, Unlink2 } from 'lucide-react';
+import { ArrowLeft, ClipboardCheck, Link2, Ruler, Unlink2 } from 'lucide-react';
 import type { DescProfile, Item } from '@/types';
 import { DEFAULT_PROFILE } from '@/lib/description';
-import { api, type Album } from '@/lib/api';
+import { api, type Album, type ConfigStatus } from '@/lib/api';
 import { errorMessage } from '@/lib/utils';
+import { isTriageDraft, readiness, triageSort } from '@/lib/readiness';
+import { matchShortcut } from '@/lib/shortcuts';
 import { ChromeStatusChip } from '@/components/ChromeStatusChip';
+import { GuideMenu, type GuideSection } from '@/components/GuideMenu';
+import { Onboarding, ONBOARDED_KEY } from '@/components/Onboarding';
+import { editsOf } from '@/components/DraftEditor';
 import { Home } from '@/components/Home';
 import { MeasureScreen } from '@/components/MeasureScreen';
+import { FinishScreen } from '@/components/FinishScreen';
 import { Sidebar } from '@/components/Sidebar';
 import { Editor } from '@/components/Editor';
+import { FillTracker } from '@/components/FillTracker';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { BatchProgressBar } from '@/components/BatchProgressBar';
 
 export type Selection = number | 'import';
-export type View = 'home' | 'workspace' | 'measure';
+export type View = 'home' | 'workspace' | 'measure' | 'finish';
 export type UpdateItem = (id: number, recipe: (draft: Item) => void) => void;
 
 // Persisted dock-Chrome intent (audit §2.5).
@@ -25,9 +32,9 @@ export default function App() {
   const [albums, setAlbums] = useState<Album[]>([]);
   const [view, setView] = useState<View>('home');
   const [selected, setSelected] = useState<Selection>('import');
-  // Where Measure mode was launched from, so "Done" returns there (audit §2.2:
-  // Measure is now reachable from the workspace, not just Home).
-  const [measureReturn, setMeasureReturn] = useState<View>('home');
+  // Where a batch pass (Measure / Finish drafts) was launched from, so "Done"
+  // returns there (audit §2.2: passes are reachable from Home AND workspace).
+  const [passReturn, setPassReturn] = useState<View>('home');
   // One-shot: "New batch" opens the OS folder picker on the Import screen
   // without the extra drop-zone click (audit §2.4). Consumed on mount.
   const [autoPickImport, setAutoPickImport] = useState(false);
@@ -74,7 +81,7 @@ export default function App() {
         } else setToastMsg(res.message ?? 'Could not dock Chrome.');
       })
       .catch((err) => {
-        setToastMsg(errorMessage(err));
+        setToastMsg(`Couldn’t dock Chrome — ${errorMessage(err)}`);
       });
   };
   // Audit §2.5: remember the dock preference across sessions. On entering the
@@ -146,6 +153,18 @@ export default function App() {
     return () => clearInterval(t);
   }, []);
 
+  // Preflight config check (beta Part E): a build without its keys should say
+  // so calmly on launch, not fail deep inside the first import. Booleans only
+  // — no key material ever reaches this process. Checked once; keys don't
+  // appear mid-session.
+  const [config, setConfig] = useState<ConfigStatus | null>(null);
+  useEffect(() => {
+    api
+      .getConfigStatus()
+      .then(setConfig)
+      .catch(() => {});
+  }, []);
+
   const updateItem = useCallback<UpdateItem>((id, recipe) => {
     setItems((prev) =>
       prev.map((it) => {
@@ -167,15 +186,21 @@ export default function App() {
     setView('workspace');
   };
   const openMeasure = (from: View) => {
-    setMeasureReturn(from);
+    setPassReturn(from);
     setView('measure');
+  };
+  const openFinish = (from: View) => {
+    setPassReturn(from);
+    setView('finish');
   };
 
   const selectedItem = typeof selected === 'number' ? items.find((it) => it.id === selected) ?? null : null;
 
   // "Listed, fill next": the next draft in sidebar order (after the current
-  // item, wrapping) — the one-click post-publish flow advances to it.
-  const draftQueue = items.filter((it) => it.status === 'draft' && it.content?.title);
+  // item, wrapping) — the one-click post-publish flow advances to it. Sidebar
+  // order is now the R1 triage order (needs-attention drafts first), shared
+  // via lib/readiness.ts so "next" always matches what's on screen.
+  const draftQueue = triageSort(items).filter(isTriageDraft);
   const curIdx = typeof selected === 'number' ? draftQueue.findIndex((it) => it.id === selected) : -1;
   const nextDraftItem =
     draftQueue.length === 0
@@ -187,12 +212,109 @@ export default function App() {
           : null;
   const nextDraft = nextDraftItem ? { id: nextDraftItem.id, title: nextDraftItem.content?.title ?? `item #${nextDraftItem.id}` } : null;
 
+  // R2: drafts with at least one unresolved required field — the Finish pass
+  // walks exactly these; the button hides when there's nothing to finish.
+  const unreadyCount = draftQueue.filter((it) => !readiness(it).ready).length;
+
+  // R3 keyboard-first navigation (bindings live in lib/shortcuts.ts — the
+  // guide renders the same table, so docs can't drift). J/K/arrows move
+  // through the sidebar's draft order; Cmd/Ctrl+Enter saves and advances even
+  // mid-typing; F is one manual fill keypress routed through the editor's
+  // gated fill path (probe + blocked card — never fires onto a stale page,
+  // never submits). matchShortcut() drops plain keys while typing.
+  const [fillSignal, setFillSignal] = useState(0);
+
+  // Beta Part A: one-time first-run welcome (persists via localStorage);
+  // Part G: the Guide overlay, reopenable from the "?" buttons any time.
+  // `guide` holds the section to open with, or null when closed.
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try {
+      return localStorage.getItem(ONBOARDED_KEY) !== '1';
+    } catch {
+      return false;
+    }
+  });
+  const dismissOnboarding = () => {
+    setShowOnboarding(false);
+    try {
+      localStorage.setItem(ONBOARDED_KEY, '1');
+    } catch {
+      /* private mode — it'll show again next launch, harmless */
+    }
+  };
+  const [guide, setGuide] = useState<GuideSection | null>(null);
+  useEffect(() => {
+    if (view !== 'workspace') return;
+    const onKey = (e: KeyboardEvent) => {
+      const id = matchShortcut(e);
+      if (!id) return;
+      const idx = typeof selected === 'number' ? draftQueue.findIndex((it) => it.id === selected) : -1;
+      const go = (dir: 1 | -1) => {
+        if (!draftQueue.length) return;
+        const next =
+          idx === -1
+            ? dir === 1
+              ? draftQueue[0]
+              : draftQueue[draftQueue.length - 1]
+            : draftQueue[(idx + dir + draftQueue.length) % draftQueue.length];
+        setSelected(next.id);
+      };
+      if (id === 'nextDraft') {
+        e.preventDefault();
+        go(1);
+      } else if (id === 'prevDraft') {
+        e.preventDefault();
+        go(-1);
+      } else if (id === 'saveAndNext') {
+        e.preventDefault();
+        const cur = selectedItem;
+        if (cur?.dirty) {
+          api
+            .saveItem(cur.id, editsOf(cur))
+            .then(() =>
+              updateItem(cur.id, (d) => {
+                d.dirty = false;
+              })
+            )
+            .catch((err) => setToastMsg(`Save failed: ${errorMessage(err)}`));
+        }
+        go(1);
+      } else if (id === 'fill') {
+        // Only a draft with content can fill; the editor's gate does the rest.
+        if (selectedItem && selectedItem.status !== 'submitted' && selectedItem.content?.title) {
+          e.preventDefault();
+          setFillSignal((s) => s + 1);
+        }
+      } else if (id === 'help') {
+        e.preventDefault();
+        setGuide((g) => (g ? null : 'shortcuts'));
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, selected, items]);
+
   return (
     <div className="flex h-full flex-col">
       {circuitOpen && (
         <div className="border-b border-destructive/50 bg-destructive/15 px-4 py-2 text-center text-[13px] font-medium text-destructive">
-          Circuit breaker OPEN — live comps + autofill are disabled (PRD §8.1). Review the Grailed account, then
-          remove data/CIRCUIT_OPEN to re-enable.
+          Pricing and Fill are paused as a safety precaution — something looked off with the Grailed account, so the
+          app stopped touching it. Nothing was submitted. Check the account in Chrome, then reach out to whoever set
+          this up to re-enable.
+        </div>
+      )}
+      {/* Beta Part E: calm setup banners for a keyless build. */}
+      {config && !config.hasAnthropicKey && (
+        <div className="border-b border-warning/50 bg-warning/10 px-4 py-2 text-center text-[13px] font-medium text-warning">
+          This copy isn’t finished setting up (it’s missing an API key). Importing photos and drafting listings won’t
+          work until it’s configured — reach out to whoever shared this with you.
+        </div>
+      )}
+      {config && config.hasAnthropicKey && !config.hasCompsKey && (
+        <div className="border-b bg-secondary/40 px-4 py-1.5 text-center text-xs text-muted-foreground">
+          Price suggestions are limited on this copy (no sold-comps access configured) — you can still set prices
+          yourself on every draft.
         </div>
       )}
       {/* Persistent import progress: a batch keeps running in the background while
@@ -226,6 +348,8 @@ export default function App() {
               .catch((err) => setToastMsg(`Delete failed: ${errorMessage(err)}`));
           }}
           onMeasure={() => openMeasure('home')}
+          onFinish={() => openFinish('home')}
+          onOpenGuide={() => setGuide('how')}
           toast={setToastMsg}
         />
       ) : view === 'measure' ? (
@@ -235,7 +359,20 @@ export default function App() {
           onDone={() => {
             // Reload so editors show the numbers typed in measure mode, then
             // return to wherever Measure was launched from (Home or workspace).
-            reloadItems().then(() => setView(measureReturn));
+            reloadItems().then(() => setView(passReturn));
+          }}
+        />
+      ) : view === 'finish' ? (
+        <FinishScreen
+          drafts={draftQueue}
+          toast={setToastMsg}
+          onOpenItem={(id) => {
+            // A gap this pass can't fix inline (photos) — reload so the
+            // editor sees the pass's saved fixes, then open the full editor.
+            reloadItems().then(() => openItem(id));
+          }}
+          onDone={() => {
+            reloadItems().then(() => setView(passReturn));
           }}
         />
       ) : (
@@ -248,6 +385,16 @@ export default function App() {
               Tailor <span className="italic text-primary">Studio</span>
             </span>
             <span className="flex-1" />
+            {unreadyCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                title="One pass over every draft that still needs something — only the gaps are shown, complete drafts are skipped."
+                onClick={() => openFinish('workspace')}
+              >
+                <ClipboardCheck /> Finish drafts ({unreadyCount})
+              </Button>
+            )}
             {draftQueue.length > 0 && (
               <Button
                 variant="ghost"
@@ -258,6 +405,15 @@ export default function App() {
                 <Ruler /> Measure
               </Button>
             )}
+            <Button
+              variant="ghost"
+              size="sm"
+              title="Guide & keyboard shortcuts (?)"
+              aria-label="open guide and keyboard shortcuts"
+              onClick={() => setGuide((g) => (g ? null : 'shortcuts'))}
+            >
+              ?
+            </Button>
             <ChromeStatusChip toast={setToastMsg} />
             <Button
               variant={docked ? 'secondary' : 'ghost'}
@@ -270,8 +426,20 @@ export default function App() {
             </Button>
             <ThemeToggle />
           </header>
+          {/* R5: batch momentum strip — count, current, and next queued. Its
+              one control routes through the same autoFillId path as "fill
+              next draft" (that click is the per-item manual trigger). */}
+          <FillTracker
+            items={items}
+            albums={albums}
+            selected={selected}
+            onFillNext={(id) => {
+              setAutoFillId(id);
+              setSelected(id);
+            }}
+          />
           <div className="grid min-h-0 flex-1 grid-cols-[320px_1fr]">
-            <Sidebar items={items} selected={selected} onSelect={setSelected} />
+            <Sidebar items={items} selected={selected} onSelect={setSelected} updateItem={updateItem} toast={setToastMsg} />
             <Editor
               selection={selected}
               item={selectedItem}
@@ -293,6 +461,7 @@ export default function App() {
                 setView('workspace');
               }}
               nextDraft={nextDraft}
+              fillSignal={fillSignal}
               autoFillId={autoFillId}
               onAutoFillConsumed={() => setAutoFillId(null)}
               onMarkListedAndNext={(nextId) => {
@@ -316,6 +485,19 @@ export default function App() {
         </div>
       )}
       </div>
+
+      {/* Beta A/G overlays: the Guide (keyed so it reopens on the requested
+          section) and the one-time first-run welcome on top. */}
+      {guide && <GuideMenu key={guide} open initialSection={guide} onClose={() => setGuide(null)} />}
+      {showOnboarding && (
+        <Onboarding
+          onClose={dismissOnboarding}
+          onImport={() => {
+            dismissOnboarding();
+            newBatch();
+          }}
+        />
+      )}
 
       {toastMsg && (
         <div className="fixed bottom-5 left-1/2 max-w-[70%] -translate-x-1/2 rounded-md border bg-card px-4 py-2.5 text-sm shadow-lg">

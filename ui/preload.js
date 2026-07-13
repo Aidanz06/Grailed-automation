@@ -53,6 +53,9 @@ contextBridge.exposeInMainWorld('tailor', {
   },
   getAutofillOptions: () => ipcRenderer.invoke('autofill:options'),
   getGuardStatus: () => ipcRenderer.invoke('guard:status'),
+  // Read-only preflight: are the build's keys configured? Booleans only —
+  // key values never reach the renderer.
+  getConfigStatus: () => ipcRenderer.invoke('config:status'),
   // Read-only Chrome tab probe (HTTP /json/list only — no page connection):
   // drives the header status chip + the fresh-Sell-form fill gate.
   getChromeStatus: () => ipcRenderer.invoke('chrome:status'),

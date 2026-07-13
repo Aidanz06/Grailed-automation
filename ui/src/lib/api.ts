@@ -246,6 +246,7 @@ interface TailorBridge {
   onFillProgress(cb: (p: FillProgress) => void): () => void;
   getAutofillOptions(): Promise<AutofillOptions>;
   getGuardStatus(): Promise<GuardStatus>;
+  getConfigStatus(): Promise<ConfigStatus>;
   getChromeStatus(): Promise<ChromeStatus>;
   launchChrome(): Promise<ChromeLaunchResult>;
   openSellTab(): Promise<ChromeLaunchResult>;
@@ -257,6 +258,13 @@ interface TailorBridge {
 /** §8.1 circuit-breaker state (pipeline/compGuard.js). */
 export interface GuardStatus {
   circuitOpen: boolean;
+}
+
+/** Read-only preflight (friend-beta Part E): whether this build's keys are
+ * configured. BOOLEANS ONLY — the main process never sends key values. */
+export interface ConfigStatus {
+  hasAnthropicKey: boolean;
+  hasCompsKey: boolean;
 }
 
 /** Read-only snapshot of the launched Chrome (ui/chrome-status.js — one HTTP
@@ -347,6 +355,8 @@ export interface Api {
   getAutofillOptions(): Promise<AutofillOptions>;
   /** §8.1 breaker state — drives the app-wide warning banner. */
   getGuardStatus(): Promise<GuardStatus>;
+  /** Read-only key-presence preflight (booleans only, never key values). */
+  getConfigStatus(): Promise<ConfigStatus>;
   /** Read-only Chrome tab probe — header chip + fresh-Sell-form fill gate. */
   getChromeStatus(): Promise<ChromeStatus>;
   /** Launch the dedicated CDP Chrome (no-op if already up). Login stays manual. */
@@ -705,6 +715,10 @@ const mockApi: Api = {
   async getGuardStatus() {
     return { circuitOpen: false };
   },
+  // Preview reads as fully configured (flip these to preview the banners).
+  async getConfigStatus() {
+    return { hasAnthropicKey: true, hasCompsKey: true };
+  },
   // No CDP in the browser preview — reports per mockChromeState ('ready' by
   // default so the normal flow renders; flip it above to walk the other UI).
   async getChromeStatus() {
@@ -880,6 +894,9 @@ function realApi(bridge: TailorBridge): Api {
     },
     async getGuardStatus() {
       return bridge.getGuardStatus();
+    },
+    async getConfigStatus() {
+      return bridge.getConfigStatus();
     },
     async getChromeStatus() {
       return bridge.getChromeStatus();

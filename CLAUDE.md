@@ -188,7 +188,38 @@ form)" secondary — full fill stays default for armed/fill-next
 (fresh form, no old values to diff against). Preview-verified
 full cycle (fill → edit demo diff → changed-only fill → card
 clears); real changed-only fill against a live form pending
-eyes-on.
+eyes-on. 2026-07-12: UX-streamlining (R1–R5) + friend-beta (A–G)
+BUILT — renderer/state + one read-only IPC only; preview-verified
+end-to-end (scripted Electron walk of the ui:dev mock, 0 console
+errors). R1: lib/readiness.ts is the SINGLE readiness source
+(extracted from ListingChecklist buildRows) — sidebar triage chips
+(Ready / top blocker), triageSort (review → needs-attention →
+ready → listed; App's J/K + fill-next queue share the order),
+All/Needs-attention/Ready filter. R2: FinishScreen — one pass,
+ONLY unresolved required fields per draft (inline combined
+category picker keeps the staged Confirm gate; brand/size
+"verified" buttons record user judgment), debounced saveItem;
+"Finish drafts (n)" on Home + workspace headers. R3:
+lib/shortcuts.ts is the single bindings source (key handler AND
+the guide render from it): J/K/↓↑ next-prev, Cmd/Ctrl+Enter
+save-and-next, F = the same gated fillListing path (one keypress
+per item; probe/blocked card unchanged), ? = guide. R4: sidebar
+multi-select + BulkActionBar (condition / tag add-remove /
+description style / per-item Recompute; size/measurements/price
+VALUES excluded by design; album-assign SKIPPED — would need a
+store column, pipeline off-limits). R5: FillTracker strip
+(album-scoped "n of m listed" + next queued; its button = the
+existing autoFillId manual trigger). Beta: Onboarding first-run
+modal (tailor.onboarded) + GuideMenu behind "?" in both headers
+(how-it-works / screens / shortcuts-from-shortcuts.ts / trust
+contract / troubleshooting / glossary), Home live GettingStarted
+checklist (folds ChromeNotifier into step 2; hides once anything
+is listed), de-jargoned circuit-breaker/import/PricePanel copy +
+directional empty/error states, config:status IPC (BOOLEANS ONLY:
+ANTHROPIC_API_KEY / GRAILED_ALGOLIA_KEY presence) → calm keyless
+banners + friendly import-failure routing, one-time first-fill
+heads-up (tailor.firstFillConfirmed). Real keyless-build launch
+and a live F-key/fill pass await eyes-on.
 
 ## Non-negotiable rules
 - Never apply navigator/fingerprint/UA spoofing anywhere in this
