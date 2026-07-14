@@ -38,6 +38,10 @@ export default function App() {
   // One-shot: "New batch" opens the OS folder picker on the Import screen
   // without the extra drop-zone click (audit §2.4). Consumed on mount.
   const [autoPickImport, setAutoPickImport] = useState(false);
+  // Post-import landing (plan §C): "Review the batch" pre-scopes the Home
+  // board to that import's album. Cleared whenever Home is reached any other
+  // way, so a later manual visit shows all batches again.
+  const [boardAlbum, setBoardAlbum] = useState<number | null>(null);
   // "Listed, fill next": set when the user clicks "mark listed & fill next
   // draft" — the DraftEditor for this item starts its fill on mount (that
   // click IS the per-item manual trigger; nothing fills without it).
@@ -366,6 +370,7 @@ export default function App() {
           }}
           onFinish={() => openFinish('home')}
           onOpenGuide={() => setGuide('how')}
+          boardAlbumId={boardAlbum}
           toast={setToastMsg}
           updater={updater}
         />
@@ -385,7 +390,14 @@ export default function App() {
       ) : (
         <div className="flex h-full flex-col">
           <header className="flex items-center gap-2 border-b bg-card px-3 py-2.5">
-            <Button variant="ghost" size="sm" onClick={() => setView('home')}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setBoardAlbum(null); // manual Home visit → board shows all batches
+                setView('home');
+              }}
+            >
               <ArrowLeft /> Home
             </Button>
             <span className="font-display text-lg tracking-tight">
@@ -457,6 +469,15 @@ export default function App() {
                 setSelected(id);
                 setView('workspace');
               }}
+              onOpenBoard={(result) => {
+                // Land on the Home board scoped to the import's album — items
+                // were reloaded when the batch finished, so the album can be
+                // looked up from any item it produced.
+                const firstId = result.processed.find((p) => p.itemId != null)?.itemId ?? null;
+                const albumId = firstId != null ? items.find((it) => it.id === firstId)?.albumId ?? null : null;
+                setBoardAlbum(albumId);
+                setView('home');
+              }}
               nextDraft={nextDraft}
               fillSignal={fillSignal}
               onFillingChange={(b) => {
@@ -476,8 +497,10 @@ export default function App() {
                 // Reload BEFORE navigating so the resolved item renders its new
                 // state (draft editor, moved photos) rather than the stale one.
                 reloadItems().then(() => {
-                  if (nextId == null) setView('home');
-                  else setSelected(nextId);
+                  if (nextId == null) {
+                    setBoardAlbum(null);
+                    setView('home');
+                  } else setSelected(nextId);
                 });
               }}
             />

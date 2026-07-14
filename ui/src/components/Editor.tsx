@@ -17,6 +17,8 @@ interface EditorProps {
   onImported: (result: BatchResult) => void;
   /** Open an item from the import summary screen. */
   onOpenItem: (id: number) => void;
+  /** Land on the batch board scoped to a finished import (plan §C). */
+  onOpenBoard: (result: BatchResult) => void;
   /** "New batch" wants the folder picker opened on entry (audit §2.4). */
   autoPickImport: boolean;
   onAutoPickConsumed: () => void;
@@ -33,7 +35,7 @@ interface EditorProps {
   onFillingChange?: (busy: boolean) => void;
 }
 
-export function Editor({ selection, item, defaultProfile, setDefaultProfile, updateItem, toast, onImported, onOpenItem, onReviewResolved, nextDraft, autoFillId, onAutoFillConsumed, onMarkListedAndNext, autoPickImport, onAutoPickConsumed, fillSignal, onFillingChange }: EditorProps) {
+export function Editor({ selection, item, defaultProfile, setDefaultProfile, updateItem, toast, onImported, onOpenItem, onOpenBoard, onReviewResolved, nextDraft, autoFillId, onAutoFillConsumed, onMarkListedAndNext, autoPickImport, onAutoPickConsumed, fillSignal, onFillingChange }: EditorProps) {
   // §J: pin draft-vs-review to the SELECTION, not to every items refresh — a
   // background reload (import streaming, etc.) must never yank an open draft
   // editor to the Review screen mid-edit. The mode recomputes when the user
@@ -53,7 +55,7 @@ export function Editor({ selection, item, defaultProfile, setDefaultProfile, upd
 
   let content: ReactNode;
   if (selection === 'import') {
-    content = <ImportScreen toast={toast} onImported={onImported} onOpenItem={onOpenItem} autoPick={autoPickImport} onAutoPickConsumed={onAutoPickConsumed} />;
+    content = <ImportScreen toast={toast} onImported={onImported} onOpenItem={onOpenItem} onOpenBoard={onOpenBoard} autoPick={autoPickImport} onAutoPickConsumed={onAutoPickConsumed} />;
   } else if (!item) {
     content = <div className="flex h-full items-center justify-center text-muted-foreground">Select an item from the queue.</div>;
   } else if (reviewMode || !item.content) {

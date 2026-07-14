@@ -4,6 +4,7 @@ import type { Item, ItemStatus } from '@/types';
 import type { Selection, UpdateItem } from '@/App';
 import { cn } from '@/lib/utils';
 import { isTriageDraft, readiness, triageSort } from '@/lib/readiness';
+import { quality, qualityTitle } from '@/lib/quality';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BulkActionBar } from '@/components/BulkActionBar';
@@ -111,8 +112,10 @@ export function Sidebar({ items, selected, onSelect, updateItem, toast }: Sideba
             const hasListing = !!it.content?.title;
             const cover = it.photos[0];
             // R1 readiness chip: "Ready" or the top blocker, so a correct
-            // draft never has to be opened just to check on it.
-            const r = isTriageDraft(it) ? readiness(it) : null;
+            // draft never has to be opened just to check on it. The §D4
+            // quality score rides along in the tooltip.
+            const q = isTriageDraft(it) ? quality(it) : null;
+            const r = q?.r ?? null;
             const isChecked = checked.has(it.id);
             return (
               <li key={it.id} className="relative">
@@ -181,14 +184,14 @@ export function Sidebar({ items, selected, onSelect, updateItem, toast }: Sideba
                         (r.ready ? (
                           <span
                             className="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-success"
-                            title="Every required field is set — fill it whenever you're ready."
+                            title={`Every required field is set — fill it whenever you're ready. ${qualityTitle(q!)}.`}
                           >
                             <CheckCircle2 className="h-3 w-3" /> Ready
                           </span>
                         ) : (
                           <span
                             className="truncate text-[10px] font-medium uppercase tracking-wide text-warning"
-                            title={`Next: ${r.blocker!.label} — ${r.blocker!.sub} (${r.doneCount}/${r.requiredCount} done)`}
+                            title={`Next: ${r.blocker!.label} — ${r.blocker!.sub} (${r.doneCount}/${r.requiredCount} done). ${qualityTitle(q!)}.`}
                           >
                             {r.blocker!.short}
                           </span>

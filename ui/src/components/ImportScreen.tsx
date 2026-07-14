@@ -13,6 +13,9 @@ interface Props {
   onImported: (result: BatchResult) => void;
   /** Open an item from the batch summary (selects it in the workspace). */
   onOpenItem: (id: number) => void;
+  /** Land on the batch board scoped to this import (refinement plan §C —
+   * the batch, not the first item, is the unit of the review pass). */
+  onOpenBoard: (result: BatchResult) => void;
   /** "New batch" wants the OS folder picker opened on entry, skipping the
    * drop-zone click (audit §2.4). Fired once, only when idle with no summary. */
   autoPick?: boolean;
@@ -23,7 +26,7 @@ interface Props {
 // still gets its summary when they come back to the Import screen.
 let lastResult: BatchResult | null = null;
 
-export function ImportScreen({ toast, onImported, onOpenItem, autoPick, onAutoPickConsumed }: Props) {
+export function ImportScreen({ toast, onImported, onOpenItem, onOpenBoard, autoPick, onAutoPickConsumed }: Props) {
   const [busy, setBusy] = useState(false);
   // Summary of the just-finished batch (real-run feedback 2026-07-04): shown in
   // place of the folder picker until "Import another folder".
@@ -210,7 +213,6 @@ export function ImportScreen({ toast, onImported, onOpenItem, autoPick, onAutoPi
   // until the user starts another folder (survives navigating away and back).
   if (result && !running) {
     const rows = result.processed;
-    const firstDraft = rows.find((p) => p.status === 'draft' && p.itemId != null);
     return (
       <div className="flex h-full items-start justify-center overflow-y-auto p-6">
         <div className="rise-in w-full max-w-2xl">
@@ -262,11 +264,13 @@ export function ImportScreen({ toast, onImported, onOpenItem, autoPick, onAutoPi
             })}
           </ul>
           <div className="flex items-center gap-2.5">
-            {firstDraft && (
-              <Button className="glow-primary" onClick={() => onOpenItem(firstDraft.itemId!)}>
-                Start with the first draft <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            )}
+            <Button
+              className="glow-primary"
+              title="See the whole batch as cards — what's ready, what needs attention, and the next thing to fix on each."
+              onClick={() => onOpenBoard(result)}
+            >
+              Review the batch <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
             <Button
               variant="outline"
               onClick={() => {
