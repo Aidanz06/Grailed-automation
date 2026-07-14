@@ -16,3 +16,11 @@ ui/dist/
 # OS / tooling
 .DS_Store
 .claude/settings.local.json
+
+# Internal working docs — kept locally, not published.
+# docs/ only ships the tester setup guide.
+CLAUDE.md
+PHASE-0B-FINDINGS.md
+POC-FINDINGS.md
+docs/*
+!docs/SETUP-GUIDE.md
