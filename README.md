@@ -19,9 +19,9 @@ draft into the sell form for your review.
 2. **Draft** — each group becomes a draft: generated title/description
    (structured parts, no authenticity claims), a price range computed from
    Grailed sold comps (rate-limited, cached, relevance-weighted, with a
-   confidence estimate), and measurement templates by garment type.
-3. **Review** — fix groupings, confirm the suggested Grailed category, enter
-   measurements (batch "Measure" mode tabs through every draft), tweak text.
+   confidence estimate).
+3. **Review** — fix groupings, confirm the suggested Grailed category, tweak
+   text. Measurements go through Grailed's own listing fields, not the app.
 4. **Fill** — with the app-launched Chrome sitting on `grailed.com/sell/new`,
    one click types the whole draft into the form: title, description, price,
    condition, color, style, country, photos, and — once you've confirmed the
@@ -73,8 +73,6 @@ but login and publishing stay human.
   autofill immediately; comps are cached and rate-limited.
 - **No autonomous bumping, offers, or messaging.** One manual click per fill.
 
-See `CLAUDE.md` and `docs/` (PRD, remaining work, findings) for the full detail.
-
 ## Running it
 
 Requirements: macOS, Node 20+, Google Chrome in `/Applications`.
@@ -108,5 +106,4 @@ Renderer changes only reach the desktop app after `npm run ui:build`
 ## Status
 
 Personal-use v1: the full photo-folder → published-listing loop works end to
-end. A planned second phase swaps the CDP fill for a browser-extension shell
-(`docs/PLANS-v1-vs-extension.md`).
+end. A planned second phase swaps the CDP fill for a browser-extension shell.

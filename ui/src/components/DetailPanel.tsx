@@ -85,11 +85,8 @@ export function DetailPanel({ item, defaultProfile, setDefaultProfile, update }:
       <div className="flex flex-wrap gap-1.5">
         {ALL_SECTIONS.filter(
           // Text sections with no generated content can't add anything — hide
-          // them so they aren't dead toggles. "measurements" is a data-entry
-          // section (blank grid to fill), so it always stays available.
-          (k) =>
-            k === 'measurements' ||
-            !!(item.descParts && (item.descParts as unknown as Record<string, string | undefined>)[k]?.trim())
+          // them so they aren't dead toggles.
+          (k) => !!(item.descParts && (item.descParts as unknown as Record<string, string | undefined>)[k]?.trim())
         ).map((k) => {
           const on = !!eff.sections[k];
           return (

@@ -3,7 +3,6 @@ import { ArrowUpRight, Pencil, RefreshCw } from 'lucide-react';
 import type { DescProfile, Item } from '@/types';
 import { api, type AutofillOptions, type ChromeStatus, type FillChanges } from '@/lib/api';
 import { suggestGrailedCategory } from '@/lib/grailedCategory';
-import { measureFields, measurementLines } from '@/lib/measurements';
 import { assembleDescription, effectiveProfile } from '@/lib/description';
 import { agoLabel, cn, errorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -577,12 +576,7 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
   };
 
   const copyListing = () => {
-    const filled = eff.sections.measurements ? measurementLines(attrs, item.measurements) : [];
     const parts = [content.title, '', content.description];
-    if (filled.length) {
-      parts.push('', 'Measurements:');
-      filled.forEach((line) => parts.push(line));
-    }
     parts.push('', 'Tags: ' + content.tags.join(', '), '', `Price: ${money(item.range?.median)}`);
     const text = parts.join('\n');
     if (navigator.clipboard?.writeText) {
@@ -654,19 +648,10 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
         />
       </section>
 
-      {/* Description + detail selector + measurements */}
+      {/* Description + detail selector */}
       <section id="sec-desc" className="mb-5 scroll-mt-4">
-        <div className="mb-2 flex items-center gap-2">
+        <div className="mb-2">
           <span className="text-sm font-semibold uppercase tracking-wider text-foreground">Description</span>
-          <button
-            type="button"
-            aria-label="edit description style template"
-            title="Your style template — paste an example listing and every generation matches its tone and format."
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
-            onClick={openStyleEditor}
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
         </div>
         {/* Plan §A: the seller's style template — one persistent example
             listing every generation (import + Regenerate) emulates. Style
@@ -717,46 +702,40 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
             </Button>
           </div>
         )}
-        <Textarea
-          ref={descRef}
-          className="min-h-[240px] font-mono text-[13px]"
-          value={content.description}
-          onChange={(e) =>
-            update((d) => {
-              d.content!.description = e.target.value;
-              d.dirty = true;
-            })
-          }
-        />
-        {eff.sections.measurements && item.measurements && (
-          <>
-            <div className="mb-0.5 mt-4 text-sm font-semibold uppercase tracking-wider text-foreground">
-              Measurements <span className="font-normal text-muted-foreground">(optional)</span>
-            </div>
-            <div className="mb-1.5 text-xs text-muted-foreground">
-              Fields match this garment’s category — only ones you fill in are added to the copied listing; blanks
-              are skipped. Tab through all drafts at once from Home → Measure.
-            </div>
-            <div className="grid grid-cols-4 gap-2.5">
-              {measureFields(attrs, item.measurements).map((f) => (
-                <div key={f.key} className="flex flex-col gap-1">
-                  <span className="text-xs text-muted-foreground">{f.label}</span>
-                  <Input
-                    value={item.measurements![f.key] ?? ''}
-                    placeholder={f.placeholder}
-                    className={item.measurements![f.key] ? '' : 'border-dashed'}
-                    onChange={(e) =>
-                      update((d) => {
-                        d.measurements![f.key] = e.target.value;
-                        d.dirty = true;
-                      })
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+        {/* The style-template editor opens from a floating circular button in
+            the textarea's bottom-right corner (a tiny header pencil wasn't
+            discoverable — owner feedback 2026-07-14). */}
+        <div className="relative">
+          <Textarea
+            ref={descRef}
+            className="min-h-[240px] pb-12 font-mono text-[13px]"
+            value={content.description}
+            onChange={(e) =>
+              update((d) => {
+                d.content!.description = e.target.value;
+                d.dirty = true;
+              })
+            }
+          />
+          <button
+            type="button"
+            aria-label="edit description style template"
+            title="Your style template — paste an example listing and every generation matches its tone and format."
+            className={cn(
+              'absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full border shadow-sm transition-colors',
+              styleOpen
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-input bg-card text-muted-foreground hover:border-primary hover:text-primary'
+            )}
+            onClick={() => (styleOpen ? setStyleOpen(false) : openStyleEditor())}
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+        </div>
+        {/* Measurements were removed entirely (owner decision 2026-07-14):
+            on Grailed they go through Grailed's own measurements system on
+            the listing, never the description — the app stopped collecting
+            them. */}
       </section>
 
       {/* Tags */}

@@ -9,8 +9,9 @@
  *   - If brand is "unclear" or brand_confidence is low, do NOT state the brand as
  *     fact — describe generically or hedge.
  *   - Measurements are NOT known from photos — never invent numbers, and the
- *     body carries NO measurements section at all (the app manages
- *     measurements separately; owner decision 2026-07-12).
+ *     body carries NO measurements section at all (owner decisions 2026-07-12/
+ *     14: measurements go through Grailed's own listing fields, never the
+ *     description; the app doesn't collect them).
  *
  * Uses the Anthropic SDK, model claude-opus-4-8 (override via CONTENT_MODEL),
  * adaptive thinking, and structured outputs.
@@ -47,8 +48,8 @@ const CONTENT_SCHEMA = {
       description:
         'Listing body in plain text with short lines/line breaks — SHORT and simple: a one-line ' +
         'overview, then a rating-based condition line (e.g. "Gently used condition."). Nothing ' +
-        'else. Do NOT include a measurements section or blank placeholders — the app manages ' +
-        'measurements separately. No price. No authenticity guarantees AND no authenticity ' +
+        'else. Do NOT include a measurements section or blank placeholders — measurements live in ' +
+        'Grailed\'s own listing fields, never the description. No price. No authenticity guarantees AND no authenticity ' +
         'disclaimers — never write "authenticity not verified" or similar in the listing body; ' +
         'that caveat belongs ONLY in the seller-facing `disclaimers` array.',
     },
@@ -99,7 +100,7 @@ const SYSTEM_PROMPT = [
   'Hard rules:',
   '(1) NEVER mention authenticity in the listing text at all — no claims ("authentic", "guaranteed real", "100% legit") AND no disclaimers ("authenticity not verified", "cannot guarantee authenticity"). Authenticity caveats go ONLY in the `disclaimers` array, which the seller sees privately.',
   '(2) If the brand is "unclear" or brand_confidence is low (< ~0.6), do NOT state the brand as fact — describe it generically or hedge ("appears to be", "unbranded/unknown").',
-  '(3) You do NOT know measurements — never invent them, and never include a measurements section or blank placeholders anywhere; the seller adds measurements separately in the app.',
+  '(3) You do NOT know measurements — never invent them, and never include a measurements section or blank placeholders anywhere; measurements are handled through Grailed\'s own measurements fields on the listing, never the description.',
   '(4) State ONLY facts present in the input attributes. NEVER introduce a color, colorway, material, collaboration, era, or feature that is not given — if an attribute is unknown or low-confidence, omit it entirely; never guess. The item\'s color is exactly what `primary_color`/`secondary_colors` say (a black item must never be described as red/white).',
   '(5) The title contains NO designer/brand name — the brand fills Grailed\'s separate designer field. Title = item + era/notable feature/model, under 7 words. Same for every title alternative.',
   '(6) Objective tone only — this is plain product description, not marketing. BANNED: hype and subjective filler such as "modern streetwear classic", "timeless", "must-have", "grail", "iconic", "versatile", "clean", "elevate your wardrobe", "wardrobe staple", "statement piece", "sought-after", "coveted", "effortless", and anything similar.',

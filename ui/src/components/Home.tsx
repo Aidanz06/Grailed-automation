@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, CircleHelp, ClipboardCheck, Eye, EyeOff, Images, Plus, Ruler, Trash2 } from 'lucide-react';
+import { ArrowRight, CircleHelp, ClipboardCheck, Eye, EyeOff, Images, Plus, Trash2 } from 'lucide-react';
 import type { Item } from '@/types';
 import type { Album } from '@/lib/api';
 import { isTriageDraft, readiness } from '@/lib/readiness';
@@ -91,8 +91,6 @@ interface Props {
   onDeleteItem: (id: number) => void;
   /** Hide/show a whole import batch on this screen (nothing is deleted). */
   onToggleAlbum: (id: number, hidden: boolean) => void;
-  /** Batch measure mode: tab through every draft's measurements in one table. */
-  onMeasure: () => void;
   /** Finish-drafts pass (R2): resolve every draft's remaining gaps in one queue. */
   onFinish: () => void;
   /** Open the in-app Guide (beta Part G) — the "?" button. */
@@ -107,7 +105,7 @@ interface Props {
 // De-stubbed per the UX review (Q3): no "Check Grailed messages" dead button
 // (deferred per §8.5 — add it back only when it does something), no demo-only
 // "hide flagged" toggle, no "mock data" subtitle in shipped UI.
-export function Home({ items, albums, onOpenItem, onNewBatch, onDeleteItem, onToggleAlbum, onMeasure, onFinish, onOpenGuide, toast, updater }: Props) {
+export function Home({ items, albums, onOpenItem, onNewBatch, onDeleteItem, onToggleAlbum, onFinish, onOpenGuide, toast, updater }: Props) {
   // Items in hidden albums leave every Home list (but stay in the workspace
   // sidebar and DB — hiding is organization, not deletion).
   const hiddenAlbumIds = new Set(albums.filter((a) => a.hidden).map((a) => a.id));
@@ -140,15 +138,6 @@ export function Home({ items, albums, onOpenItem, onNewBatch, onDeleteItem, onTo
             onClick={onFinish}
           >
             <ClipboardCheck /> Finish drafts ({unready})
-          </Button>
-        )}
-        {drafts.length > 0 && (
-          <Button
-            variant="outline"
-            title="Tab through every draft's measurements in one table — the slowest part of listing, done in one sitting."
-            onClick={onMeasure}
-          >
-            <Ruler /> Measure
           </Button>
         )}
         <Button onClick={onNewBatch}>

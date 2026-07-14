@@ -123,7 +123,11 @@ export interface DescParts {
   care: string;
 }
 
-export type DescSectionKey = 'materials' | 'condition' | 'fit' | 'flaws' | 'care' | 'measurements';
+// "measurements" was removed from the section set (owner decision 2026-07-14):
+// on Grailed, measurements go through Grailed's own measurements system, never
+// the description — the app no longer collects or renders them anywhere. The
+// Measurements type + Item.measurements stay so legacy saved data round-trips.
+export type DescSectionKey = 'materials' | 'condition' | 'fit' | 'flaws' | 'care';
 export type PresetName = 'Minimal' | 'Standard' | 'Detailed' | 'Custom';
 
 export interface DescProfile {

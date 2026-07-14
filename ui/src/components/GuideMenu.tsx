@@ -34,10 +34,6 @@ const SCREENS: Array<{ name: string; body: string }> = [
     body: 'One listing: photos, title, description, details, and price with the sold comps behind it. The checklist on the right shows exactly what’s left; click a row to jump to it.',
   },
   {
-    name: 'Measure',
-    body: 'Every draft’s measurement blanks in one table, so you can tape-measure the whole rack in one sitting instead of opening each editor.',
-  },
-  {
     name: 'Finish drafts',
     body: 'One pass over every draft that still needs something — it shows only the gaps (a missing size, an unconfirmed category) and skips drafts that are already complete.',
   },

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ClipboardCheck, Link2, Ruler, Unlink2 } from 'lucide-react';
+import { ArrowLeft, ClipboardCheck, Link2, Unlink2 } from 'lucide-react';
 import type { DescProfile, Item } from '@/types';
 import { DEFAULT_PROFILE } from '@/lib/description';
 import { api, type Album, type ConfigStatus } from '@/lib/api';
@@ -12,7 +12,6 @@ import { Onboarding, ONBOARDED_KEY } from '@/components/Onboarding';
 import { CheckUpdatesButton, UpdateBanner, UpdateModal, useUpdater } from '@/components/Updater';
 import { editsOf } from '@/components/DraftEditor';
 import { Home } from '@/components/Home';
-import { MeasureScreen } from '@/components/MeasureScreen';
 import { FinishScreen } from '@/components/FinishScreen';
 import { Sidebar } from '@/components/Sidebar';
 import { Editor } from '@/components/Editor';
@@ -22,7 +21,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { BatchProgressBar } from '@/components/BatchProgressBar';
 
 export type Selection = number | 'import';
-export type View = 'home' | 'workspace' | 'measure' | 'finish';
+export type View = 'home' | 'workspace' | 'finish';
 export type UpdateItem = (id: number, recipe: (draft: Item) => void) => void;
 
 // Persisted dock-Chrome intent (audit §2.5).
@@ -33,8 +32,8 @@ export default function App() {
   const [albums, setAlbums] = useState<Album[]>([]);
   const [view, setView] = useState<View>('home');
   const [selected, setSelected] = useState<Selection>('import');
-  // Where a batch pass (Measure / Finish drafts) was launched from, so "Done"
-  // returns there (audit §2.2: passes are reachable from Home AND workspace).
+  // Where a batch pass (Finish drafts) was launched from, so "Done" returns
+  // there (audit §2.2: passes are reachable from Home AND workspace).
   const [passReturn, setPassReturn] = useState<View>('home');
   // One-shot: "New batch" opens the OS folder picker on the Import screen
   // without the extra drop-zone click (audit §2.4). Consumed on mount.
@@ -205,10 +204,6 @@ export default function App() {
     setSelected('import');
     setView('workspace');
   };
-  const openMeasure = (from: View) => {
-    setPassReturn(from);
-    setView('measure');
-  };
   const openFinish = (from: View) => {
     setPassReturn(from);
     setView('finish');
@@ -369,21 +364,10 @@ export default function App() {
               .then(() => setToastMsg(`Deleted “${title}” from the app. Grailed and your photo files are untouched.`))
               .catch((err) => setToastMsg(`Delete failed: ${errorMessage(err)}`));
           }}
-          onMeasure={() => openMeasure('home')}
           onFinish={() => openFinish('home')}
           onOpenGuide={() => setGuide('how')}
           toast={setToastMsg}
           updater={updater}
-        />
-      ) : view === 'measure' ? (
-        <MeasureScreen
-          drafts={draftQueue}
-          toast={setToastMsg}
-          onDone={() => {
-            // Reload so editors show the numbers typed in measure mode, then
-            // return to wherever Measure was launched from (Home or workspace).
-            reloadItems().then(() => setView(passReturn));
-          }}
         />
       ) : view === 'finish' ? (
         <FinishScreen
@@ -416,16 +400,6 @@ export default function App() {
                 onClick={() => openFinish('workspace')}
               >
                 <ClipboardCheck /> Finish drafts ({unreadyCount})
-              </Button>
-            )}
-            {draftQueue.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                title="Measure every draft in one pass — tab through all of them without opening each editor."
-                onClick={() => openMeasure('workspace')}
-              >
-                <Ruler /> Measure
               </Button>
             )}
             <Button

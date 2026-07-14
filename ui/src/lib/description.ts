@@ -1,15 +1,12 @@
 import type { DescProfile, DescSectionKey, Item, PresetName } from '@/types';
 
-// Overview is always included; these are the toggleable text sections (mapped to
-// descParts). "measurements" is a separate structured group, not body text.
-export const TEXT_SECTIONS: Exclude<DescSectionKey, 'measurements'>[] = [
-  'materials',
-  'condition',
-  'fit',
-  'flaws',
-  'care',
-];
-export const ALL_SECTIONS: DescSectionKey[] = [...TEXT_SECTIONS, 'measurements'];
+// Overview is always included; these are the toggleable text sections (mapped
+// to descParts). Measurements are GONE from the app entirely (owner decision
+// 2026-07-14): on Grailed they go through Grailed's own measurements system,
+// never the description. Legacy saved descProfiles may still carry a
+// `measurements` key — ALL_SECTIONS-driven code simply ignores it.
+export const TEXT_SECTIONS: DescSectionKey[] = ['materials', 'condition', 'fit', 'flaws', 'care'];
+export const ALL_SECTIONS: DescSectionKey[] = [...TEXT_SECTIONS];
 
 export const SECTION_LABELS: Record<DescSectionKey, string> = {
   materials: 'Materials',
@@ -17,13 +14,12 @@ export const SECTION_LABELS: Record<DescSectionKey, string> = {
   fit: 'Fit',
   flaws: 'Flaws',
   care: 'Care/shipping',
-  measurements: 'Measurements',
 };
 
 export const PRESETS: Record<'Minimal' | 'Standard' | 'Detailed', Record<DescSectionKey, boolean>> = {
-  Minimal: { materials: false, condition: true, fit: false, flaws: false, care: false, measurements: false },
-  Standard: { materials: true, condition: true, fit: false, flaws: false, care: false, measurements: true },
-  Detailed: { materials: true, condition: true, fit: true, flaws: true, care: true, measurements: true },
+  Minimal: { materials: false, condition: true, fit: false, flaws: false, care: false },
+  Standard: { materials: true, condition: true, fit: false, flaws: false, care: false },
+  Detailed: { materials: true, condition: true, fit: true, flaws: true, care: true },
 };
 
 // Plan §B (tester feedback): drafts default to Minimal — overview + a short

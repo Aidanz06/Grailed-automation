@@ -5,9 +5,9 @@ listings → an editable price range. **No dependency on `phase0b.js`, the Chrom
 profile, or anything CDP-related** — it makes its own Claude API and HTTP calls.
 
 ## Files
-- `content.js` — `generateContent(attributes)`: Grailed-style title, measurement-forward
-  description (blank measurement placeholders — never invented), and up to 10 tags (PRD §5.2).
-  Never claims authenticity; hedges the brand when confidence is low.
+- `content.js` — `generateContent(attributes)`: Grailed-style title, a short objective
+  description (no measurements — those live in Grailed's own listing fields), and up to
+  10 tags (PRD §5.2). Never claims authenticity; hedges the brand when confidence is low.
 - `vision.js` — `extractAttributes(photoPaths)`: one Claude vision call per item
   (all photos in one message), returns structured attributes. Everything framed as
   "resembles", never confirmed identity (PRD §8.8). Uses `claude-opus-4-8`, adaptive

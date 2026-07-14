@@ -13,8 +13,8 @@ import { CONDITIONS } from '@/components/DraftEditor';
 /*
  * R4 bulk edit bar: one action across the selected drafts instead of N editor
  * visits. SAFE seller-judgment fields only — condition, tags, description
- * style. Size, measurements, and price VALUES are deliberately absent (per-
- * item truth; never bulk-set); bulk Recompute re-runs each item's OWN comps.
+ * style. Size and price VALUES are deliberately absent (per-item truth;
+ * never bulk-set); bulk Recompute re-runs each item's OWN comps.
  * Every action is the existing per-item saveItem edit applied in a loop —
  * no bulk fill, no bulk submit, nothing touches Grailed.
  */
@@ -199,7 +199,7 @@ export function BulkActionBar({ targets, updateItem, toast, onClear }: Props) {
         </Button>
       </div>
       <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
-        Size, measurements, and price values stay per-item — they’re never bulk-set. No bulk fill either: filling is
+        Size and price values stay per-item — they’re never bulk-set. No bulk fill either: filling is
         one click per draft.
       </p>
     </div>

@@ -1,6 +1,6 @@
 # CLAUDE.md — Resale Studio / Grailed automation
 
-@docs/PRD.md
+@docs/grailed-automation-prd.md
 
 ## Current status
 Phase 0b COMPLETE — §8.5 cleared (Runtime.enable + evaluate: no
@@ -450,6 +450,28 @@ review item still routes to Review, draft to editor, 0 console
 errors. ui:typecheck clean. Eyes-on remaining: a real streaming
 import while editing (the original tester scenario) + a fill with
 photos on a real listing to see photos-first in the checklist.
+MEASUREMENTS REMOVED ENTIRELY 2026-07-14 (owner decision — on
+Grailed, measurements go through Grailed's OWN listing fields,
+never the description; the DetailPanel pill was also always-
+available by special-case, which read as "still selected"):
+deleted MeasureScreen.tsx + lib/measurements.ts, removed the
+DraftEditor grid, the DetailPanel 'measurements' section/pill
+(DescSectionKey/ALL_SECTIONS/PRESETS no longer know it — legacy
+saved descProfiles with a measurements key are simply ignored),
+Home/workspace Measure buttons + 'measure' view, copyListing
+measurement lines, GuideMenu entry, BulkActionBar copy;
+content.js prompt copy now says measurements live in Grailed's
+own fields. KEPT: Measurements type, Item.measurements,
+editsOf/save path + store column — legacy saved data round-trips
+untouched. Preview-verified (no Measure button, no pill even on
+Detailed, no grid, 0 console errors); ui:typecheck + ui:build
+clean. Same day: the style-template PENCIL moved from the
+Description header (tiny, undiscoverable) to a CIRCULAR floating
+button in the description textarea's bottom-right (rounded-full,
+bg-card border, primary fill while the panel is open, click
+toggles open/closed; textarea gained pb-12 so text clears it).
+Preview-verified: geometry inside the bottom-right corner,
+panel opens/closes, screenshot eyeballed, 0 console errors.
 
 ## Non-negotiable rules
 - Never apply navigator/fingerprint/UA spoofing anywhere in this

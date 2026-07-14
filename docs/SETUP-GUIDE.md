@@ -165,8 +165,8 @@ Inside the app:
    the app). The status should turn to **"Chrome ready."**
 3. Back in the app, click **New batch** and pick a folder of item photos. The app
    groups them and drafts titles, descriptions, and prices.
-4. Open a draft, check it over, add measurements (or use **Measure** to do them
-   all at once), and confirm the suggested Grailed category.
+4. Open a draft, check it over, and confirm the suggested Grailed category.
+   (Measurements go in Grailed's own form fields after the fill, if you want them.)
 5. Click **Fill listing in Chrome**. The app types the listing into the sell
    form. **Review it in Chrome and click Publish yourself** — the app never
    submits.
