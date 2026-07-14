@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ChromeNotifier } from '@/components/ChromeNotifier';
 import { GettingStarted } from '@/components/GettingStarted';
+import { CheckUpdatesButton, type Updater } from '@/components/Updater';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { cn, formatWhen } from '@/lib/utils';
 
@@ -98,12 +99,15 @@ interface Props {
   onOpenGuide: () => void;
   /** App-level toast — carries the Chrome notifier's launch-result copy. */
   toast?: (msg: string) => void;
+  /** In-app updater state (App-owned) — renders the header "Check for
+   * updates" entry; hidden entirely when the build isn't a git clone. */
+  updater?: Updater;
 }
 
 // De-stubbed per the UX review (Q3): no "Check Grailed messages" dead button
 // (deferred per §8.5 — add it back only when it does something), no demo-only
 // "hide flagged" toggle, no "mock data" subtitle in shipped UI.
-export function Home({ items, albums, onOpenItem, onNewBatch, onDeleteItem, onToggleAlbum, onMeasure, onFinish, onOpenGuide, toast }: Props) {
+export function Home({ items, albums, onOpenItem, onNewBatch, onDeleteItem, onToggleAlbum, onMeasure, onFinish, onOpenGuide, toast, updater }: Props) {
   // Items in hidden albums leave every Home list (but stay in the workspace
   // sidebar and DB — hiding is organization, not deletion).
   const hiddenAlbumIds = new Set(albums.filter((a) => a.hidden).map((a) => a.id));
@@ -124,6 +128,7 @@ export function Home({ items, albums, onOpenItem, onNewBatch, onDeleteItem, onTo
           Tailor <span className="italic text-primary">Studio</span>
         </span>
         <span className="flex-1" />
+        {updater && <CheckUpdatesButton u={updater} />}
         <Button variant="ghost" size="sm" title="How Tailor works — the guide" aria-label="open guide" onClick={onOpenGuide}>
           <CircleHelp />
         </Button>

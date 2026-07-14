@@ -94,11 +94,32 @@ function openStore(dbPath = DEFAULT_DB, opts = {}) {
   // most recent fill + per-field results, so a re-fill can target only what the
   // user changed since. NULL = never filled.
   try { db.exec('ALTER TABLE items ADD COLUMN last_fill_json TEXT'); } catch {}
+  // App settings the PIPELINE also reads (plan §A: the description style
+  // template must reach generation at import AND on Regenerate, so it can't
+  // live in renderer state). Plain key/value; V1 key: descriptionStyleTemplate.
+  db.exec('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)');
   const now = () => (opts.now ? new Date(opts.now).toISOString() : new Date().toISOString());
 
   const api = {
     db,
     close: () => db.close(),
+
+    /** Read one app setting; null when unset. */
+    getSetting(key) {
+      const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
+      return row ? row.value : null;
+    },
+    /** Persist one app setting; empty/null value deletes the key. */
+    setSetting(key, value) {
+      if (value == null || String(value).trim() === '') {
+        db.prepare('DELETE FROM settings WHERE key = ?').run(key);
+      } else {
+        db.prepare(
+          'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+        ).run(key, String(value));
+      }
+      return true;
+    },
 
     /**
      * Persist one full pipeline run as an item + its photos, listing, comps, flags.

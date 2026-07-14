@@ -34,12 +34,22 @@ export interface ExtractedAttributes {
   grailed_color?: string;
   grailed_style?: string;
   country_of_origin?: string;
+  // Grailed's native Smart Pricing (plan §I) — strictly opt-in per item
+  // (default OFF/absent). Both must be set for the fill to touch Grailed's
+  // Smart Pricing section: the toggle is enabled and the floor typed, then
+  // the user reviews and publishes. Never auto-enabled.
+  smart_pricing_enabled?: boolean;
+  smart_pricing_floor?: number | null;
   // A1 staged confirmation: BOTH set = the user confirmed the category, which
   // unlocks the category/size/sub-category/designer cascade on Fill listing.
   // Absent = cascade stays manual (never blind-filled from a suggestion).
   grailed_department?: string;
   grailed_category?: string;
   // Produced by the real vision call; not all set in mock:
+  /** AI's best fit among Grailed's fixed Style options (or "Unclear") — the
+   *  editor auto-adopts it into grailed_style when it validates against the
+   *  live option list, same pattern as color/category. */
+  grailed_style_estimate?: string;
   secondary_colors?: string[];
   materials?: string[];
   search_keywords?: string[];
@@ -72,10 +82,22 @@ export interface RangeConfidence {
 export interface PriceRange {
   currency: string;
   low: number | null;
+  /** The price to use — the seller-editable "your price", what autofill fills.
+   * Since plan §D2 the pipeline seeds it with the recommended LIST price
+   * (~70th weighted pct of sold sales — offer headroom built in). */
   median: number | null;
   high: number | null;
+  /** Weighted SOLD median — the expected-sale figure ("typically sells ~$X").
+   * Absent on ranges computed before the list/sell split. */
+  soldMedian?: number | null;
+  /** The recommended list price as computed (median is seeded from it). */
+  listAt?: number | null;
+  /** Comps whose Grailed condition is is_new — drives the NWT thin-comps note. */
+  newCompCount?: number;
   sampleSize?: number;
   outliersDropped?: number;
+  /** High-tail sales kept at reduced weight instead of dropped (plan §D2). */
+  outliersDownweighted?: number;
   basis?: string;
   mostRelevantComps: Comp[];
   /** UI-mock only: a longer static list behind the "view all" expander */

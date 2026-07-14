@@ -43,6 +43,7 @@ export const FIELD_LABEL: Record<string, string> = {
   title: 'Title',
   description: 'Description',
   price: 'Price',
+  smartPricing: 'Smart Pricing',
   condition: 'Condition',
   color: 'Color',
   style: 'Style',

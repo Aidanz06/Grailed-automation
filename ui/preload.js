@@ -56,6 +56,21 @@ contextBridge.exposeInMainWorld('tailor', {
   // Read-only preflight: are the build's keys configured? Booleans only —
   // key values never reach the renderer.
   getConfigStatus: () => ipcRenderer.invoke('config:status'),
+  // App settings (plain key/value in the SQLite store; the pipeline reads
+  // them too — e.g. the description style template, plan §A).
+  getSetting: (key) => ipcRenderer.invoke('settings:get', key),
+  setSetting: (key, value) => ipcRenderer.invoke('settings:set', key, value),
+  // In-app one-click updater (git pull --ff-only + npm install + build +
+  // relaunch, main-process only). check → { supported, updateAvailable, … };
+  // onUpdateProgress returns an unsubscribe function.
+  checkForUpdate: () => ipcRenderer.invoke('update:check'),
+  applyUpdate: (opts) => ipcRenderer.invoke('update:apply', opts),
+  cancelUpdate: () => ipcRenderer.invoke('update:cancel'),
+  onUpdateProgress: (cb) => {
+    const listener = (_e, p) => cb(p);
+    ipcRenderer.on('update:progress', listener);
+    return () => ipcRenderer.removeListener('update:progress', listener);
+  },
   // Read-only Chrome tab probe (HTTP /json/list only — no page connection):
   // drives the header status chip + the fresh-Sell-form fill gate.
   getChromeStatus: () => ipcRenderer.invoke('chrome:status'),

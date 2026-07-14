@@ -26,7 +26,10 @@ export const PRESETS: Record<'Minimal' | 'Standard' | 'Detailed', Record<DescSec
   Detailed: { materials: true, condition: true, fit: true, flaws: true, care: true, measurements: true },
 };
 
-export const DEFAULT_PROFILE: DescProfile = { preset: 'Standard', sections: { ...PRESETS.Standard } };
+// Plan §B (tester feedback): drafts default to Minimal — overview + a short
+// condition line, measurements off. The presets themselves are untouched so
+// the Minimal/Standard/Detailed toggles still work per item.
+export const DEFAULT_PROFILE: DescProfile = { preset: 'Minimal', sections: { ...PRESETS.Minimal } };
 
 export function presetName(sections: Record<DescSectionKey, boolean>): PresetName {
   for (const name of ['Minimal', 'Standard', 'Detailed'] as const) {

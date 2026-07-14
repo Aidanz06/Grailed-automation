@@ -36,6 +36,13 @@
     }
   },
   "autocompletes": {
+    "_timing": {
+      "_note": "fillAutocomplete pacing (bug G hardening, plan §G). pollMs × pollTries = the per-attempt suggestion-wait budget (~4s, proven live 2026-07-03/04). retries = extra type→poll→click attempts after a failed commit; retryBackoffMs grows per retry. The click fires only once the suggestion list SETTLES (same items on two consecutive polls) or the budget runs out with a match still showing.",
+      "pollMs": 500,
+      "pollTries": 8,
+      "retries": 2,
+      "retryBackoffMs": 700
+    },
     "designer": {
       "selector": "#designer-autocomplete",
       "kind": "autocomplete",
@@ -225,9 +232,21 @@
     }
   },
   "checkboxes": {
-    "makeOffer": "input[name=\"makeOffer\"]",
-    "smartPricingEnabled": "input[name=\"smartPricing.enabled\"]",
-    "smartPricingFloor": "input[name=\"smartPricing.minimumPrice\"]"
+    "makeOffer": "input[name=\"makeOffer\"]"
+  },
+  "smartPricing": {
+    "_note": "Grailed's NATIVE Smart Pricing (plan §I), re-captured live 2026-07-12 with a read-only phase0b-footprint probe. The seller enables it and sets a floor; Grailed then lowers the price ~10%/week toward the floor. The app fills these ONLY for items whose seller opted in (DraftEditor/PricePanel toggle, default OFF) — never auto-enabled, never autonomous; the user still reviews and Publishes. CAVEAT found live: Grailed's own fresh form renders the toggle ALREADY ON with an empty floor — the driver treats 'already checked' as alreadySet and only ever sets it to the opted-in state; it never touches the section for non-opted-in items.",
+    "toggle": "input[name=\"smartPricing.enabled\"]",
+    "toggleKind": "checkbox",
+    "toggleNote": "type=checkbox behind a styled switch label (SellFormCheckbox _switch); the input itself is visible — synthetic el.click() toggles it (verify checked after).",
+    "floor": "input[name=\"smartPricing.minimumPrice\"]",
+    "floorKind": "native-setter",
+    "floorNote": "type=tel, placeholder 'Floor Price (USD)'; digits only, same technique as price"
+  },
+  "fill": {
+    "_note": "fillListing step isolation (plan §K): every field step is time-capped and runs isolated — a thrown/hung field (the tester's collab-designer hang) is marked failed and the fill CONTINUES; it never aborts the run. Photos are filled FIRST (right after the fresh form opens) so a flaky cascade/designer can never cost them. The §8.1 detection abort (AutofillAbort) still stops everything immediately. photoStepTimeoutMs is larger — up to 9 real uploads.",
+    "stepTimeoutMs": 30000,
+    "photoStepTimeoutMs": 180000
   },
   "photos": {
     "fileInputs": "input[type=\"file\"][id^=\"photo_input_\"]",

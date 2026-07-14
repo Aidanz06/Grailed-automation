@@ -20,6 +20,18 @@ const DEFAULT_MODEL = process.env.ATTRIBUTE_MODEL || 'claude-opus-4-8';
 // (Haiku 4.5 → 400). Lets ATTRIBUTE_MODEL be set to a cheaper model without breaking.
 const { outputConfig, thinkingConfig } = require('./cluster');
 
+// Grailed's fixed "Style" dropdown options come from grailed-selectors.json
+// (the selectors file stays the single source — never hardcode them here).
+// "None" is a form choice, not an estimate; "Unclear" is the model's out.
+const GRAILED_STYLE_OPTIONS = (() => {
+  try {
+    const sel = require('../grailed-selectors.json');
+    const opts = (sel.dropdowns?.style?.options || []).filter((o) => o !== 'None');
+    if (opts.length) return opts;
+  } catch {}
+  return ['Luxury', 'Vintage', 'Avant-Garde', 'Streetwear', 'Workwear', 'Gorpcore', 'Sportswear', 'Basics', 'Western'];
+})();
+
 const MEDIA_TYPES = {
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
@@ -62,15 +74,33 @@ const ATTRIBUTE_SCHEMA = {
       type: 'string',
       description: 'Era / style the piece resembles, e.g. "y2k", "90s workwear", "modern minimal".',
     },
+    grailed_style_estimate: {
+      type: 'string',
+      enum: [...GRAILED_STYLE_OPTIONS, 'Unclear'],
+      description:
+        'Which of Grailed\'s fixed "Style" categories the piece best fits, judged from the photos ' +
+        '(silhouette, branding, fabric, styling cues). Pick the single best fit; choose "Unclear" ' +
+        'when none clearly applies — never force a weak match.',
+    },
     condition_rating: {
       type: 'string',
-      enum: ['new', 'like new', 'excellent', 'very good', 'good', 'fair', 'poor', 'unclear'],
-      description: 'Overall visible condition. Base only on what the photos show.',
+      enum: ['New with tags', 'Gently used', 'Used', 'Unclear'],
+      description:
+        'Overall visible condition, decided by these rules (plan §D — a new garment mis-rated "Used" ' +
+        'drags both the copy and the price): choose "New with tags" when retail/hang tags are visibly ' +
+        'ATTACHED, or the garment is clearly unworn/deadstock (crisp folds, pristine fabric, no wear ' +
+        'anywhere). Choose "Used" ONLY when the photos show actual wear evidence (fading, pilling, ' +
+        'stains, stretched cuffs, sole wear…). "Gently used" = worn but near-new with only trivial ' +
+        'signs. If the photos are genuinely ambiguous, choose "Unclear" — NEVER default to "Used" ' +
+        'just because the item is second-hand listing stock.',
     },
     condition_markers: {
       type: 'array',
       items: { type: 'string' },
-      description: 'Specific visible wear: fading, pilling, stains, holes, scuffs, etc. Empty if none visible.',
+      description:
+        'Specific visible condition evidence — BOTH directions: wear (fading, pilling, stains, holes, ' +
+        'scuffs) AND newness signals (hang tags attached, size sticker, deadstock crispness). ' +
+        'Empty if none visible.',
     },
     size: {
       type: 'string',
@@ -107,6 +137,7 @@ const ATTRIBUTE_SCHEMA = {
     'secondary_colors',
     'materials',
     'era_style',
+    'grailed_style_estimate',
     'condition_rating',
     'condition_markers',
     'size',
@@ -121,6 +152,8 @@ const SYSTEM_PROMPT = [
   'Describe only what is visibly evidenced in the photos. Never assert a confirmed brand or authenticity —',
   'always frame brand as what the item RESEMBLES, and set brand_confidence accordingly (low when a logo/tag is not clearly legible).',
   'If you cannot tell, use "unclear" rather than guessing confidently.',
+  'Condition is evidence-based, not assumed: attached retail tags or a clearly unworn garment → "New with tags";',
+  '"Used" requires VISIBLE wear; when ambiguous say "Unclear" — never default to "Used".',
   'You are identifying probable style/brand for pricing research, not authenticating.',
 ].join(' ');
 

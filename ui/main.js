@@ -75,9 +75,30 @@ ipcMain.handle('items:delete', (_e, id) => getStore().deleteItem(id));
 // albums. Pure app-side organization — nothing touches Grailed.
 ipcMain.handle('albums:list', () => getStore().listAlbums());
 ipcMain.handle('albums:setHidden', (_e, id, hidden) => getStore().setAlbumHidden(id, hidden));
+// App settings (plan §A): plain key/value in the SQLite store so the PIPELINE
+// can read them too (the description style template must reach generation at
+// import and on Regenerate). Generic get/set — the renderer owns which keys
+// exist; V1 key: descriptionStyleTemplate (see STYLE_TEMPLATE_KEY below and
+// its twin in ui/src/lib/api.ts).
+ipcMain.handle('settings:get', (_e, key) => getStore().getSetting(String(key)));
+ipcMain.handle('settings:set', (_e, key, value) => getStore().setSetting(String(key), value));
+// Key duplicated in ui/src/lib/api.ts (renderer can't import main constants).
+const STYLE_TEMPLATE_KEY = 'descriptionStyleTemplate';
+function styleTemplate() {
+  try {
+    return getStore().getSetting(STYLE_TEMPLATE_KEY) || undefined;
+  } catch {
+    return undefined; // settings must never block generation
+  }
+}
+
 // Slice 3: regenerate listing content from (possibly user-edited) attributes.
+// The persisted style template rides along so Regenerate matches import.
 ipcMain.handle('content:generate', (_e, attributes, instructions) =>
-  generateContent(attributes, instructions ? { instructions } : {})
+  generateContent(attributes, {
+    ...(instructions ? { instructions } : {}),
+    ...(styleTemplate() ? { styleExample: styleTemplate() } : {}),
+  })
 );
 // Slice 4: recompute price/comps from (possibly user-edited) attributes via the
 // guarded live-Grailed provider. Cache/rate-limit/circuit-breaker are disk-backed
@@ -194,6 +215,7 @@ ipcMain.handle('batch:process', async (e, folder) => {
           providerName: shared.providerName,
           content: true,
           label: `[group ${g.groupId}]`,
+          styleExample: styleTemplate(), // plan §A: imports match the seller's saved style
         });
         // base last so confidence-annotated photos + flags win over plain paths.
         const id = store.saveItemRun({ ...item, ...base, status: 'draft' });
@@ -260,7 +282,13 @@ ipcMain.handle('review:confirm', async (_e, itemId) => {
     path.isAbsolute(p.file_path) ? p.file_path : path.join(PROJECT_ROOT, p.file_path)
   );
   const { provider, providerName } = makeCompProvider({}, (m) => console.error(m));
-  const run = await processItem(photoPaths, { provider, providerName, content: true, label: `[review ${itemId}]` });
+  const run = await processItem(photoPaths, {
+    provider,
+    providerName,
+    content: true,
+    label: `[review ${itemId}]`,
+    styleExample: styleTemplate(), // plan §A: review-confirm drafts match the saved style too
+  });
   store.updateItemRun(itemId, { attributes: run.attributes, content: run.content, range: run.range, comps: run.comps });
   store.logCorrection('confirm', { itemId, photos: item.photos.length });
   return { itemId, title: run.content?.title ?? null };
@@ -342,11 +370,23 @@ function buildFillPayload(item) {
     }
   }
 
+  // Smart Pricing (plan §I): opt-in ONLY. The `smartPricing` field IS the
+  // floor value, and non-null is the whole signal the driver acts on — it
+  // exists only when the user enabled the per-item toggle (default OFF) AND
+  // set a numeric floor. Anything else stays null and the driver never touches
+  // Grailed's Smart Pricing section. Field name matches the driver's step/
+  // results key so the last-fill snapshot + changed-only diff work unchanged.
+  const spFloorDigits =
+    attrs.smart_pricing_enabled && attrs.smart_pricing_floor != null
+      ? String(attrs.smart_pricing_floor).replace(/[^0-9]/g, '')
+      : '';
+
   return {
     fields: {
       title: content.title ?? listing.title ?? null,
       description: content.description ?? listing.description ?? null,
       price: listing.price_range?.median ?? null,
+      smartPricing: spFloorDigits ? Number(spFloorDigits) : null,
       condition: attrs.condition_rating || null,
       // User-selected Grailed details (optional attributes_json fields):
       color: attrs.grailed_color || null,
@@ -552,6 +592,42 @@ ipcMain.handle('config:status', () => ({
   hasAnthropicKey: !!process.env.ANTHROPIC_API_KEY,
   hasCompsKey: !!process.env.GRAILED_ALGOLIA_KEY,
 }));
+
+// In-app one-click updater (tester QoL — main-process + renderer plumbing
+// only; see ui/updater.js). git pull --ff-only + npm install + ui:build in
+// the repo root, then relaunch. Hidden entirely when not running from a git
+// clone ({ supported:false }).
+const updaterMod = require('./updater');
+let updating = false;
+ipcMain.handle('update:check', () => updaterMod.checkForUpdate());
+ipcMain.handle('update:apply', async (e, opts = {}) => {
+  if (updating) return { ok: false, failedStep: null, message: 'An update is already running.', output: [] };
+  // The renderer says whether an import or fill is in flight (it watches both
+  // streams) — never rebuild the app under a running job.
+  if (opts && opts.busy) {
+    return { ok: false, failedStep: null, message: 'Finish the import or fill that’s running first, then update.', output: [] };
+  }
+  updating = true;
+  const wc = e.sender;
+  const onProgress = (p) => {
+    if (!wc.isDestroyed()) wc.send('update:progress', p);
+  };
+  try {
+    const res = await updaterMod.applyUpdate(updaterMod.REPO_ROOT, onProgress);
+    if (res.ok) {
+      onProgress({ step: 'restart', status: 'start', label: 'Restarting into the new version…' });
+      // Let the renderer paint the final state, then relaunch into fresh dist.
+      setTimeout(() => {
+        app.relaunch();
+        app.exit(0);
+      }, 1200);
+    }
+    return res;
+  } finally {
+    updating = false;
+  }
+});
+ipcMain.handle('update:cancel', () => updaterMod.cancelUpdate());
 
 // §8.1 breaker state for the renderer's warning banner (polled by App.tsx).
 ipcMain.handle('guard:status', () => {

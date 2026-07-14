@@ -107,6 +107,10 @@ export interface GeneratedContent extends ListingContent {
 // templates (category-specific), not from fixed keys here.
 const BLANK_MEASUREMENTS: Measurements = {};
 
+// Settings key for the seller's style template (plan §A). Twin constant lives
+// in ui/main.js (the main process reads the setting for batch + Regenerate).
+const STYLE_TEMPLATE_KEY = 'descriptionStyleTemplate';
+
 /** Normalize the model's snake_case desc_parts into the UI DescParts shape. */
 function adaptDescParts(dp: DescParts | null | undefined): DescParts | null {
   if (!dp) return null;
@@ -247,6 +251,12 @@ interface TailorBridge {
   getAutofillOptions(): Promise<AutofillOptions>;
   getGuardStatus(): Promise<GuardStatus>;
   getConfigStatus(): Promise<ConfigStatus>;
+  getSetting(key: string): Promise<string | null>;
+  setSetting(key: string, value: string | null): Promise<boolean>;
+  checkForUpdate(): Promise<UpdateCheck>;
+  applyUpdate(opts?: { busy?: boolean }): Promise<UpdateApplyResult>;
+  cancelUpdate(): Promise<{ ok: boolean; message?: string }>;
+  onUpdateProgress(cb: (p: UpdateProgress) => void): () => void;
   getChromeStatus(): Promise<ChromeStatus>;
   launchChrome(): Promise<ChromeLaunchResult>;
   openSellTab(): Promise<ChromeLaunchResult>;
@@ -320,6 +330,41 @@ export interface AutofillOptions {
   categoryTree: Record<string, string[]>;
 }
 
+/** In-app one-click updater (main runs git/npm in the repo root).
+ * supported:false = not running from a git clone (e.g. a packaged build) —
+ * the renderer hides the whole feature. */
+export interface UpdateCheck {
+  supported: boolean;
+  updateAvailable?: boolean;
+  /** Commits behind the tracking branch. */
+  behind?: number;
+  /** User-facing reason the check couldn't complete (offline, no upstream…). */
+  error?: string;
+}
+
+export type UpdateStep = 'download' | 'install' | 'build' | 'restart';
+
+/** Streamed over update:progress while an update applies. */
+export interface UpdateProgress {
+  step: UpdateStep;
+  status: 'start' | 'output' | 'done' | 'failed';
+  /** Step headline ("Installing dependencies…"), on status:'start'. */
+  label?: string;
+  /** Throttled raw output line, on status:'output'. */
+  line?: string;
+  /** Failure copy, on status:'failed'. */
+  detail?: string;
+}
+
+export interface UpdateApplyResult {
+  ok: boolean;
+  cancelled?: boolean;
+  failedStep?: UpdateStep | null;
+  message?: string;
+  /** Tail of the failed step's output — the "copy details" payload. */
+  output?: string[];
+}
+
 export interface Api {
   listItems(): Promise<Item[]>;
   getItem(id: number): Promise<Item | null>;
@@ -357,6 +402,20 @@ export interface Api {
   getGuardStatus(): Promise<GuardStatus>;
   /** Read-only key-presence preflight (booleans only, never key values). */
   getConfigStatus(): Promise<ConfigStatus>;
+  /** In-app updater: is a newer version available on the tracking branch? */
+  checkForUpdate(): Promise<UpdateCheck>;
+  /** Pull + install + build + relaunch. `busy` = an import/fill is running —
+   * main refuses rather than rebuild under a live job. */
+  applyUpdate(opts?: { busy?: boolean }): Promise<UpdateApplyResult>;
+  /** Cancel the running update (honored only before the build step). */
+  cancelUpdate(): Promise<{ ok: boolean; message?: string }>;
+  /** Live step/output stream during applyUpdate; returns an unsubscribe fn. */
+  onUpdateProgress(cb: (p: UpdateProgress) => void): () => void;
+  /** Plan §A: the seller's saved example listing — a persistent setting the
+   * PIPELINE reads at import and on Regenerate (style guidance only; the
+   * hard rules and each item's facts always win). "" = none set. */
+  getStyleTemplate(): Promise<string>;
+  setStyleTemplate(template: string): Promise<void>;
   /** Read-only Chrome tab probe — header chip + fresh-Sell-form fill gate. */
   getChromeStatus(): Promise<ChromeStatus>;
   /** Launch the dedicated CDP Chrome (no-op if already up). Login stays manual. */
@@ -427,8 +486,12 @@ function adaptRange(listing: StoreListing | null, comps: StoreComp[]): PriceRang
     low: pr.low ?? null,
     median: pr.median ?? null,
     high: pr.high ?? null,
+    soldMedian: pr.soldMedian ?? null,
+    listAt: pr.listAt ?? null,
+    newCompCount: pr.newCompCount,
     sampleSize: pr.sampleSize,
     outliersDropped: pr.outliersDropped,
+    outliersDownweighted: pr.outliersDownweighted,
     basis: pr.basis,
     mostRelevantComps: relevant.map(adaptComp),
     allComps: pr.allComps?.map(adaptComp),
@@ -443,8 +506,12 @@ function toUiRange(range: PipelineRange, comps: StoreComp[]): PriceRange {
     low: range.low ?? null,
     median: range.median ?? null,
     high: range.high ?? null,
+    soldMedian: range.soldMedian ?? null,
+    listAt: range.listAt ?? null,
+    newCompCount: range.newCompCount,
     sampleSize: range.sampleSize,
     outliersDropped: range.outliersDropped,
+    outliersDownweighted: range.outliersDownweighted,
     basis: range.basis,
     mostRelevantComps: (range.mostRelevantComps ?? []).map(adaptComp),
     allComps: comps.length ? comps.map(adaptComp) : undefined,
@@ -529,6 +596,11 @@ const mockDeletedIds = new Set<number>();
 // mirroring the real launch → sign in → open-a-Sell-form flow.
 type MockChromeState = 'ready' | 'no-sell-form' | 'disconnected';
 let mockChromeState: MockChromeState = 'ready';
+
+// Preview-only updater state: flip to true to walk the update banner + the
+// progress modal in ui:dev (spec default: supported, no update available).
+const mockUpdateAvailable = false;
+const mockUpdateSubs = new Set<(p: UpdateProgress) => void>();
 
 // Preview-only albums: two fake import batches so the Home hide/show flow is
 // previewable. Hidden state lives here for the session.
@@ -635,6 +707,10 @@ const mockApi: Api = {
         low: median - 15,
         median,
         high: median + 25,
+        // Preview the §D2 list/sells split (median above = the list price).
+        soldMedian: median - 8,
+        listAt: median,
+        newCompCount: 1,
         sampleSize: comps.length,
         basis: 'mock recompute',
         mostRelevantComps: comps,
@@ -718,6 +794,57 @@ const mockApi: Api = {
   // Preview reads as fully configured (flip these to preview the banners).
   async getConfigStatus() {
     return { hasAnthropicKey: true, hasCompsKey: true };
+  },
+  // In-app updater, previewable: check says up-to-date (per spec); flip
+  // mockUpdateAvailable below to walk the banner + modal. Apply simulates the
+  // four-step stream (no git/npm in the browser preview).
+  async checkForUpdate() {
+    return { supported: true, updateAvailable: mockUpdateAvailable, behind: mockUpdateAvailable ? 2 : 0 };
+  },
+  async applyUpdate(opts) {
+    if (opts?.busy) return { ok: false, failedStep: null, message: 'Finish the import or fill that’s running first, then update.', output: [] };
+    console.log('[mock] applyUpdate — simulated; a real update needs the desktop app');
+    const emit = (p: UpdateProgress) => mockUpdateSubs.forEach((cb) => cb(p));
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const steps: Array<[UpdateStep, string]> = [
+      ['download', 'Downloading the new version…'],
+      ['install', 'Installing dependencies…'],
+      ['build', 'Building the app (~10–30s)…'],
+    ];
+    for (const [step, label] of steps) {
+      emit({ step, status: 'start', label });
+      await wait(700);
+      emit({ step, status: 'output', line: `[mock] ${step} running…` });
+      await wait(700);
+      emit({ step, status: 'done' });
+    }
+    emit({ step: 'restart', status: 'start', label: 'Restarting into the new version…' });
+    return { ok: true };
+  },
+  async cancelUpdate() {
+    return { ok: true };
+  },
+  onUpdateProgress(cb) {
+    mockUpdateSubs.add(cb);
+    return () => mockUpdateSubs.delete(cb);
+  },
+  // Preview style template: localStorage stands in for the SQLite setting so
+  // the save → survives-reload walk works without a backend.
+  async getStyleTemplate() {
+    try {
+      return localStorage.getItem(STYLE_TEMPLATE_KEY) ?? '';
+    } catch {
+      return '';
+    }
+  },
+  async setStyleTemplate(template) {
+    console.log('[mock] setStyleTemplate — persisted to localStorage for this preview');
+    try {
+      if (template.trim()) localStorage.setItem(STYLE_TEMPLATE_KEY, template);
+      else localStorage.removeItem(STYLE_TEMPLATE_KEY);
+    } catch {
+      /* private mode — session-only */
+    }
   },
   // No CDP in the browser preview — reports per mockChromeState ('ready' by
   // default so the normal flow renders; flip it above to walk the other UI).
@@ -897,6 +1024,24 @@ function realApi(bridge: TailorBridge): Api {
     },
     async getConfigStatus() {
       return bridge.getConfigStatus();
+    },
+    async checkForUpdate() {
+      return bridge.checkForUpdate();
+    },
+    async applyUpdate(opts) {
+      return bridge.applyUpdate(opts);
+    },
+    async cancelUpdate() {
+      return bridge.cancelUpdate();
+    },
+    onUpdateProgress(cb) {
+      return bridge.onUpdateProgress(cb);
+    },
+    async getStyleTemplate() {
+      return (await bridge.getSetting(STYLE_TEMPLATE_KEY)) ?? '';
+    },
+    async setStyleTemplate(template) {
+      await bridge.setSetting(STYLE_TEMPLATE_KEY, template.trim() ? template : null);
     },
     async getChromeStatus() {
       return bridge.getChromeStatus();

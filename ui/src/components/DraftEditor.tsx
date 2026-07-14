@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, RefreshCw } from 'lucide-react';
+import { ArrowUpRight, Pencil, RefreshCw } from 'lucide-react';
 import type { DescProfile, Item } from '@/types';
 import { api, type AutofillOptions, type ChromeStatus, type FillChanges } from '@/lib/api';
 import { suggestGrailedCategory } from '@/lib/grailedCategory';
@@ -58,6 +58,9 @@ interface Props {
    * runs the exact same gated fillListing path as the button (never submits;
    * blocked with the warning card when Chrome isn't on a fresh Sell form). */
   fillSignal?: number;
+  /** Reports fill activity upward (in-app updater guard: never rebuild the
+   * app under a running fill). */
+  onFillingChange?: (busy: boolean) => void;
 }
 
 // Everything a save persists — INCLUDING the photo list (order + membership):
@@ -76,7 +79,7 @@ export function editsOf(item: Item) {
   };
 }
 
-export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, toast, nextDraft, autoFill, onAutoFillConsumed, onMarkListedAndNext, fillSignal = 0 }: Props) {
+export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, toast, nextDraft, autoFill, onAutoFillConsumed, onMarkListedAndNext, fillSignal = 0, onFillingChange }: Props) {
   const content = item.content!;
   const attrs = item.attributes;
   const eff = effectiveProfile(item, defaultProfile);
@@ -197,6 +200,41 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
       });
   };
 
+  // Plan §A: the persistent description style template (SQLite setting —
+  // batch imports and Regenerate both read it main-side). This panel only
+  // edits the setting; generation picks it up automatically.
+  const [styleOpen, setStyleOpen] = useState(false);
+  const [styleText, setStyleText] = useState('');
+  const [styleSaving, setStyleSaving] = useState(false);
+  const openStyleEditor = () => {
+    if (styleOpen) return setStyleOpen(false);
+    api
+      .getStyleTemplate()
+      .then((t) => {
+        setStyleText(t);
+        setStyleOpen(true);
+      })
+      .catch((err) => toast(`Couldn’t load the style template: ${errorMessage(err)}`));
+  };
+  const saveStyle = (regenerateAfter: boolean) => {
+    setStyleSaving(true);
+    api
+      .setStyleTemplate(styleText)
+      .then(() => {
+        toast(
+          styleText.trim()
+            ? 'Style template saved — imports and Regenerate now match it.'
+            : 'Style template removed — generations use the default style.'
+        );
+        if (regenerateAfter) {
+          setStyleOpen(false);
+          regenerate();
+        }
+      })
+      .catch((err) => toast(`Couldn’t save the style template: ${errorMessage(err)}`))
+      .finally(() => setStyleSaving(false));
+  };
+
   // Grailed's fixed color/style lists + the department→category tree (from
   // grailed-selectors.json via IPC; static mirror in mock mode).
   const [fillOptions, setFillOptions] = useState<AutofillOptions>({ colors: [], styles: [], categoryTree: {} });
@@ -208,7 +246,8 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
   // a confident suggestion is now ADOPTED automatically instead of waiting for
   // a manual confirm — the card shows the selection with "Change", and
   // ui/main.js still only passes cascade fields that are set here. Same for
-  // color: the free-text primary_color maps onto Grailed's fixed list.
+  // color (free-text primary_color maps onto Grailed's fixed list) and style
+  // (vision's grailed_style_estimate, already one of the fixed options).
   const suggestion = suggestGrailedCategory(attrs);
   useEffect(() => {
     const colors = fillOptions.colors;
@@ -222,14 +261,22 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
         colors.find((c) => pc.includes(c.toLowerCase()) || c.toLowerCase().includes(pc)) ??
         null;
     }
+    // Style: adopt the vision estimate when it matches one of Grailed's fixed
+    // options ("Unclear" never matches by construction, so it stays manual).
+    let nextStyle: string | null = null;
+    if (!attrs.grailed_style && attrs.grailed_style_estimate) {
+      const est = attrs.grailed_style_estimate.trim().toLowerCase();
+      nextStyle = fillOptions.styles.find((s) => s.toLowerCase() === est) ?? null;
+    }
     const adoptCascade =
       !attrs.grailed_department &&
       !attrs.grailed_category &&
       !!suggestion &&
       (tree[suggestion.department] ?? []).includes(suggestion.category);
-    if (!nextColor && !adoptCascade) return;
+    if (!nextColor && !nextStyle && !adoptCascade) return;
     update((d) => {
       if (nextColor && !d.attributes.grailed_color) d.attributes.grailed_color = nextColor;
+      if (nextStyle && !d.attributes.grailed_style) d.attributes.grailed_style = nextStyle;
       if (adoptCascade && !d.attributes.grailed_department && !d.attributes.grailed_category && suggestion) {
         d.attributes.grailed_department = suggestion.department;
         d.attributes.grailed_category = suggestion.category;
@@ -281,6 +328,13 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
   // edits first so what's filled matches the screen. The app never submits —
   // the user reviews, completes category/size/designer, and submits in Chrome.
   const [filling, setFilling] = useState(false);
+  // In-app updater guard: report fill activity to App (never rebuild the app
+  // under a running fill). Cleared on unmount so it can't stick true.
+  useEffect(() => {
+    onFillingChange?.(filling);
+    return () => onFillingChange?.(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filling]);
   // UX review Q1: after a fill, the "NOT saved on Grailed until you Save as
   // Draft/Publish" fact must NOT live only in a self-dismissing toast — a
   // reload silently reverts the form to Grailed's last saved draft. This
@@ -602,7 +656,50 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
 
       {/* Description + detail selector + measurements */}
       <section id="sec-desc" className="mb-5 scroll-mt-4">
-        <label className={SECTION_LABEL}>Description</label>
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-sm font-semibold uppercase tracking-wider text-foreground">Description</span>
+          <button
+            type="button"
+            aria-label="edit description style template"
+            title="Your style template — paste an example listing and every generation matches its tone and format."
+            className="rounded p-1 text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+            onClick={openStyleEditor}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        {/* Plan §A: the seller's style template — one persistent example
+            listing every generation (import + Regenerate) emulates. Style
+            only: facts still come from each item, and the generation hard
+            rules always win. */}
+        {styleOpen && (
+          <div className="mb-2.5 rounded-md border bg-secondary/40 p-3">
+            <div className="mb-1.5 text-xs font-medium">Description style template</div>
+            <p className="mb-2 text-xs text-muted-foreground">
+              Used as a style example for all generations — tone, structure, and length. Facts still come from each
+              item; its specific details, measurements, and price are never copied. Leave empty to remove.
+            </p>
+            <Textarea
+              value={styleText}
+              placeholder="Paste one of your own listings here…"
+              className="min-h-[120px] font-mono text-[13px]"
+              onChange={(e) => setStyleText(e.target.value)}
+            />
+            <div className="mt-2 flex gap-2">
+              <Button size="sm" variant="outline" disabled={styleSaving} onClick={() => saveStyle(false)}>
+                {styleSaving ? 'Saving…' : 'Save style'}
+              </Button>
+              <Button size="sm" disabled={styleSaving || item.regenerating || !styleText.trim()} onClick={() => saveStyle(true)}>
+                <RefreshCw className={item.regenerating ? 'animate-spin' : ''} />
+                Save &amp; regenerate with my style
+              </Button>
+              <span className="flex-1" />
+              <Button size="sm" variant="ghost" onClick={() => setStyleOpen(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
         {/* The detail selector rebuilds the description from structured descParts.
             Items generated before those existed can't drive it — say so and offer
             the one-click fix (Q4) instead of silently hiding the control. */}

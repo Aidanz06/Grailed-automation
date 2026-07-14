@@ -54,12 +54,65 @@ function getJSON(pathname) {
   });
 }
 
+// DevTools HTTP endpoint with a method (PUT /json/new on current Chrome; GET
+// fallback for pre-111 builds). HTTP-only tab management — no page connection.
+function devtoolsRequest(method, pathname) {
+  return new Promise((resolve, reject) => {
+    const req = http.request({ host: '127.0.0.1', port: PORT, method, path: pathname }, (res) => {
+      let body = '';
+      res.on('data', (c) => (body += c));
+      res.on('end', () => {
+        if (res.statusCode && res.statusCode >= 400) return reject(new Error(`HTTP ${res.statusCode}: ${body.slice(0, 120)}`));
+        try { resolve(body ? JSON.parse(body) : null); } catch { resolve(body); }
+      });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+/*
+ * Open a brand-new /sell/new tab and return its target descriptor (id +
+ * webSocketDebuggerUrl) so the fill can bind to EXACTLY this tab — never a
+ * reused form, never the wrong sell tab when several are open (bug F,
+ * PLAN-description-and-pricing-improvements §F: a reused form made new photos
+ * append to a previous listing's). URL comes from grailed-selectors.json
+ * (sellForm.url), tab creation is the same DevTools-HTTP /json/new technique
+ * as ui/chrome-launch.js openSellTab — no page script, no navigation of
+ * existing tabs. NOTE: a new tab is necessary but NOT sufficient for a clean
+ * photo upload — Grailed can restore an unfinished draft into it — so
+ * fillListing/uploadPhotos still assert the photo slots are actually empty.
+ */
+async function openFreshSellTab() {
+  const url = loadSelectors().sellForm?.url || 'https://www.grailed.com/sell/new';
+  const newPath = '/json/new?' + encodeURIComponent(url);
+  let target = null;
+  try {
+    target = await devtoolsRequest('PUT', newPath);
+  } catch {
+    try {
+      target = await devtoolsRequest('GET', newPath); // pre-111 Chrome
+    } catch (err) {
+      throw new Error(`Couldn’t open a fresh Sell-form tab in the launched Chrome (${err.message}). Open grailed.com/sell/new there yourself, then fill again.`);
+    }
+  }
+  if (!target || !target.webSocketDebuggerUrl) {
+    throw new Error('Couldn’t open a fresh Sell-form tab in the launched Chrome. Open grailed.com/sell/new there yourself, then fill again.');
+  }
+  await devtoolsRequest('GET', `/json/activate/${target.id}`).catch(() => {});
+  return target;
+}
+
 async function portUp() {
   try { await getJSON('/json/version'); return true; } catch { return false; }
 }
 
 // Prefer the sell-form tab; fall back to any grailed tab (fillText will then
 // report "element not found" with a hint rather than silently filling elsewhere).
+// /json lists targets most-recently-focused first, so find() = the newest/
+// active sell tab when several are open (bug F #3). Photo-carrying fills don't
+// rely on this at all — they open their own tab and bind to its exact id
+// (openFreshSellTab); this path serves changed-only re-fills + CLI primitives.
 async function sellTarget() {
   const list = await getJSON('/json');
   const pages = list.filter((t) => t.type === 'page');
@@ -174,11 +227,16 @@ const menuItemsExpr = () => `(() => {
 // grailed-selectors.json): free text does NOT persist and synthetic pointer
 // events on the suggestion do nothing. Clear + focus, then REAL typing
 // (Input.insertText) and a REAL mouse click on the scrolled-into-view <li>.
-const acFocusExpr = (sel, want) => `(() => {
+// checkAlready: the "value already committed → no-op" short-circuit is ONLY
+// valid before this fill has typed anything (attempt 1). On retries the input
+// holds our OWN uncommitted typing — which equals `want` by construction — so
+// the check would false-positive and leave the field half-entered (found live
+// 2026-07-12 while hardening bug G).
+const acFocusExpr = (sel, want, checkAlready) => `(() => {
   const el = document.querySelector(${JSON.stringify(sel)});
   if (!el) return { ok: false, reason: 'input not found', selector: ${JSON.stringify(sel)} };
   if (el.disabled) return { ok: false, reason: 'input is disabled', selector: ${JSON.stringify(sel)} };
-  if (el.value.trim().toLowerCase() === ${JSON.stringify(want.toLowerCase())}) return { ok: true, alreadySet: true, value: el.value };
+  if (${JSON.stringify(!!checkAlready)} && el.value.trim().toLowerCase() === ${JSON.stringify(want.toLowerCase())}) return { ok: true, alreadySet: true, value: el.value };
   const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
   setter.call(el, '');
   el.dispatchEvent(new Event('input', { bubbles: true }));
@@ -194,12 +252,53 @@ const acRectExpr = (sel, want) => `(() => {
   // sides or an exact brand ("Louis Vuitton") can miss its own suggestion.
   const norm = (s) => String(s || '').replace(/\\u00a0/g, ' ').replace(/\\s+/g, ' ').trim().toLowerCase();
   const w = norm(${JSON.stringify(want)});
+  // §K collab matching: "Supreme x Nike" must find "Supreme X Nike" /
+  // "Nike x Supreme" / "Supreme/Nike" — compare token SETS with the collab
+  // separators ("x", "×") dropped. Only used for multi-token wants so plain
+  // one-word brands keep the stricter exact/substring behavior.
+  const toks = (s) => norm(s).split(/[^a-z0-9]+/).filter((t) => t && t !== 'x');
+  const wt = toks(${JSON.stringify(want)});
+  // texts = the settle signature (bug G): the caller clicks only once the
+  // suggestion list reports the SAME items on two consecutive polls.
+  const texts = items.map((li) => norm(li.textContent)).slice(0, 15);
   const item = items.find((li) => norm(li.textContent) === w)
-    || items.find((li) => norm(li.textContent).includes(w));
-  if (!item) return { ok: false, reason: 'no matching suggestion', want: ${JSON.stringify(want)}, available: items.map((li) => (li.textContent || '').trim()).slice(0, 10) };
+    || items.find((li) => norm(li.textContent).includes(w))
+    || (wt.length > 1
+      ? items.find((li) => { const lt = toks(li.textContent); return wt.every((t) => lt.includes(t)); })
+      : null);
+  if (!item) return { ok: false, reason: 'no matching suggestion', want: ${JSON.stringify(want)}, texts, available: items.map((li) => (li.textContent || '').trim()).slice(0, 10) };
   item.scrollIntoView({ block: 'center' });
   const r = item.getBoundingClientRect();
-  return { ok: true, x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2), text: (item.textContent || '').trim() };
+  return { ok: true, x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2), text: (item.textContent || '').trim(), texts };
+})()`;
+
+// Native checkbox set-to-state (Smart Pricing toggle, plan §I). Idempotent:
+// no-ops when the box already holds the wanted state — important live, since
+// Grailed's fresh form renders Smart Pricing ON by default. A synthetic
+// el.click() both flips .checked and fires the click event React's onChange
+// listens for (same synthetic-event surface the dropdowns already use).
+const checkboxExpr = (sel, want) => `(() => {
+  const el = document.querySelector(${JSON.stringify(sel)});
+  if (!el) return { ok: false, reason: 'checkbox not found', selector: ${JSON.stringify(sel)} };
+  if (el.disabled) return { ok: false, reason: 'checkbox is disabled', selector: ${JSON.stringify(sel)} };
+  const want = ${JSON.stringify(!!want)};
+  const before = el.checked;
+  if (before === want) return { ok: true, alreadySet: true, checked: el.checked };
+  el.click();
+  return { ok: el.checked === want, before, checked: el.checked };
+})()`;
+
+// Bug G fail-clean: on final failure the typed fragment is removed (same
+// native-setter technique as acFocusExpr — no new surface) so the field never
+// sits half-entered looking committed when it isn't.
+const acClearExpr = (sel) => `(() => {
+  const el = document.querySelector(${JSON.stringify(sel)});
+  if (!el) return { cleared: false };
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+  setter.call(el, '');
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.blur();
+  return { cleared: true };
 })()`;
 
 class AutofillAbort extends Error {
@@ -215,8 +314,13 @@ class AutofillAbort extends Error {
  *   { selectors, targetUrl, fillText(sel, value), close(), signals }
  * Throws with a user-facing message when the breaker is open, Chrome isn't up,
  * or no grailed tab exists — the IPC layer surfaces these verbatim.
+ *
+ * opts.freshTab (bug F #1): open a brand-new /sell/new tab and bind the CDP
+ * session to that exact target — photo-carrying fills use this so they can
+ * never land on a reused form or the wrong sell tab. The handle then waits for
+ * the form to actually render (waitForSellForm) before any fill primitive runs.
  */
-async function connect() {
+async function connect({ freshTab = false } = {}) {
   if (isCircuitOpen()) {
     throw new Error(
       'Autofill disabled — the §8.1 circuit breaker is OPEN. ' +
@@ -228,7 +332,7 @@ async function connect() {
       `Chrome CDP endpoint not found on :${PORT}. Run \`npm run 0b:launch\`, log in, and open /sell/new.`
     );
   }
-  const target = await sellTarget();
+  const target = freshTab ? await openFreshSellTab() : await sellTarget();
   if (!target) {
     throw new Error('No grailed.com tab in the launched Chrome. Open https://www.grailed.com/sell/new there.');
   }
@@ -280,6 +384,50 @@ async function connect() {
     const res = await evaluate(fillExpr(sel, String(value)), `fillText(${sel})`);
     await assertClean(`fillText(${sel})`);
     return res; // { ok, before, after, url } | { ok:false, reason, selector }
+  }
+
+  // Set a native checkbox to an explicit state (Smart Pricing toggle). No-ops
+  // when already there — see checkboxExpr.
+  async function setCheckbox(sel, want) {
+    const res = await evaluate(checkboxExpr(sel, want), `setCheckbox(${sel})`);
+    await assertClean(`setCheckbox(${sel})`);
+    return res; // { ok, alreadySet?, before?, checked } | { ok:false, reason }
+  }
+
+  // Fresh-tab fills only: wait until the sell form has actually rendered
+  // (title field + photo inputs exist) before the first primitive runs — a
+  // just-created /sell/new tab is still loading its React app. A timeout here
+  // usually means the tab landed on a login page instead of the form.
+  async function waitForSellForm() {
+    const titleSel = selectors.textFields.title.selector;
+    const photoSel = selectors.photos.fileInputs;
+    for (let i = 0; i < 30; i++) {
+      const r = await evaluate(
+        `(() => ({ form: !!document.querySelector(${JSON.stringify(titleSel)}), photoInputs: document.querySelectorAll(${JSON.stringify(photoSel)}).length, url: location.href }))()`,
+        'waitForSellForm'
+      );
+      if (r.form && r.photoInputs > 0) return r;
+      await sleep(500);
+    }
+    throw new Error(
+      'The fresh Sell-form tab never finished loading the form — check that Chrome is signed in to Grailed, then fill again.'
+    );
+  }
+
+  // How many photo slots are still EMPTY on this form. Grailed renders one
+  // file input per empty slot (photo_input_0..8) and removes it once the slot
+  // holds a photo — so fewer inputs than photos.slots means the form already
+  // has photos on it (the bug-F signal: filling would APPEND to a previous
+  // listing's set). Same DOM.querySelectorAll the upload itself uses.
+  async function countEmptyPhotoSlots() {
+    const total = Number(selectors.photos.slots) || 9;
+    const { root } = await client.DOM.getDocument();
+    const { nodeIds } = await client.DOM.querySelectorAll({
+      nodeId: root.nodeId,
+      selector: selectors.photos.fileInputs,
+    });
+    const empty = nodeIds ? nodeIds.length : 0;
+    return { empty, total, filled: Math.max(0, total - empty) };
   }
 
   // Flat Radix dropdown: open by trigger text (pointer events, CDP mouse-click
@@ -406,6 +554,10 @@ async function connect() {
   // Grailed uploads on select then clears the input, so el.files stays 0 —
   // the POST to the media host is the success signal. `onSlot(done, total)`
   // (optional) reports each uploaded slot for the live fill checklist.
+  //
+  // HARD RULE (bug F #2): photos are NEVER added to a form that already has
+  // some — that appends this item's photos to a previous listing's. If any
+  // slot is already filled, abort with a clear message instead of mixing.
   async function uploadPhotos(paths, onSlot) {
     const missing = paths.filter((p) => !fs.existsSync(p));
     if (missing.length) return { ok: false, reason: 'files not found', missing };
@@ -415,6 +567,13 @@ async function connect() {
       selector: selectors.photos.fileInputs,
     });
     if (!nodeIds || !nodeIds.length) return { ok: false, reason: 'no photo inputs found — is /sell/new open?' };
+    const totalSlots = Number(selectors.photos.slots) || 9;
+    if (nodeIds.length < totalSlots) {
+      return {
+        ok: false,
+        reason: `this Sell form already has ${totalSlots - nodeIds.length} photo(s) — open a fresh, empty Sell form and fill again (photos are never added to an existing set)`,
+      };
+    }
     if (paths.length > nodeIds.length) {
       return { ok: false, reason: `only ${nodeIds.length} empty photo slots for ${paths.length} photos` };
     }
@@ -436,59 +595,148 @@ async function connect() {
     };
   }
 
-  // Autocomplete select: real-type the value, real-click the matching
-  // suggestion, confirm the input holds the suggestion's canonical text.
+  // Autocomplete select: real-type the value, wait for the suggestion list to
+  // SETTLE, real-click the matching suggestion, confirm the input holds the
+  // suggestion's canonical text. Hardened per bug G (plan §G — designer
+  // intermittently didn't commit: the list was still loading or the click
+  // didn't register before the check): settle-before-click, verify + retry
+  // the whole type→poll→click up to `retries` more times with small backoff,
+  // and on final failure CLEAR the typed fragment so the field is never left
+  // half-entered. Timings live in grailed-selectors.json autocompletes._timing.
   async function fillAutocomplete(sel, value) {
     const want = String(value).replace(/\s+/g, ' ').trim();
-    await pressEscape(); // an open menu (e.g. from a failed dropdown) would swallow the typing + click
-    // Designer (and any dependent autocomplete) is DISABLED until a category
-    // is chosen and Grailed enables it asynchronously after the category
-    // click — failing instantly on 'input is disabled' lost real fills
-    // (2026-07-04 run: Louis Vuitton reported as not found). Poll up to ~4s.
-    let focus = { ok: false, reason: 'input not found' };
-    for (let i = 0; i < 8; i++) {
-      focus = await evaluate(acFocusExpr(sel, want), `fillAutocomplete(${sel})`);
-      if (focus.ok || focus.reason !== 'input is disabled') break;
-      await sleep(500);
-    }
-    if (!focus.ok || focus.alreadySet) return focus;
-    await client.Input.insertText({ text: want });
-    // Suggestions come from a network lookup, so render latency varies (900ms
-    // was enough on 2026-07-03; the designer list took ~2s on 2026-07-04 and
-    // the single fixed wait made the fill "fail" while suggestions were still
-    // loading). Poll up to ~4s for a matching <li> instead.
-    let rect = { ok: false, reason: 'no matching suggestion' };
-    for (let i = 0; i < 8; i++) {
-      await sleep(500);
-      rect = await evaluate(acRectExpr(sel, want), `fillAutocomplete(${sel})`);
-      if (rect.ok) break;
-    }
-    if (!rect.ok) return rect;
-    const { x, y } = rect;
-    await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x, y });
-    await client.Input.dispatchMouseEvent({ type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
-    await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
-    await sleep(500);
-    const got = await evaluate(
-      `(() => { const el = document.querySelector(${JSON.stringify(sel)}); el.blur(); return el.value; })()`,
-      `fillAutocomplete(${sel})`
-    );
-    await assertClean(`fillAutocomplete(${sel})`);
     // Case/whitespace-insensitive: the input may canonicalize the suggestion
     // ("LOUIS VUITTON" chip vs clicked "Louis Vuitton") — that's still a fill.
     const norm = (s) => String(s || '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
-    const ok = norm(got) === norm(rect.text) || (!!got && norm(got).includes(norm(want)));
-    return { ok, value: got, clicked: rect.text, reason: ok ? undefined : `value after click was "${got}" (clicked "${rect.text}")` };
+    const t = (selectors.autocompletes && selectors.autocompletes._timing) || {};
+    const pollMs = t.pollMs ?? 500;
+    const pollTries = t.pollTries ?? 8; // ≈4s suggestion budget per attempt (the proven flow's budget, unchanged)
+    const attempts = 1 + (t.retries ?? 2);
+    const backoffMs = t.retryBackoffMs ?? 700;
+
+    // §K collab fallback: Grailed's designer lookup often returns NOTHING for
+    // a full "A x B" collab typed verbatim (label order/format differs — e.g.
+    // the entry is "Nike x Stussy"), so the right suggestion never renders and
+    // token matching has nothing to match. Retries type only the LONGEST
+    // collab part ("Stussy x Nike" → "Stussy") to surface the list, while
+    // acRectExpr keeps matching against the FULL want (token-set match).
+    const collabParts = want.split(/\s+x\s+|\s*[×/&+]\s*/i).map((s) => s.trim()).filter(Boolean);
+    const collabFragment = collabParts.length > 1 ? [...collabParts].sort((a, b) => b.length - a.length)[0] : null;
+
+    let lastFail = { ok: false, reason: 'no matching suggestion' };
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      if (attempt > 1) await sleep(backoffMs * (attempt - 1));
+      // Fragment retries apply only to "nothing matched" failures — a failed
+      // CLICK (bug G's case) retypes the full value as before.
+      const typed =
+        attempt > 1 && collabFragment && /no matching suggestion/.test(lastFail.reason || '') ? collabFragment : want;
+      await pressEscape(); // an open menu (e.g. from a failed dropdown) would swallow the typing + click
+      // Designer (and any dependent autocomplete) is DISABLED until a category
+      // is chosen and Grailed enables it asynchronously after the category
+      // click — failing instantly on 'input is disabled' lost real fills
+      // (2026-07-04 run: Louis Vuitton reported as not found). Poll up to ~4s.
+      // acFocusExpr also CLEARS the input, so every retry re-types from
+      // scratch. The already-set short-circuit only applies on attempt 1 —
+      // on retries the field holds our own uncommitted typing (see acFocusExpr).
+      let focus = { ok: false, reason: 'input not found' };
+      for (let i = 0; i < pollTries; i++) {
+        focus = await evaluate(acFocusExpr(sel, want, attempt === 1), `fillAutocomplete(${sel})`);
+        if (focus.ok || focus.reason !== 'input is disabled') break;
+        await sleep(pollMs);
+      }
+      if (!focus.ok) return focus; // not found / still disabled — retyping won't change that
+      if (focus.alreadySet) return focus;
+      await client.Input.insertText({ text: typed });
+
+      // Suggestions come from a network lookup, so render latency varies
+      // (900ms was enough on 2026-07-03; the designer list took ~2s on
+      // 2026-07-04). Poll for a matching <li>, and only click once the list
+      // has SETTLED — the same items on two consecutive polls (bug G:
+      // clicking a still-loading list is the intermittent no-commit). If the
+      // budget ends with a match but no stable read, click the latest match
+      // rather than giving up.
+      let rect = { ok: false, reason: 'no matching suggestion' };
+      let lastRead = rect; // last poll regardless of match — carries what WAS shown
+      let lastSig = null;
+      for (let i = 0; i < pollTries; i++) {
+        await sleep(pollMs);
+        const r = await evaluate(acRectExpr(sel, want), `fillAutocomplete(${sel})`);
+        lastRead = r;
+        const sig = JSON.stringify(r.texts || []);
+        if (r.ok && sig === lastSig) {
+          rect = r; // settled with a match — click now
+          break;
+        }
+        if (r.ok) rect = r; // match present but list still changing — confirm next poll
+        lastSig = sig;
+      }
+      if (!rect.ok) {
+        // Keep the last read (not the empty initial object) so the final
+        // failure can say what Grailed DID offer — e.g. a collab fragment
+        // retry surfaces the primary brand ("Stussy") for the manual pick.
+        lastFail = lastRead.ok ? rect : lastRead;
+        continue; // no suggestion matched this attempt — back off and re-type
+      }
+
+      const { x, y } = rect;
+      await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x, y });
+      await client.Input.dispatchMouseEvent({ type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
+      await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+      await sleep(pollMs);
+      const got = await evaluate(
+        `(() => { const el = document.querySelector(${JSON.stringify(sel)}); if (!el) return null; el.blur(); return el.value; })()`,
+        `fillAutocomplete(${sel})`
+      );
+      await assertClean(`fillAutocomplete(${sel})`);
+      const ok = norm(got) === norm(rect.text) || (!!got && norm(got).includes(norm(want)));
+      if (ok) return { ok: true, value: got, clicked: rect.text, attempt };
+      // The click didn't commit (the reported bug) — record why, retry clean.
+      lastFail = {
+        ok: false,
+        reason: `value after click was "${got}" (clicked "${rect.text}")`,
+        available: rect.texts,
+      };
+    }
+
+    // Final failure: leave the field EMPTY (a half-typed value looks committed
+    // but isn't — React wipes it on blur, or it confuses the manual fix) and
+    // say exactly what the user should do.
+    await evaluate(acClearExpr(sel), `fillAutocomplete(clear ${sel})`).catch(() => {});
+    return {
+      ok: false,
+      cleared: true,
+      reason:
+        `couldn't select “${want}” from the suggestions after ${attempts} attempts — ` +
+        'the field was cleared; pick it manually in Chrome' +
+        (lastFail.available && lastFail.available.length
+          ? ` (suggestions seen: ${lastFail.available.slice(0, 6).join(', ')})`
+          : ` (${lastFail.reason})`),
+    };
+  }
+
+  // Fresh tab: don't hand back the driver until the form has rendered — every
+  // primitive (and the emptiness check) needs the React app up.
+  if (freshTab) {
+    try {
+      await waitForSellForm();
+    } catch (e) {
+      await client.close().catch(() => {});
+      throw e;
+    }
   }
 
   return {
     selectors,
     targetUrl: target.url,
+    targetId: target.id,
+    freshTab,
     fillText,
+    setCheckbox,
     selectDropdown,
     selectNestedCategory,
     uploadPhotos,
     fillAutocomplete,
+    countEmptyPhotoSlots,
     signals,
     uploads,
     close: () => client.close().catch(() => {}),
@@ -498,7 +746,8 @@ async function connect() {
 /*
  * High-level fill used by the app (IPC `autofill:fill`). Fields are pre-mapped
  * store values; null/absent fields are skipped. Scope: title, description,
- * price, condition, color, style, country of origin, photos — category/size/
+ * price, condition, color, style, country of origin, photos, and (opt-in
+ * only, plan §I) Grailed's native Smart Pricing toggle + floor — category/size/
  * designer fill ONLY when the app passes a user-CONFIRMED department+category
  * (staged confirmation, A1 — see grailed-selectors.json _dependentFieldsPolicy);
  * without that confirmation the cascade stays manual. Never submits.
@@ -516,18 +765,53 @@ async function fillListing(fields, onProgress) {
     if (!onProgress) return;
     try { onProgress(p); } catch (err) { console.error('[autofill] onProgress listener failed:', err.message); }
   };
-  const driver = await connect();
+  // Bug F: any fill that carries photos gets its OWN brand-new /sell/new tab
+  // (bound by target id — never a reused form, never the wrong tab among
+  // several). Changed-only re-fills arrive with photoPaths nulled by
+  // ui/main.js and deliberately keep targeting the existing form — their whole
+  // point is updating the form that's already filled.
+  const wantsPhotos = !!(fields.photoPaths && fields.photoPaths.length);
+  const driver = await connect({ freshTab: wantsPhotos });
   try {
+    // Even a brand-new tab can come up NON-empty — Grailed restores an
+    // unfinished draft into /sell/new. Refuse it BEFORE any field is typed:
+    // a partial fill over a restored draft would pair this item's text with
+    // the previous item's photos (exactly the bug). Nothing is filled.
+    if (wantsPhotos) {
+      const slots = await driver.countEmptyPhotoSlots();
+      if (slots.filled > 0) {
+        return {
+          ok: false,
+          results: {},
+          targetUrl: driver.targetUrl,
+          message:
+            `This Sell form already has ${slots.filled} photo(s) on it — Grailed restored an unfinished listing. ` +
+            'Nothing was filled (photos are never mixed between listings). Publish or clear that draft in the Chrome tab, then fill again.',
+        };
+      }
+    }
     const sel = driver.selectors;
     const results = {};
     // The plan mirrors the field gates below so the checklist can render all
     // rows (pending) before the first one starts.
     const priceDigits = fields.price != null ? String(fields.price).replace(/[^0-9]/g, '') : '';
+    // Smart Pricing (plan §I): fields.smartPricing is the FLOOR VALUE and
+    // non-null IS the opt-in — named like its step/results key so the app's
+    // last-fill snapshot + changed-only diff track it like any other field —
+    // ui/main.js only sets it when the user enabled the toggle AND gave a
+    // floor. Absent/null = the driver never touches Grailed's Smart Pricing
+    // section (which the live form defaults to ON — that's Grailed's state,
+    // not ours to change).
+    const floorDigits = fields.smartPricing != null ? String(fields.smartPricing).replace(/[^0-9]/g, '') : '';
     const cascade = !!(fields.department && fields.category);
+    // §K: photos are planned (and run) FIRST — they're the highest-value field
+    // and must never be a casualty of a flaky dropdown/autocomplete later on.
     const plan = [
+      fields.photoPaths && fields.photoPaths.length && 'photos',
       fields.title != null && 'title',
       fields.description != null && 'description',
       priceDigits && 'price',
+      floorDigits && 'smartPricing',
       fields.condition && 'condition',
       fields.color && 'color',
       fields.style && 'style',
@@ -536,21 +820,74 @@ async function fillListing(fields, onProgress) {
       cascade && fields.size && 'size',
       cascade && fields.subcategory && 'subcategory',
       cascade && fields.designer && 'designer',
-      fields.photoPaths && fields.photoPaths.length && 'photos',
     ].filter(Boolean);
     notify({ kind: 'plan', fields: plan });
     // Run one field, bracketing it with filling → ok/failed/skipped events.
-    const step = async (field, run) => {
+    // §K step isolation: a field that THROWS becomes { ok:false } and the fill
+    // CONTINUES (the tester's collab-designer hang aborted the run and cost
+    // the photos); every field is also time-capped (grailed-selectors.json
+    // fill.stepTimeoutMs) so nothing can hang the whole fill. The ONE
+    // exception is AutofillAbort — a §8.1 detection signal still stops
+    // everything immediately, by design.
+    const fillTiming = sel.fill || {};
+    const STEP_CAP = Number(fillTiming.stepTimeoutMs) || 30000;
+    const PHOTO_CAP = Number(fillTiming.photoStepTimeoutMs) || 180000;
+    const step = async (field, run, capMs = STEP_CAP) => {
       notify({ kind: 'field', field, status: 'filling' });
-      const r = await run();
+      let r;
+      let timer = null;
+      try {
+        const timeout = new Promise((resolve) => {
+          timer = setTimeout(
+            () =>
+              resolve({
+                ok: false,
+                timedOut: true,
+                reason: `timed out after ${Math.round(capMs / 1000)}s — finish this field manually in Chrome`,
+              }),
+            capMs
+          );
+        });
+        r = await Promise.race([run(), timeout]);
+      } catch (err) {
+        if (err instanceof AutofillAbort) throw err; // §8.1: detection aborts the whole run
+        r = { ok: false, reason: err.message };
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
       results[field] = r;
       notify({ kind: 'field', field, status: r.skipped ? 'skipped' : r.ok ? 'ok' : 'failed', reason: r.reason });
       return r;
     };
+    // §K: photos FIRST (see plan above) — runs right after the fresh-form
+    // emptiness check, before any field that could fail or stall.
+    if (fields.photoPaths && fields.photoPaths.length) {
+      await step(
+        'photos',
+        () =>
+          driver.uploadPhotos(fields.photoPaths, (done, total) =>
+            notify({ kind: 'field', field: 'photos', status: 'filling', done, total })
+          ),
+        PHOTO_CAP
+      );
+    }
     if (fields.title != null) await step('title', () => driver.fillText(sel.textFields.title.selector, fields.title));
     if (fields.description != null)
       await step('description', () => driver.fillText(sel.textFields.description.selector, fields.description));
     if (priceDigits) await step('price', () => driver.fillText(sel.textFields.price.selector, priceDigits));
+    if (floorDigits) {
+      // Opt-in only (plan §I): enable Grailed's native Smart Pricing toggle,
+      // then type the floor. Both idempotent; the user reviews and publishes.
+      const sp = sel.smartPricing;
+      await step('smartPricing', async () => {
+        if (!sp || !sp.toggle || !sp.floor) return { ok: false, reason: 'smartPricing selectors missing from grailed-selectors.json' };
+        const t = await driver.setCheckbox(sp.toggle, true);
+        if (!t.ok) return { ok: false, reason: `couldn't enable the Smart Pricing toggle (${t.reason || 'state did not change'})` };
+        const f = await driver.fillText(sp.floor, floorDigits);
+        if (!f.ok) return { ok: false, reason: `toggle enabled but the floor price didn't take (${f.reason || 'value mismatch'})` };
+        return { ok: true, enabled: true, alreadyEnabled: !!t.alreadySet, floor: f.after };
+      });
+    }
     if (fields.condition) {
       const cond = sel.dropdowns.condition;
       // Case-insensitive: the map covers both the UI's and the pipeline's
@@ -619,13 +956,6 @@ async function fillListing(fields, onProgress) {
         }
       }
     }
-    if (fields.photoPaths && fields.photoPaths.length) {
-      await step('photos', () =>
-        driver.uploadPhotos(fields.photoPaths, (done, total) =>
-          notify({ kind: 'field', field: 'photos', status: 'filling', done, total })
-        )
-      );
-    }
     return {
       ok: Object.values(results).every((r) => r.ok),
       results,
@@ -638,7 +968,7 @@ async function fillListing(fields, onProgress) {
 
 // getJSON/portUp/sellTarget are shared with ui/chrome-dock.js (window
 // choreography uses the same :9222 endpoint but a browser-level connection).
-module.exports = { connect, fillListing, AutofillAbort, getJSON, portUp, sellTarget, PORT };
+module.exports = { connect, fillListing, AutofillAbort, getJSON, portUp, sellTarget, openFreshSellTab, PORT };
 
 // ---------------------------------------------------------------- CLI test modes
 // Live per-primitive verification without the app. Prereq: `npm run 0b:launch`,
@@ -708,27 +1038,74 @@ if (require.main === module) {
       if (res.ok) console.log('REMOVE the test photo(s) from the draft before submitting.');
       return res.ok;
     },
+    // Smart Pricing (plan §I): enable Grailed's native toggle + type a floor
+    // on the ACTIVE sell tab, exactly like an opted-in fill would. Form-only,
+    // reversible, never submits. Run twice to see the idempotent alreadySet.
+    //   node ui/autofill-driver.js smart-pricing [floor]
+    'smart-pricing': async (driver) => {
+      const sp = driver.selectors.smartPricing;
+      const floor = String(rest[0] || '45').replace(/[^0-9]/g, '');
+      const toggle = await driver.setCheckbox(sp.toggle, true);
+      console.log('toggle result:', JSON.stringify(toggle, null, 2));
+      if (!toggle.ok) return false;
+      const f = await driver.fillText(sp.floor, floor);
+      console.log('floor result:', JSON.stringify(f, null, 2));
+      if (f.ok) console.log('CLEAR the Smart Pricing floor / review the toggle on the form before submitting.');
+      return f.ok;
+    },
+    // Read-only diagnostic: how many photo slots are empty on the ACTIVE sell
+    // tab (the bug-F emptiness signal). Safe to run any time.
+    slots: async (driver) => {
+      const res = await driver.countEmptyPhotoSlots();
+      console.log('photo slots:', JSON.stringify(res, null, 2));
+      console.log(res.filled > 0
+        ? `→ a photo-carrying fill would REFUSE this form (${res.filled} slot(s) already filled).`
+        : '→ form is empty — a fill would proceed.');
+      return true;
+    },
   };
-  const action = actions[cmd];
-  if (!action) {
-    console.log('usage: node ui/autofill-driver.js fill-title ["value"] | dropdown ["Trigger"] ["Option"] | category ["Dept"] ["Category"] | country ["Country"] | upload [paths…]');
-    process.exit(cmd ? 1 : 0);
-  }
-  (async () => {
-    console.log(`== autofill-driver: ${cmd} ==`);
-    const driver = await connect();
-    try {
-      console.log('connected to tab:', driver.targetUrl);
-      const ok = await action(driver);
-      console.log('network signals:', JSON.stringify(driver.signals));
-      console.log(ok
-        ? '\n✅ primitive succeeded; no detection reaction in the observation window (silent-detection caveat §8.5 applies).'
-        : '\n⚠️  primitive did not confirm — see result above. Are you logged in and on /sell/new?');
-    } finally {
-      await driver.close();
+  // fresh-fill exercises the REAL app path (fillListing): opens its own fresh
+  // /sell/new tab, refuses a restored non-empty form, fills title + uploads a
+  // test photo into that exact tab. Never submits; remove the test content.
+  //   node ui/autofill-driver.js fresh-fill [photo-path]
+  if (cmd === 'fresh-fill') {
+    (async () => {
+      console.log('== autofill-driver: fresh-fill (fillListing end-to-end) ==');
+      const photo = rest[0] || path.join(__dirname, '..', 'grailed-vision-test', 'grailed-vision-test-4.jpg');
+      const res = await fillListing(
+        { title: 'TEST FILL (fresh-tab) — clear this before submitting', photoPaths: [photo] },
+        (p) => console.log('  progress:', JSON.stringify(p))
+      );
+      console.log('fill result:', JSON.stringify(res, null, 2));
+      console.log(res.ok
+        ? '\n✅ fresh-tab fill succeeded — check the NEW Sell tab holds exactly this photo, then remove the test content.'
+        : `\n⚠️  fill refused/failed: ${res.message || 'see per-field results above'}`);
+    })().catch((e) => {
+      console.error('❌', e.message);
+      process.exit(1);
+    });
+  } else {
+    const action = actions[cmd];
+    if (!action) {
+      console.log('usage: node ui/autofill-driver.js fill-title ["value"] | dropdown ["Trigger"] ["Option"] | category ["Dept"] ["Category"] | country ["Country"] | upload [paths…] | slots | smart-pricing [floor] | fresh-fill [photo]');
+      process.exit(cmd ? 1 : 0);
     }
-  })().catch((e) => {
-    console.error('❌', e.message);
-    process.exit(1);
-  });
+    (async () => {
+      console.log(`== autofill-driver: ${cmd} ==`);
+      const driver = await connect();
+      try {
+        console.log('connected to tab:', driver.targetUrl);
+        const ok = await action(driver);
+        console.log('network signals:', JSON.stringify(driver.signals));
+        console.log(ok
+          ? '\n✅ primitive succeeded; no detection reaction in the observation window (silent-detection caveat §8.5 applies).'
+          : '\n⚠️  primitive did not confirm — see result above. Are you logged in and on /sell/new?');
+      } finally {
+        await driver.close();
+      }
+    })().catch((e) => {
+      console.error('❌', e.message);
+      process.exit(1);
+    });
+  }
 }

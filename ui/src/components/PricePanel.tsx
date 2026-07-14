@@ -61,6 +61,17 @@ export function PricePanel({ item, update, toast }: Props) {
   const r = item.range;
   const [recomputing, setRecomputing] = useState(false);
   const [open, setOpen] = useState(false);
+  // Plan §D: NWT is a strong price signal — badge it, and warn when the
+  // estimate had few same-condition sales behind it (likely conservative).
+  const isNwt = /^new( with tags)?$/i.test((item.attributes.condition_rating || '').trim());
+  const nwtThin = isNwt && (r?.newCompCount ?? 0) < 3 && (r?.sampleSize ?? 0) > 0;
+
+  // Plan §I Smart Pricing state: opt-in flag + floor ride in attributes (like
+  // grailed_color — no store migration). The floor suggestion is the D2
+  // sold-median ("list at $Y, floor at $X").
+  const spOn = item.attributes.smart_pricing_enabled === true;
+  const spFloor = item.attributes.smart_pricing_floor ?? null;
+  const suggestedFloor = r?.soldMedian ?? null;
 
   // Slice 4: recompute price/comps from the item's current (possibly edited)
   // attributes via the guarded live-Grailed provider. Result replaces the range
@@ -131,9 +142,29 @@ export function PricePanel({ item, update, toast }: Props) {
               }
             />
           </div>
+          {/* Plan §D2 list/sell split: the editable number above is the LIST
+              price (offer headroom built in); what comparable items actually
+              sold for is shown separately so neither is mistaken for the other. */}
           <div className="mt-0.5 font-mono text-xs text-muted-foreground">
-            comps {money(r.low)} – {money(r.high)} · your price is editable
+            {r.soldMedian != null && r.soldMedian !== r.median ? (
+              <>list price — typically sells ~{money(r.soldMedian)} · comps {money(r.low)} – {money(r.high)}</>
+            ) : (
+              <>comps {money(r.low)} – {money(r.high)} · your price is editable</>
+            )}
           </div>
+          {isNwt && (
+            <div className="mt-1.5">
+              <span className="rounded-md border border-transparent bg-success/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success">
+                New with tags — priced against new-condition sales
+              </span>
+              {nwtThin && (
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Few new-with-tags comps behind this estimate — it may be conservative; new pieces often sell above
+                  used comps.
+                </div>
+              )}
+            </div>
+          )}
           {r.confidence && (
             <div
               className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1"
@@ -148,7 +179,7 @@ export function PricePanel({ item, update, toast }: Props) {
                 {r.confidence.level} confidence
               </span>
               <span className="font-mono text-xs text-muted-foreground">
-                likely {money(r.confidence.ci95[0])}–{money(r.confidence.ci95[1])}
+                likely sells {money(r.confidence.ci95[0])}–{money(r.confidence.ci95[1])}
               </span>
               <span className="w-full text-xs text-muted-foreground">{r.confidence.explanation}</span>
             </div>
@@ -195,6 +226,78 @@ export function PricePanel({ item, update, toast }: Props) {
           )}
         </>
       )}
+
+      {/* Plan §I: Grailed's NATIVE Smart Pricing — strictly opt-in per item
+          (default OFF). Enabling here only records the choice; the next fill
+          sets Grailed's own toggle + floor on the Sell form, and the user
+          still reviews and publishes. Never auto-enabled, never autonomous.
+          Pairs with §D2: the editable number above is the list price, the
+          suggested floor is what comparable items typically sold for. */}
+      <div className="mt-3 rounded-lg border bg-secondary/30 p-3">
+        <label className="flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-primary"
+            checked={spOn}
+            aria-label="Enable Smart Pricing on Grailed for this item"
+            onChange={(e) => {
+              const on = e.target.checked;
+              update((d) => {
+                d.attributes.smart_pricing_enabled = on;
+                // Seed the floor with the typical-sale figure the first time —
+                // still fully editable, and nothing reaches Grailed until the
+                // user runs a fill.
+                if (on && d.attributes.smart_pricing_floor == null && suggestedFloor != null) {
+                  d.attributes.smart_pricing_floor = suggestedFloor;
+                }
+                d.dirty = true;
+              });
+            }}
+          />
+          <span className="text-sm font-medium">Smart Pricing (Grailed)</span>
+        </label>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Grailed’s own auto-discount: it lowers the price ~10% a week until your floor, and nudges likers. Off unless
+          you turn it on here — the next fill then sets the toggle + floor on the Sell form for you to review before
+          publishing.
+        </p>
+        {spOn && (
+          <div className="mt-2 flex items-center gap-1.5">
+            <span className="text-sm text-muted-foreground">Floor $</span>
+            <Input
+              value={spFloor ?? ''}
+              inputMode="numeric"
+              aria-label="Smart Pricing floor price"
+              className="h-8 w-24"
+              onChange={(e) => {
+                const digits = e.target.value.replace(/[^0-9]/g, '');
+                update((d) => {
+                  d.attributes.smart_pricing_floor = digits === '' ? null : Number(digits);
+                  d.dirty = true;
+                });
+              }}
+            />
+            {suggestedFloor != null && spFloor !== suggestedFloor && (
+              <button
+                type="button"
+                className="text-xs text-primary hover:underline"
+                title="Comparable items typically sold around this — a floor below it rarely helps."
+                onClick={() =>
+                  update((d) => {
+                    d.attributes.smart_pricing_floor = suggestedFloor;
+                    d.dirty = true;
+                  })
+                }
+              >
+                use ~{money(suggestedFloor)} (typical sale)
+              </button>
+            )}
+            {spOn && (spFloor == null || spFloor <= 0) && (
+              <span className="text-xs text-warning">set a floor — the fill skips Smart Pricing without one</span>
+            )}
+          </div>
+        )}
+      </div>
     </section>
   );
 }

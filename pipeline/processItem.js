@@ -48,7 +48,13 @@ async function processItem(photos, opts = {}) {
   if (opts.content !== false) {
     log(`${tag}generating content…`);
     try {
-      content = await generateContent(attributes, { model: opts.model, instructions: opts.note });
+      // opts.styleExample: the seller's saved style template (plan §A) — the
+      // batch caller reads it from the store so import and Regenerate match.
+      content = await generateContent(attributes, {
+        model: opts.model,
+        instructions: opts.note,
+        styleExample: opts.styleExample,
+      });
     } catch (err) {
       log(`${tag}[warn] content generation failed: ${err.message}`);
     }

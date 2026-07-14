@@ -55,20 +55,48 @@ function itemTokens(attributes = {}) {
 
 // ---- condition proximity ----
 const COMP_COND_ORD = { is_new: 2, is_gently_used: 1, is_used: 0 };
+// Covers BOTH condition vocabularies: the UI's / new vision.js enum
+// ("New with tags"…) and the legacy pipeline enum on already-stored items.
 function itemConditionOrd(rating) {
   const r = String(rating || '').toLowerCase();
-  if (['new', 'like new', 'excellent'].includes(r)) return 2;
+  if (['new with tags', 'new', 'like new', 'excellent'].includes(r)) return 2;
   if (r === 'very good') return 1.5;
-  if (r === 'good') return 1;
+  if (['gently used', 'good'].includes(r)) return 1;
   if (r === 'fair') return 0.5;
-  if (r === 'poor') return 0;
+  if (['used', 'poor', 'very worn'].includes(r)) return 0;
   return 1; // unclear
 }
 function conditionProximity(compCondition, itemOrd) {
   const compOrd = COMP_COND_ORD[compCondition];
+  // NWT/new items (plan §D): used sales are a different market tier — new
+  // pieces sell well above them — so the curve is much steeper than the
+  // generic ramp. Same-condition (is_new) comps dominate; used comps fade
+  // instead of dragging the estimate down.
+  if (itemOrd >= 2) {
+    if (compOrd == null) return 0.6;
+    return compOrd === 2 ? 1.0 : compOrd === 1 ? 0.45 : 0.25;
+  }
   if (compOrd == null) return 0.7; // unknown comp condition → neutral
   const prox = 1 - Math.abs(itemOrd - compOrd) / 2;
   return 0.4 + 0.6 * Math.max(0, prox); // 0.4 (opposite) … 1.0 (same tier)
+}
+
+// ---- brand match (plan §D2: tighten comp relevance) ----
+// The broad comp query (removeWordsIfNoResults) can pull in cheap, loosely
+// related listings; a comp whose title doesn't even mention the item's brand
+// is down-weighted here — WITHOUT touching the guarded provider's query.
+// NOTE: uses its own normalization, not tokenize() — STOPWORDS deliberately
+// drops common brand words (nike/adidas/puma) that are load-bearing here.
+function brandMatchFactor(compTitle, brand, brandConfidence) {
+  const conf = Number(brandConfidence);
+  const b = String(brand || '').trim().toLowerCase();
+  // No reliable brand to match on → neutral (don't punish comps for our own
+  // uncertainty).
+  if (!b || b === 'unclear' || (Number.isFinite(conf) && conf < 0.6)) return 1.0;
+  const brandToks = b.split(/[^a-z0-9]+/).filter((t) => t.length >= 2);
+  if (!brandToks.length) return 1.0;
+  const title = String(compTitle || '').toLowerCase();
+  return brandToks.some((t) => title.includes(t)) ? 1.0 : 0.55;
 }
 
 // ---- size proximity ----
@@ -112,7 +140,7 @@ function recencyWeight(soldDate, now) {
 }
 
 function dropOutliers(prices) {
-  if (prices.length < 4) return { kept: prices.slice(), dropped: [] };
+  if (prices.length < 4) return { kept: prices.slice(), dropped: [], lowFence: -Infinity, highFence: Infinity };
   const sorted = [...prices].sort((a, b) => a - b);
   const q = (p) => {
     const idx = (sorted.length - 1) * p;
@@ -128,7 +156,10 @@ function dropOutliers(prices) {
   const kept = [];
   const dropped = [];
   for (const p of prices) (p >= lowFence && p <= highFence ? kept : dropped).push(p);
-  return { kept: kept.length ? kept : prices.slice(), dropped };
+  // Fences exposed so computeRange can treat the tails asymmetrically (plan
+  // §D2): low outliers are junk that drags the estimate; high outliers are
+  // often GENUINE strong sales, so they're down-weighted there, not dropped.
+  return { kept: kept.length ? kept : prices.slice(), dropped, lowFence, highFence };
 }
 
 function weightedQuantile(items, q) {
@@ -149,6 +180,13 @@ function weightedQuantile(items, q) {
   return items[items.length - 1].price;
 }
 
+// Sellers list ABOVE where things sell (offers negotiate down) — the plan §D2
+// fix: `median` (what the whole app treats as "your price") is now the
+// recommended LIST price, a higher percentile of the weighted sold
+// distribution; `soldMedian` keeps the expected-sale figure for display.
+const LIST_PERCENTILE = 0.7; // ~70th weighted percentile → built-in offer headroom
+const HIGH_OUTLIER_DOWNWEIGHT = 0.5; // high tail: kept at half weight, never hard-dropped
+
 function computeRange(comps = [], attributes = {}, opts = {}) {
   const now = opts.now || Date.now();
 
@@ -156,27 +194,37 @@ function computeRange(comps = [], attributes = {}, opts = {}) {
   if (priced.length === 0) {
     return {
       currency: 'USD',
-      low: null, median: null, high: null,
+      low: null, median: null, high: null, soldMedian: null,
       sampleSize: 0, outliersDropped: 0,
       note: 'no usable comps',
     };
   }
 
-  const { kept, dropped } = dropOutliers(priced.map((c) => c.price));
-  const keptSet = new Set(kept);
+  // Asymmetric outlier policy (plan §D2): junk-cheap comps below the low fence
+  // are DROPPED (they drag the estimate down); genuinely strong sales above
+  // the high fence stay in at reduced weight (hard-trimming them was part of
+  // why estimates read low).
+  const { lowFence, highFence } = dropOutliers(priced.map((c) => c.price));
+  const usable = priced.filter((c) => c.price >= lowFence);
+  const lowDropped = priced.length - usable.length;
 
   const iTokens = itemTokens(attributes);
   const itemOrd = itemConditionOrd(attributes.condition_rating);
   const itemSize = attributes.size;
 
-  const weighted = priced
-    .filter((c) => keptSet.has(c.price))
+  let highDownweighted = 0;
+  const weighted = usable
     .map((c) => {
       const relevance =
         conditionProximity(c.condition, itemOrd) *
         sizeFactor(itemSize, c.size) *
-        titleOverlapFactor(c.title, iTokens);
-      const weight = recencyWeight(c.soldDate, now) * relevance;
+        titleOverlapFactor(c.title, iTokens) *
+        brandMatchFactor(c.title, attributes.resembles_brand, attributes.brand_confidence);
+      let weight = recencyWeight(c.soldDate, now) * relevance;
+      if (c.price > highFence) {
+        weight *= HIGH_OUTLIER_DOWNWEIGHT;
+        highDownweighted++;
+      }
       return { ...c, weight, relevance };
     })
     .sort((a, b) => a.price - b.price);
@@ -195,19 +243,37 @@ function computeRange(comps = [], attributes = {}, opts = {}) {
     }));
 
   const q25 = weightedQuantile(weighted, 0.25);
-  const median = weightedQuantile(weighted, 0.5);
+  const soldMedian = weightedQuantile(weighted, 0.5);
   const q75 = weightedQuantile(weighted, 0.75);
+  // Recommended list price: never below the expected sale.
+  const listAt = Math.max(soldMedian ?? 0, weightedQuantile(weighted, LIST_PERCENTILE) ?? 0) || null;
+
+  // NWT thin-comps signal (plan §D): when the item is new-condition but few
+  // same-condition sales back the estimate, the number leans on used sales —
+  // likely conservative. Confidence is lowered instead of guessing an uplift.
+  const isNewItem = itemOrd >= 2;
+  const newCompCount = weighted.filter((c) => c.condition === 'is_new').length;
+  const nwtThin = isNewItem && newCompCount < 3;
 
   return {
     currency: 'USD',
     low: round(q25),
-    median: round(median),
+    // `median` stays the field every consumer treats as "the price to use"
+    // (editable your-price, autofill, checklist) — it is now the recommended
+    // LIST price. The weighted sold median lives in `soldMedian`.
+    median: round(listAt),
     high: round(q75),
+    soldMedian: round(soldMedian),
+    listAt: round(listAt),
     sampleSize: weighted.length,
-    outliersDropped: dropped.length,
-    basis: 'relevance-weighted (condition × size × title/era overlap × recency) 25/50/75 percentiles',
+    outliersDropped: lowDropped,
+    outliersDownweighted: highDownweighted,
+    newCompCount,
+    basis:
+      `relevance-weighted (condition × size × title/era × brand match × recency); ` +
+      `list = ${Math.round(LIST_PERCENTILE * 100)}th pct of sold, sells = weighted sold median`,
     mostRelevantComps: topComps,
-    confidence: confidenceFor(weighted, { q25, median, q75 }),
+    confidence: confidenceFor(weighted, { q25, median: soldMedian, q75 }, { nwtThin }),
   };
 }
 
@@ -227,7 +293,7 @@ function computeRange(comps = [], attributes = {}, opts = {}) {
  */
 const STRONG_RELEVANCE = 0.75;
 const MODERATE_RELEVANCE = 0.55;
-function confidenceFor(weighted, { q25, median, q75 }) {
+function confidenceFor(weighted, { q25, median, q75 }, opts = {}) {
   if (!weighted.length || median == null || median <= 0) return null;
   const strong = weighted.filter((c) => c.relevance >= STRONG_RELEVANCE).length;
   const moderate = weighted.filter((c) => c.relevance >= MODERATE_RELEVANCE && c.relevance < STRONG_RELEVANCE).length;
@@ -247,6 +313,9 @@ function confidenceFor(weighted, { q25, median, q75 }) {
   // 2.5, not 3: one strong comp dominating the weights shouldn't by itself
   // turn "a close match + corroborating sales" into low.
   if (effectiveN < 2.5 || weighted.length < 3) demote();
+  // NWT item priced against mostly non-new sales (plan §D): the estimate is
+  // likely conservative — say so with LOWER confidence, never a guessed uplift.
+  if (opts.nwtThin) demote();
 
   const matchPart =
     strong >= 3
@@ -263,7 +332,7 @@ function confidenceFor(weighted, { q25, median, q75 }) {
     moderateMatches: moderate,
     effectiveN: Number(effectiveN.toFixed(1)),
     spreadCv: Number(cv.toFixed(2)),
-    explanation: `${matchPart}; ${spreadPart}`,
+    explanation: `${matchPart}; ${spreadPart}${opts.nwtThin ? '; few new-condition comps — may read conservative for a new-with-tags piece' : ''}`,
   };
 }
 
@@ -274,4 +343,5 @@ module.exports = {
   itemTokens,
   sizeFactor,
   conditionProximity,
+  brandMatchFactor,
 };

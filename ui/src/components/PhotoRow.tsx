@@ -3,7 +3,19 @@ import type { Item, Photo } from '@/types';
 
 const PALETTE = ['#1d3f8a', '#7a1420', '#2f6b3a', '#6b4a2b', '#5a3a6b', '#2a2f38'];
 
-export function PhotoTile({ photo, thumbnail, children }: { photo: Photo; thumbnail?: boolean; children?: ReactNode }) {
+export function PhotoTile({
+  photo,
+  thumbnail,
+  position,
+  children,
+}: {
+  photo: Photo;
+  thumbnail?: boolean;
+  /** 1-based LIVE position from the render index (plan §E) — photo.label is a
+   * stale caption (filename / import-time name) and must not number tiles. */
+  position: number;
+  children?: ReactNode;
+}) {
   // The thumbnail (position 1 — what buyers see in the Grailed feed) renders
   // notably larger than the rest so it's obvious which photo leads the listing.
   return (
@@ -23,13 +35,13 @@ export function PhotoTile({ photo, thumbnail, children }: { photo: Photo; thumbn
           }}
         />
       )}
-      {thumbnail && (
-        <span className="absolute left-1 top-1 rounded bg-black/55 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-white">
-          thumbnail
-        </span>
-      )}
+      {/* Position badge on EVERY tile — this is also the Grailed upload order,
+          so reordering/deleting renumbers instantly. */}
+      <span className="absolute left-1 top-1 z-10 rounded bg-black/55 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-white">
+        {thumbnail ? '1 · thumbnail' : position}
+      </span>
       {children}
-      <span className="relative z-10 text-[11px] text-white [text-shadow:0_1px_2px_rgba(0,0,0,.5)]">{photo.label}</span>
+      <span className="relative z-10 truncate text-[11px] text-white [text-shadow:0_1px_2px_rgba(0,0,0,.5)]">{photo.label}</span>
     </div>
   );
 }
@@ -93,7 +105,7 @@ export function PhotoRow({ item, update }: Props) {
               dragFrom.current = null;
             }}
           >
-            <PhotoTile photo={p} thumbnail>
+            <PhotoTile photo={p} thumbnail position={1}>
               <DeleteButton onDelete={() => update((d) => { d.photos.splice(0, 1); d.dirty = true; })} />
             </PhotoTile>
           </div>
@@ -115,7 +127,7 @@ export function PhotoRow({ item, update }: Props) {
                   dragFrom.current = null;
                 }}
               >
-                <PhotoTile photo={p}>
+                <PhotoTile photo={p} position={i + 1}>
                   <DeleteButton onDelete={() => update((d) => { d.photos.splice(i, 1); d.dirty = true; })} />
                 </PhotoTile>
               </div>

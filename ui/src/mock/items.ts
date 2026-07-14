@@ -25,6 +25,9 @@ export const MOCK_ITEMS: Item[] = [
       category: 'tops',
       subcategory: 'soccer jersey',
       era_style: '2022-23 football kit',
+      // Vision's Grailed-Style estimate — the editor auto-adopts it into the
+      // Style select (like color), so the preview exercises that path.
+      grailed_style_estimate: 'Sportswear',
       primary_color: 'navy blue',
       size: '',
       size_unclear: true,

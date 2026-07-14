@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ClipboardCheck, Link2, Ruler, Unlink2 } from 'lucide-react';
 import type { DescProfile, Item } from '@/types';
 import { DEFAULT_PROFILE } from '@/lib/description';
@@ -9,6 +9,7 @@ import { matchShortcut } from '@/lib/shortcuts';
 import { ChromeStatusChip } from '@/components/ChromeStatusChip';
 import { GuideMenu, type GuideSection } from '@/components/GuideMenu';
 import { Onboarding, ONBOARDED_KEY } from '@/components/Onboarding';
+import { CheckUpdatesButton, UpdateBanner, UpdateModal, useUpdater } from '@/components/Updater';
 import { editsOf } from '@/components/DraftEditor';
 import { Home } from '@/components/Home';
 import { MeasureScreen } from '@/components/MeasureScreen';
@@ -110,7 +111,17 @@ export default function App() {
     () =>
       Promise.all([api.listItems(), api.listAlbums()])
         .then(([its, als]) => {
-          setItems(its);
+          // §J: never clobber in-flight edits. reloadItems fires on background
+          // events (import streaming, album toggles, …) and used to replace
+          // the whole array — wiping the in-memory state of the item being
+          // edited mid-debounce. Dirty items keep their in-memory version;
+          // the DB one takes over once their auto-save lands (dirty clears).
+          setItems((prev) =>
+            its.map((fresh) => {
+              const cur = prev.find((p) => p.id === fresh.id);
+              return cur?.dirty ? cur : fresh;
+            })
+          );
           setAlbums(als);
         })
         .catch((err) => console.error('[api] listItems failed', err)),
@@ -121,11 +132,20 @@ export default function App() {
     reloadItems();
   }, [reloadItems]);
 
+  // In-app updater: quiet check on launch (inside useUpdater) + banner/modal.
+  // Busy refs feed the guard — never rebuild the app under a running import
+  // (batch:progress stream, non-terminal stage) or fill (DraftEditor report).
+  const batchBusyRef = useRef(false);
+  const fillBusyRef = useRef(false);
+  const isBusy = useCallback(() => batchBusyRef.current || fillBusyRef.current, []);
+  const updater = useUpdater(setToastMsg, isBusy);
+
   // Stream drafts as they finish: batch:process announces each saved item via
   // the progress stream — refresh the lists incrementally so the sidebar (and
   // Home) fill up while the rest of the batch is still pricing/writing.
   useEffect(() => {
     const off = api.onBatchProgress((p) => {
+      batchBusyRef.current = p.stage !== 'done' && p.stage !== 'error';
       if (p.item?.itemId != null) reloadItems();
     });
     return off;
@@ -317,6 +337,8 @@ export default function App() {
           yourself on every draft.
         </div>
       )}
+      {/* In-app updater: quiet launch check surfaced as a small banner. */}
+      <UpdateBanner u={updater} />
       {/* Persistent import progress: a batch keeps running in the background while
           you navigate; show a thin top strip everywhere except the Import screen,
           which renders its own detailed bar. */}
@@ -351,6 +373,7 @@ export default function App() {
           onFinish={() => openFinish('home')}
           onOpenGuide={() => setGuide('how')}
           toast={setToastMsg}
+          updater={updater}
         />
       ) : view === 'measure' ? (
         <MeasureScreen
@@ -462,6 +485,9 @@ export default function App() {
               }}
               nextDraft={nextDraft}
               fillSignal={fillSignal}
+              onFillingChange={(b) => {
+                fillBusyRef.current = b;
+              }}
               autoFillId={autoFillId}
               onAutoFillConsumed={() => setAutoFillId(null)}
               onMarkListedAndNext={(nextId) => {
@@ -498,6 +524,9 @@ export default function App() {
           }}
         />
       )}
+
+      {/* Updater progress modal — App-rooted so navigation can't lose it. */}
+      <UpdateModal u={updater} toast={setToastMsg} />
 
       {toastMsg && (
         <div className="fixed bottom-5 left-1/2 max-w-[70%] -translate-x-1/2 rounded-md border bg-card px-4 py-2.5 text-sm shadow-lg">
