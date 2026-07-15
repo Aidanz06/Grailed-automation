@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Pencil, RefreshCw } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, ChevronRight, Pencil, RefreshCw } from 'lucide-react';
 import type { DescProfile, Item } from '@/types';
 import { api, type AutofillOptions, type ChromeStatus, type FillChanges } from '@/lib/api';
 import { suggestGrailedCategory } from '@/lib/grailedCategory';
@@ -31,12 +31,13 @@ function firstFillSeen(): boolean {
     return true; // storage unavailable — never block the fill over it
   }
 }
-// Step headings for the middle column — sized to read as the SAME steps the
-// right-rail checklist lists (Photos / Title / Description / …), so scanning
-// checklist → form is a straight visual match. Field-level labels inside a
-// section stay smaller (FIELD_LABEL).
-const SECTION_LABEL = 'mb-2 block text-sm font-semibold uppercase tracking-wider text-foreground';
+// §F hierarchy (option B, owner-picked from 3 mocks): the page keeps its
+// order but stops shouting evenly. Tier-1 fields (the seller's call) sit in
+// a brass-bordered band with loud labels (BAND_LABEL); AI-drafted text gets
+// a quiet tier header + quiet labels (FIELD_LABEL); rarely-used fields
+// collapse behind "More details".
 const FIELD_LABEL = 'text-xs font-medium uppercase tracking-wide text-muted-foreground';
+const BAND_LABEL = 'text-xs font-semibold uppercase tracking-wide text-foreground';
 
 interface Props {
   item: Item;
@@ -197,6 +198,17 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
         toast(`Regenerate failed: ${errorMessage(err)}`);
       });
   };
+
+  // §F option B: the description collapses to a preview once it exists —
+  // it stays open while empty (it needs writing); Tier-3 Grailed details
+  // fold behind "More details". Both reset when the selection changes.
+  const [descOpen, setDescOpen] = useState(() => !item.content?.description);
+  const [moreOpen, setMoreOpen] = useState(false);
+  useEffect(() => {
+    setDescOpen(!item.content?.description);
+    setMoreOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.id]);
 
   // Plan §A: the persistent description style template (SQLite setting —
   // batch imports and Regenerate both read it main-side). This panel only
@@ -606,16 +618,14 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
         <PhotoRow item={item} update={update} />
       </div>
 
-      {/* Title + brand confidence + regenerate */}
+      {/* Tier 2 (§F option B): the AI's draft — glance and correct, don't
+          audit. Quiet labels; the loud band below holds the seller's calls.
+          Brand confidence moved into the band (titles are brandless now). */}
       <section id="sec-title" className="mb-5 scroll-mt-4">
         <div className="mb-2 flex items-center gap-2.5">
-          <span className="text-sm font-semibold uppercase tracking-wider text-foreground">Title</span>
-          <Badge
-            variant="outline"
-            className={highConf ? 'border-transparent bg-success/15 text-success' : 'border-transparent bg-warning/15 text-warning'}
-          >
-            {highConf ? `high confidence: ${attrs.resembles_brand}` : 'low confidence — verify'}
-          </Badge>
+          <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground/70">
+            AI-drafted — glance, correct if wrong
+          </span>
           <span className="flex-1" />
           {saveState !== 'idle' && (
             <span
@@ -634,6 +644,7 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
             {item.regenerating ? 'regenerating…' : 'Regenerate'}
           </Button>
         </div>
+        <span className={cn(FIELD_LABEL, 'mb-1 block')}>Title</span>
         <Input
           ref={titleRef}
           value={content.title}
@@ -649,9 +660,24 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
 
       {/* Description + detail selector */}
       <section id="sec-desc" className="mb-5 scroll-mt-4">
-        <div className="mb-2">
-          <span className="text-sm font-semibold uppercase tracking-wider text-foreground">Description</span>
-        </div>
+        <span className={cn(FIELD_LABEL, 'mb-1 block')}>Description</span>
+        {/* §F option B: once a description exists it collapses to a preview —
+            proofreading is one click away, and the page stops leading with a
+            240px textarea. Empty descriptions stay open (they need writing). */}
+        {!descOpen ? (
+          <button
+            type="button"
+            className="block w-full rounded-md border border-input bg-secondary/30 px-3 py-2.5 text-left transition-colors hover:border-primary"
+            title="Expand to read and edit the full description"
+            onClick={() => setDescOpen(true)}
+          >
+            <span className="line-clamp-3 whitespace-pre-line font-mono text-[13px] text-muted-foreground">
+              {content.description}
+            </span>
+            <span className="mt-1.5 block text-[11px] text-primary">expand to edit ▾</span>
+          </button>
+        ) : (
+        <>
         {/* Plan §A: the seller's style template — one persistent example
             listing every generation (import + Regenerate) emulates. Style
             only: facts still come from each item, and the generation hard
@@ -731,6 +757,8 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
             <Pencil className="h-4 w-4" />
           </button>
         </div>
+        </>
+        )}
         {/* Measurements were removed entirely (owner decision 2026-07-14):
             on Grailed they go through Grailed's own measurements system on
             the listing, never the description — the app stopped collecting
@@ -739,7 +767,7 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
 
       {/* Tags */}
       <section id="sec-tags" className="mb-5 scroll-mt-4">
-        <label className={SECTION_LABEL}>Tags</label>
+        <label className={cn(FIELD_LABEL, 'mb-2 block')}>Tags</label>
         <TagEditor
           tags={content.tags}
           onChange={(tags) =>
@@ -751,15 +779,51 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
         />
       </section>
 
-      {/* Item details (attributes) */}
+      {/* Tier 1 (§F option B): the seller-known fields in one loud band —
+          brand, size, condition, the staged category, and a price echo.
+          Brand editing is NEW here (it previously needed the Confirm pass);
+          it feeds the designer autofill + comps queries. */}
       <section id="sec-details" className="mb-5 scroll-mt-4">
-        <label className={SECTION_LABEL}>Item details</label>
-        <p className="-mt-1 mb-2 text-xs text-muted-foreground">
-          These feed autofill and the description. Blank fields are simply skipped — nothing is guessed for you.
+        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
+          Your call — the fields that sell it
         </p>
-        <div className="flex flex-wrap gap-4">
-          <div className="flex min-w-[220px] flex-col gap-1">
-            <span className={FIELD_LABEL}>Condition</span>
+        <div className="space-y-4 rounded-lg border border-primary/40 bg-card p-4">
+        {/* Brand · Size · Condition — same order as the ConfirmCard. */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="order-1 flex min-w-0 flex-col gap-1">
+            <span className={BAND_LABEL}>
+              Brand
+              {!highConf && <span className="font-normal normal-case tracking-normal text-warning"> — check the tag</span>}
+            </span>
+            <Input
+              value={attrs.resembles_brand === 'unclear' ? '' : attrs.resembles_brand}
+              placeholder="brand on the tag"
+              onChange={(e) =>
+                update((d) => {
+                  d.attributes.resembles_brand = e.target.value;
+                  d.dirty = true;
+                })
+              }
+            />
+            {!highConf && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 self-start px-2 text-[11px]"
+                title="Records that you checked the physical tag — the low-confidence warning goes away."
+                onClick={() =>
+                  update((d) => {
+                    d.attributes.brand_confidence = 1;
+                    d.dirty = true;
+                  })
+                }
+              >
+                I checked — it’s right
+              </Button>
+            )}
+          </div>
+          <div className="order-3 flex min-w-0 flex-col gap-1">
+            <span className={BAND_LABEL}>Condition</span>
             <ConditionChips
               value={attrs.condition_rating}
               onChange={(v) =>
@@ -773,8 +837,8 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
               <span className="text-xs text-warning">unclear from photos — judge it yourself</span>
             )}
           </div>
-          <div className="flex min-w-[220px] flex-col gap-1">
-            <span className={FIELD_LABEL}>Size</span>
+          <div className="order-2 flex min-w-0 flex-col gap-1">
+            <span className={BAND_LABEL}>Size</span>
             <Input
               ref={sizeRef}
               value={attrs.size}
@@ -801,76 +865,12 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
               </span>
             )}
           </div>
-          {/* Grailed listing details — autofilled when set, skipped when blank. */}
-          <div className="flex min-w-[220px] flex-col gap-1">
-            <span className={FIELD_LABEL}>Color (Grailed)</span>
-            <Select
-              value={attrs.grailed_color || undefined}
-              onValueChange={(v) =>
-                update((d) => {
-                  d.attributes.grailed_color = v;
-                  d.dirty = true;
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="not set — skipped" />
-              </SelectTrigger>
-              <SelectContent>
-                {fillOptions.colors.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex min-w-[220px] flex-col gap-1">
-            <span className={FIELD_LABEL}>Style (Grailed)</span>
-            <Select
-              value={attrs.grailed_style || undefined}
-              onValueChange={(v) =>
-                update((d) => {
-                  d.attributes.grailed_style = v;
-                  d.dirty = true;
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="not set — skipped" />
-              </SelectTrigger>
-              <SelectContent>
-                {fillOptions.styles.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex min-w-[220px] flex-col gap-1">
-            <span className={FIELD_LABEL}>Country of origin</span>
-            <Input
-              value={attrs.country_of_origin ?? ''}
-              placeholder="e.g. Portugal — skipped if blank"
-              onChange={(e) =>
-                update((d) => {
-                  d.attributes.country_of_origin = e.target.value;
-                  d.dirty = true;
-                })
-              }
-            />
-            <span className="text-xs text-muted-foreground">
-              must match a country Grailed suggests — filled via its autocomplete
-            </span>
-          </div>
         </div>
-      </section>
 
-      {/* A1 staged confirmation: the Grailed category cascade. The suggestion
-          is loudly labeled as a suggestion; nothing fills until confirmed. */}
-      <section id="sec-category" className="mb-5 scroll-mt-4">
-        <label className={SECTION_LABEL}>Grailed category — auto-selected from photos, change if wrong</label>
+        {/* A1 staged confirmation: the Grailed category cascade. The suggestion
+            is loudly labeled as a suggestion; nothing fills until confirmed. */}
+        <div id="sec-category" className="scroll-mt-4">
+        <span className={cn(BAND_LABEL, 'mb-1 block')}>Grailed category — auto-selected from photos, change if wrong</span>
         <div
           className={cn(
             'rounded-md border border-l-[3px] p-3',
@@ -893,8 +893,8 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
               </div>
               <div className="text-xs text-muted-foreground">
                 {cascadeExtras.length
-                  ? `Fill listing will also set: ${cascadeExtras.join(' · ')} — edit these in Item details.`
-                  : 'No size/sub-category/designer values set yet — add them in Item details to include them.'}{' '}
+                  ? `Fill listing will also set: ${cascadeExtras.join(' · ')} — size and brand are editable above.`
+                  : 'No size/sub-category/designer values set yet — set size and brand above to include them.'}{' '}
                 Nothing is saved on Grailed until you review and submit in Chrome.
               </div>
             </>
@@ -954,6 +954,30 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
             </>
           )}
         </div>
+        </div>
+
+        {/* Price echo — the editable price lives in the right-rail panel;
+            this shows it with its evidence and jumps there. */}
+        <button
+          type="button"
+          className="group flex flex-wrap items-center gap-x-2.5 gap-y-1 text-left"
+          title="Edit in the price panel (right rail)"
+          onClick={() => document.getElementById('sec-price')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+        >
+          <span className={BAND_LABEL}>Price</span>
+          <span className="font-display text-xl leading-none text-primary">{money(item.range?.median)}</span>
+          {(() => {
+            const n = item.range?.sampleSize ?? item.range?.mostRelevantComps.length ?? 0;
+            const conf = item.range?.confidence?.level;
+            return (
+              <span className="font-mono text-[11px] tabular-nums text-muted-foreground transition-colors group-hover:text-foreground">
+                {n > 0 ? `${n} comps` : 'no comps yet'}
+                {conf ? ` · ${conf} confidence` : ''} · edit →
+              </span>
+            );
+          })()}
+        </button>
+        </div>
       </section>
 
       {/* Disclaimers */}
@@ -969,6 +993,98 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
           </div>
         </section>
       )}
+
+      {/* Tier 3 (§F option B): rarely-touched Grailed details, collapsed.
+          Values set here (or auto-adopted from the AI) fill whether or not
+          the section is open — the toggle says how many are set so nothing
+          feels hidden. */}
+      <section id="sec-more" className="mb-5 scroll-mt-4">
+        {(() => {
+          const t3Set = [attrs.grailed_color, attrs.grailed_style, attrs.country_of_origin].filter(Boolean).length;
+          return (
+            <button
+              type="button"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              onClick={() => setMoreOpen((o) => !o)}
+            >
+              {moreOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+              More details — Grailed color · style · country
+              {t3Set > 0 && <span className="text-muted-foreground/60">({t3Set} set — filled even while collapsed)</span>}
+            </button>
+          );
+        })()}
+        {moreOpen && (
+          <div className="mt-2.5">
+            <p className="mb-2 text-xs text-muted-foreground">
+              These feed autofill. Blank fields are simply skipped — nothing is guessed for you.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              <div className="flex min-w-[220px] flex-col gap-1">
+                <span className={FIELD_LABEL}>Color (Grailed)</span>
+                <Select
+                  value={attrs.grailed_color || undefined}
+                  onValueChange={(v) =>
+                    update((d) => {
+                      d.attributes.grailed_color = v;
+                      d.dirty = true;
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="not set — skipped" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {fillOptions.colors.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        {c}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex min-w-[220px] flex-col gap-1">
+                <span className={FIELD_LABEL}>Style (Grailed)</span>
+                <Select
+                  value={attrs.grailed_style || undefined}
+                  onValueChange={(v) =>
+                    update((d) => {
+                      d.attributes.grailed_style = v;
+                      d.dirty = true;
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="not set — skipped" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {fillOptions.styles.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex min-w-[220px] flex-col gap-1">
+                <span className={FIELD_LABEL}>Country of origin</span>
+                <Input
+                  value={attrs.country_of_origin ?? ''}
+                  placeholder="e.g. Portugal — skipped if blank"
+                  onChange={(e) =>
+                    update((d) => {
+                      d.attributes.country_of_origin = e.target.value;
+                      d.dirty = true;
+                    })
+                  }
+                />
+                <span className="text-xs text-muted-foreground">
+                  must match a country Grailed suggests — filled via its autocomplete
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
       </div>
 
       {/* Right rail: readiness checklist, price card, actions. Sticky so the

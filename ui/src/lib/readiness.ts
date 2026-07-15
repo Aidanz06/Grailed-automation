@@ -129,7 +129,7 @@ export function buildRows(item: Item): ReadinessRow[] {
       label: 'Color & style',
       required: false,
       tag: 'optional',
-      jumpTo: 'sec-details',
+      jumpTo: 'sec-more', // §F option B: color/style live in the collapsed "More details"
       state: attrs.grailed_color ? 'done' : 'todo',
       sub: attrs.grailed_color
         ? `${attrs.grailed_color}${attrs.grailed_style ? ' · ' + attrs.grailed_style : ''}`
