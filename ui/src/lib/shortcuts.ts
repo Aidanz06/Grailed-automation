@@ -10,7 +10,7 @@
  *   only shortcuts marked `worksInInputs` (modifier chords) do.
  */
 
-export type ShortcutId = 'nextDraft' | 'prevDraft' | 'saveAndNext' | 'fill' | 'help';
+export type ShortcutId = 'nextDraft' | 'prevDraft' | 'saveAndNext' | 'fill' | 'help' | 'palette';
 
 export interface Shortcut {
   id: ShortcutId;
@@ -67,6 +67,14 @@ export const SHORTCUTS: Shortcut[] = [
     label: 'Open the guide',
     description: 'Open the how-it-works guide (including this shortcut list).',
     match: (e) => noMods(e) && e.key === '?',
+  },
+  {
+    id: 'palette',
+    keys: [`${MOD_LABEL} K`],
+    label: 'Command palette',
+    description: 'Search your drafts and jump anywhere — works from every screen, even mid-typing.',
+    worksInInputs: true,
+    match: (e) => (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && (e.key === 'k' || e.key === 'K'),
   },
 ];
 

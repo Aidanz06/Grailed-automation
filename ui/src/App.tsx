@@ -13,6 +13,7 @@ import { CheckUpdatesButton, UpdateBanner, UpdateModal, useUpdater } from '@/com
 import { editsOf } from '@/components/DraftEditor';
 import { Home } from '@/components/Home';
 import { ConfirmScreen } from '@/components/ConfirmScreen';
+import { CommandPalette, type PaletteCommand } from '@/components/CommandPalette';
 import { Sidebar } from '@/components/Sidebar';
 import { Editor } from '@/components/Editor';
 import { FillTracker } from '@/components/FillTracker';
@@ -26,6 +27,9 @@ export type UpdateItem = (id: number, recipe: (draft: Item) => void) => void;
 
 // Persisted dock-Chrome intent (audit §2.5).
 const DOCK_PREF_KEY = 'tailor.dockChrome';
+// Persisted default description detail (saved defaults) — per-draft overrides
+// still live on the item; this is only what new/unset drafts start from.
+const DESC_PROFILE_KEY = 'tailor.defaultDescProfile';
 
 export default function App() {
   const [items, setItems] = useState<Item[]>([]);
@@ -46,7 +50,26 @@ export default function App() {
   // draft" — the DraftEditor for this item starts its fill on mount (that
   // click IS the per-item manual trigger; nothing fills without it).
   const [autoFillId, setAutoFillId] = useState<number | null>(null);
-  const [defaultProfile, setDefaultProfile] = useState<DescProfile>(() => structuredClone(DEFAULT_PROFILE));
+  const [defaultProfile, setDefaultProfileState] = useState<DescProfile>(() => {
+    try {
+      const raw = localStorage.getItem(DESC_PROFILE_KEY);
+      if (raw) {
+        const p = JSON.parse(raw) as DescProfile;
+        if (p && typeof p === 'object' && p.preset && p.sections) return p;
+      }
+    } catch {
+      /* corrupt/unavailable — fall back to the built-in default */
+    }
+    return structuredClone(DEFAULT_PROFILE);
+  });
+  const setDefaultProfile = useCallback((p: DescProfile) => {
+    setDefaultProfileState(p);
+    try {
+      localStorage.setItem(DESC_PROFILE_KEY, JSON.stringify(p));
+    } catch {
+      /* private mode — session-only */
+    }
+  }, []);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   // §5.5 window docking: snap the real Chrome window against the app so
   // fill-review feels like one window. State lives in the main process
@@ -262,9 +285,40 @@ export default function App() {
     }
   };
   const [guide, setGuide] = useState<GuideSection | null>(null);
+
+  // ⌘K command palette — available from EVERY screen (its binding lives in
+  // lib/shortcuts.ts with the rest, so the guide documents it for free).
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (matchShortcut(e) === 'palette') {
+        e.preventDefault();
+        setPaletteOpen((o) => !o);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  // Every command runs an EXISTING path — the palette adds reach, not powers.
+  const paletteCommands: PaletteCommand[] = [
+    ...(view !== 'home'
+      ? [{ id: 'home', label: 'Go to the board (Home)', hint: 'navigate', run: () => { setBoardAlbum(null); setView('home'); } }]
+      : []),
+    { id: 'new-batch', label: 'New batch — import photos', hint: 'opens the folder picker', run: newBatch },
+    ...(unreadyCount > 0 && view !== 'confirm'
+      ? [{ id: 'confirm', label: `Confirm drafts (${unreadyCount})`, hint: 'one card per gap', run: () => openConfirm(view === 'workspace' ? 'workspace' : 'home') }]
+      : []),
+    ...(view === 'workspace' && selectedItem && selectedItem.status !== 'submitted' && selectedItem.content?.title
+      ? [{ id: 'fill', label: `Fill “${selectedItem.content.title}” in Chrome`, hint: 'same gated path as F', run: () => setFillSignal((s) => s + 1) }]
+      : []),
+    { id: 'guide', label: 'Open the guide', hint: 'how it works + shortcuts', run: () => setGuide('how') },
+  ];
+
   useEffect(() => {
     if (view !== 'workspace') return;
     const onKey = (e: KeyboardEvent) => {
+      // The palette owns the keyboard while open (its input handles keys).
+      if (paletteOpen) return;
       const id = matchShortcut(e);
       if (!id) return;
       const idx = typeof selected === 'number' ? draftQueue.findIndex((it) => it.id === selected) : -1;
@@ -312,7 +366,7 @@ export default function App() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, selected, items]);
+  }, [view, selected, items, paletteOpen]);
 
   return (
     <div className="flex h-full flex-col">
@@ -371,6 +425,8 @@ export default function App() {
           onFinish={() => openConfirm('home')}
           onOpenGuide={() => setGuide('how')}
           boardAlbumId={boardAlbum}
+          defaultProfile={defaultProfile}
+          setDefaultProfile={setDefaultProfile}
           toast={setToastMsg}
           updater={updater}
         />
@@ -521,6 +577,15 @@ export default function App() {
           }}
         />
       )}
+
+      {/* ⌘K palette — App-rooted so it works from every screen. */}
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        commands={paletteCommands}
+        items={items}
+        onOpenItem={openItem}
+      />
 
       {/* Updater progress modal — App-rooted so navigation can't lose it. */}
       <UpdateModal u={updater} toast={setToastMsg} />

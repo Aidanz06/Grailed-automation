@@ -92,13 +92,41 @@ function styleTemplate() {
   }
 }
 
+// Saved defaults: the seller's always-on tags (comma-separated setting, twin
+// key in ui/src/lib/api.ts) merged into every NEWLY generated draft's tags —
+// generated tags first, deduped case-insensitively, capped at 10 (the
+// generation schema's own limit). Applied at all three generation sites
+// (batch import, review-confirm, Regenerate); never blocks generation.
+const DEFAULT_TAGS_KEY = 'defaultTags';
+function applyDefaultTags(content) {
+  try {
+    if (!content || !Array.isArray(content.tags)) return content;
+    const raw = getStore().getSetting(DEFAULT_TAGS_KEY) || '';
+    const extra = raw.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
+    if (!extra.length) return content;
+    const seen = new Set(content.tags.map((t) => String(t).toLowerCase()));
+    for (const t of extra) {
+      if (!seen.has(t)) {
+        content.tags.push(t);
+        seen.add(t);
+      }
+    }
+    content.tags = content.tags.slice(0, 10);
+  } catch {
+    /* settings must never block generation */
+  }
+  return content;
+}
+
 // Slice 3: regenerate listing content from (possibly user-edited) attributes.
 // The persisted style template rides along so Regenerate matches import.
-ipcMain.handle('content:generate', (_e, attributes, instructions) =>
-  generateContent(attributes, {
-    ...(instructions ? { instructions } : {}),
-    ...(styleTemplate() ? { styleExample: styleTemplate() } : {}),
-  })
+ipcMain.handle('content:generate', async (_e, attributes, instructions) =>
+  applyDefaultTags(
+    await generateContent(attributes, {
+      ...(instructions ? { instructions } : {}),
+      ...(styleTemplate() ? { styleExample: styleTemplate() } : {}),
+    })
+  )
 );
 // Slice 4: recompute price/comps from (possibly user-edited) attributes via the
 // guarded live-Grailed provider. Cache/rate-limit/circuit-breaker are disk-backed
@@ -217,6 +245,7 @@ ipcMain.handle('batch:process', async (e, folder) => {
           label: `[group ${g.groupId}]`,
           styleExample: styleTemplate(), // plan §A: imports match the seller's saved style
         });
+        applyDefaultTags(item.content); // saved defaults: the seller's always-on tags
         // base last so confidence-annotated photos + flags win over plain paths.
         const id = store.saveItemRun({ ...item, ...base, status: 'draft' });
         const entry = { groupId: g.groupId, itemId: id, status: 'draft', title: item.content?.title ?? null };
@@ -289,6 +318,7 @@ ipcMain.handle('review:confirm', async (_e, itemId) => {
     label: `[review ${itemId}]`,
     styleExample: styleTemplate(), // plan §A: review-confirm drafts match the saved style too
   });
+  applyDefaultTags(run.content); // saved defaults: the seller's always-on tags
   store.updateItemRun(itemId, { attributes: run.attributes, content: run.content, range: run.range, comps: run.comps });
   store.logCorrection('confirm', { itemId, photos: item.photos.length });
   return { itemId, title: run.content?.title ?? null };

@@ -110,6 +110,9 @@ const BLANK_MEASUREMENTS: Measurements = {};
 // Settings key for the seller's style template (plan §A). Twin constant lives
 // in ui/main.js (the main process reads the setting for batch + Regenerate).
 const STYLE_TEMPLATE_KEY = 'descriptionStyleTemplate';
+// Settings key for the seller's always-on tags (saved defaults). Twin in
+// ui/main.js, which merges them into every newly generated draft's tags.
+const DEFAULT_TAGS_KEY = 'defaultTags';
 
 /** Normalize the model's snake_case desc_parts into the UI DescParts shape. */
 function adaptDescParts(dp: DescParts | null | undefined): DescParts | null {
@@ -416,6 +419,9 @@ export interface Api {
    * hard rules and each item's facts always win). "" = none set. */
   getStyleTemplate(): Promise<string>;
   setStyleTemplate(template: string): Promise<void>;
+  /** Saved defaults: comma-separated tags appended to every new draft. */
+  getDefaultTags(): Promise<string>;
+  setDefaultTags(tags: string): Promise<void>;
   /** Read-only Chrome tab probe — header chip + fresh-Sell-form fill gate. */
   getChromeStatus(): Promise<ChromeStatus>;
   /** Launch the dedicated CDP Chrome (no-op if already up). Login stays manual. */
@@ -846,6 +852,24 @@ const mockApi: Api = {
       /* private mode — session-only */
     }
   },
+  // Preview default tags: localStorage stands in for the SQLite setting (the
+  // real merge-into-new-drafts happens in ui/main.js at generation time).
+  async getDefaultTags() {
+    try {
+      return localStorage.getItem(DEFAULT_TAGS_KEY) ?? '';
+    } catch {
+      return '';
+    }
+  },
+  async setDefaultTags(tags) {
+    console.log('[mock] setDefaultTags — persisted to localStorage for this preview');
+    try {
+      if (tags.trim()) localStorage.setItem(DEFAULT_TAGS_KEY, tags);
+      else localStorage.removeItem(DEFAULT_TAGS_KEY);
+    } catch {
+      /* private mode — session-only */
+    }
+  },
   // No CDP in the browser preview — reports per mockChromeState ('ready' by
   // default so the normal flow renders; flip it above to walk the other UI).
   async getChromeStatus() {
@@ -1042,6 +1066,12 @@ function realApi(bridge: TailorBridge): Api {
     },
     async setStyleTemplate(template) {
       await bridge.setSetting(STYLE_TEMPLATE_KEY, template.trim() ? template : null);
+    },
+    async getDefaultTags() {
+      return (await bridge.getSetting(DEFAULT_TAGS_KEY)) ?? '';
+    },
+    async setDefaultTags(tags) {
+      await bridge.setSetting(DEFAULT_TAGS_KEY, tags.trim() ? tags : null);
     },
     async getChromeStatus() {
       return bridge.getChromeStatus();
