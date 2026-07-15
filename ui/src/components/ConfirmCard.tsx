@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AnimatedCheck } from '@/components/motion';
-import { CONDITIONS } from '@/components/DraftEditor';
+import { ConditionChips } from '@/components/ConditionChips';
 
 /*
  * Structured Confirm Card (refinement plan §D1/§D2): one draft as a compact
@@ -180,26 +180,19 @@ export function ConfirmCard({ item, fillOptions, pendingCatKey, onPendingCat, re
           )}
         </Field>
 
-        <Field label="Condition" flag={row('condition').state !== 'done' ? (attrs.condition_rating === 'Unclear' ? 'unclear — judge it' : 'missing') : null}>
-          <Select
-            value={attrs.condition_rating && attrs.condition_rating !== 'Unclear' ? attrs.condition_rating : undefined}
-            onValueChange={(v) =>
+        <Field
+          label="Condition"
+          className="col-span-2 md:col-span-1"
+          flag={row('condition').state !== 'done' ? (attrs.condition_rating === 'Unclear' ? 'unclear — judge it' : 'missing') : null}
+        >
+          <ConditionChips
+            value={attrs.condition_rating}
+            onChange={(v) =>
               edit((d) => {
                 d.attributes.condition_rating = v;
               })
             }
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="pick a condition" />
-            </SelectTrigger>
-            <SelectContent>
-              {CONDITIONS.filter((c) => c !== 'Unclear').map((c) => (
-                <SelectItem key={c} value={c}>
-                  {c}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          />
         </Field>
 
         <Field

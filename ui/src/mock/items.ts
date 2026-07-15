@@ -59,6 +59,17 @@ export const MOCK_ITEMS: Item[] = [
       median: 90,
       high: 110,
       sampleSize: 34,
+      // Confidence present on this item (and absent on others) so both board
+      // price-context variants preview: "· high" vs comps-only.
+      confidence: {
+        level: 'high',
+        ci95: [82, 98],
+        strongMatches: 6,
+        moderateMatches: 12,
+        effectiveN: 14,
+        spreadCv: 0.18,
+        explanation: 'Several near-identical sold listings of this jersey — the estimate tracks real sales closely.',
+      },
       mostRelevantComps: [
         comp(100, '2026-05-16', 'Nike FC Barcelona Lewandowski Home Jersey 22/23 NWT', 990001),
         comp(92, '2025-09-13', 'New Nike 2022-23 FC Barcelona Home Jersey', 990002),

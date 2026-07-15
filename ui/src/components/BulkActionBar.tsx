@@ -8,7 +8,7 @@ import { errorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CONDITIONS } from '@/components/DraftEditor';
+import { CONDITIONS } from '@/components/ConditionChips';
 
 /*
  * R4 bulk edit bar: one action across the selected drafts instead of N editor

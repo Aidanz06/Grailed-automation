@@ -120,7 +120,7 @@ export function GuideMenu({ open, initialSection = 'how', onClose }: Props) {
       <div className="rise-in flex max-h-[85vh] w-full max-w-xl flex-col rounded-xl border bg-card shadow-xl">
         <div className="flex items-center gap-2 border-b px-5 py-3.5">
           <BookOpenText className="h-4 w-4 text-primary" />
-          <h2 className="font-display text-lg tracking-tight">Guide</h2>
+          <h2 className="text-base font-semibold">Guide</h2>
           <span className="flex-1" />
           <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onClose} aria-label="close guide">
             <X className="h-4 w-4" />

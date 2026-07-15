@@ -257,7 +257,7 @@ export function UpdateModal({ u, toast }: { u: Updater; toast: (msg: string) => 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6" role="dialog" aria-modal="true" aria-label="Updating Tailor">
       <div className="w-full max-w-md rounded-xl border bg-card p-5 shadow-xl">
-        <div className="mb-3 font-display text-lg">
+        <div className="mb-3 text-base font-semibold">
           {err ? (err.cancelled ? 'Update cancelled' : 'Update failed') : 'Updating Tailor'}
         </div>
 

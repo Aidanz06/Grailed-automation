@@ -35,7 +35,7 @@ export function HowItWorksSteps() {
     <ol className="space-y-3">
       {STEPS.map((s, i) => (
         <li key={s.title} className="flex items-start gap-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 font-display text-sm text-primary">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 font-mono text-sm text-primary">
             {i + 1}
           </span>
           <span className="min-w-0">

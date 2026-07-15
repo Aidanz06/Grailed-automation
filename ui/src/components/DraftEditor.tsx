@@ -18,10 +18,9 @@ import { ListingChecklist } from '@/components/ListingChecklist';
 import { FillProgressCard, applyFillProgress, emptyFillRun, type FillRunState } from '@/components/FillProgressCard';
 import { FillChangesCard } from '@/components/FillChangesCard';
 import { useOpenSellTab } from '@/components/ChromeStatusChip';
+import { ConditionChips } from '@/components/ConditionChips';
 
 const money = (n: number | null | undefined) => (n == null ? '—' : '$' + n);
-// Shared with the ConfirmCard's inline condition picker.
-export const CONDITIONS = ['New with tags', 'Gently used', 'Used', 'Unclear'];
 
 // Beta Part F: the very first fill ever shows a one-time heads-up.
 const FIRST_FILL_KEY = 'tailor.firstFillConfirmed';
@@ -761,26 +760,18 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
         <div className="flex flex-wrap gap-4">
           <div className="flex min-w-[220px] flex-col gap-1">
             <span className={FIELD_LABEL}>Condition</span>
-            <Select
+            <ConditionChips
               value={attrs.condition_rating}
-              onValueChange={(v) =>
+              onChange={(v) =>
                 update((d) => {
                   d.attributes.condition_rating = v;
                   d.dirty = true;
                 })
               }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {CONDITIONS.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
+            {attrs.condition_rating === 'Unclear' && (
+              <span className="text-xs text-warning">unclear from photos — judge it yourself</span>
+            )}
           </div>
           <div className="flex min-w-[220px] flex-col gap-1">
             <span className={FIELD_LABEL}>Size</span>

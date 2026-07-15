@@ -130,7 +130,9 @@ export function ConfirmScreen({ drafts, toast, onOpenItem, onDone }: Props) {
           <ArrowLeft /> Done
         </Button>
         <ClipboardCheck className="h-4 w-4 text-primary" />
-        <span className="font-display text-lg tracking-tight">Confirm drafts</span>
+        {/* §F serif discipline: Instrument Serif stays reserved for the
+            wordmark + the big price — screen titles are plain UI type. */}
+        <span className="text-sm font-semibold">Confirm drafts</span>
         <span className="ml-2 text-sm text-muted-foreground">
           {queue.length === 0
             ? 'nothing needs attention'

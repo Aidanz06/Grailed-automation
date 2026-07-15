@@ -254,12 +254,29 @@ export function TriageBoard({ items, albums, initialAlbumId, onOpenItem, onDelet
                         {q.score}
                       </span>
                     </div>
-                    <div className="mt-1 font-mono text-xs tabular-nums text-muted-foreground">
-                      {q.state === 'listed' ? (
-                        <span className="text-success">{money(it.range?.median)}</span>
-                      ) : (
-                        money(it.range?.median)
-                      )}
+                    {/* §F: the price with its comp context inline — how many
+                        sales back the number and how much to trust it. */}
+                    <div
+                      className="mt-1 truncate font-mono text-[11px] tabular-nums text-muted-foreground"
+                      title={
+                        it.range?.confidence
+                          ? `${it.range.sampleSize ?? it.range.mostRelevantComps.length} sold comps · ${it.range.confidence.level} confidence — ${it.range.confidence.explanation}`
+                          : undefined
+                      }
+                    >
+                      <span className={q.state === 'listed' ? 'text-success' : 'text-foreground'}>
+                        {money(it.range?.median)}
+                      </span>
+                      {(() => {
+                        const n = it.range?.sampleSize ?? it.range?.mostRelevantComps.length ?? 0;
+                        const conf = it.range?.confidence?.level;
+                        return (
+                          <>
+                            {n > 0 && ` · ${n} comps`}
+                            {conf && ` · ${conf}`}
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 </button>
