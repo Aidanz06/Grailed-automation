@@ -3,7 +3,7 @@ import { CheckCircle2, CheckSquare, Plus, Square } from 'lucide-react';
 import type { Item, ItemStatus } from '@/types';
 import type { Selection, UpdateItem } from '@/App';
 import { cn } from '@/lib/utils';
-import { isTriageDraft, readiness, triageSort } from '@/lib/readiness';
+import { GRAILED_PHOTO_LIMIT, isTriageDraft, readiness, triageSort } from '@/lib/readiness';
 import { quality, qualityTitle } from '@/lib/quality';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -167,7 +167,12 @@ export function Sidebar({ items, selected, onSelect, updateItem, toast }: Sideba
                       />
                     )}
                     {it.photos.length > 1 && (
-                      <span className="absolute bottom-0.5 right-0.5 rounded bg-black/60 px-1 text-[9px] tabular-nums text-white">
+                      <span
+                        className={cn(
+                          'absolute bottom-0.5 right-0.5 rounded bg-black/60 px-1 text-[9px] tabular-nums',
+                          it.photos.length > GRAILED_PHOTO_LIMIT ? 'font-semibold text-warning' : 'text-white'
+                        )}
+                      >
                         {it.photos.length}
                       </span>
                     )}

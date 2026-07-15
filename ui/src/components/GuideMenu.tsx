@@ -34,8 +34,8 @@ const SCREENS: Array<{ name: string; body: string }> = [
     body: 'One listing: photos, title, description, details, and price with the sold comps behind it. The checklist on the right shows exactly what’s left; click a row to jump to it.',
   },
   {
-    name: 'Finish drafts',
-    body: 'One pass over every draft that still needs something — it shows only the gaps (a missing size, an unconfirmed category) and skips drafts that are already complete.',
+    name: 'Confirm drafts',
+    body: 'One card per draft that still needs something: the six fields you know instantly (brand, category, size, condition, price, floor) up top, the AI’s text below to glance over, and J/K to walk the queue. Drafts that are already complete are skipped.',
   },
   {
     name: 'Fill + Chrome',

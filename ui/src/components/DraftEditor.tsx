@@ -20,7 +20,7 @@ import { FillChangesCard } from '@/components/FillChangesCard';
 import { useOpenSellTab } from '@/components/ChromeStatusChip';
 
 const money = (n: number | null | undefined) => (n == null ? '—' : '$' + n);
-// Shared with FinishScreen's inline condition picker (R2).
+// Shared with the ConfirmCard's inline condition picker.
 export const CONDITIONS = ['New with tags', 'Gently used', 'Used', 'Unclear'];
 
 // Beta Part F: the very first fill ever shows a one-time heads-up.
@@ -790,7 +790,11 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
               placeholder="e.g. L"
               onChange={(e) =>
                 update((d) => {
+                  // Typing a size is the seller's own judgment — clear the
+                  // AI's "guessed, unclear" flag (it only ever described the
+                  // AI's value; the editor has no other way to clear it).
                   d.attributes.size = e.target.value;
+                  d.attributes.size_unclear = false;
                   d.dirty = true;
                 })
               }

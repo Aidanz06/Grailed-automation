@@ -1,5 +1,7 @@
 import { useRef, type ReactNode } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import type { Item, Photo } from '@/types';
+import { GRAILED_PHOTO_LIMIT } from '@/lib/readiness';
 
 const PALETTE = ['#1d3f8a', '#7a1420', '#2f6b3a', '#6b4a2b', '#5a3a6b', '#2a2f38'];
 
@@ -7,6 +9,7 @@ export function PhotoTile({
   photo,
   thumbnail,
   position,
+  overLimit,
   children,
 }: {
   photo: Photo;
@@ -14,6 +17,8 @@ export function PhotoTile({
   /** 1-based LIVE position from the render index (plan §E) — photo.label is a
    * stale caption (filename / import-time name) and must not number tiles. */
   position: number;
+  /** Past Grailed's photo cap at its current position — won't fit on the form. */
+  overLimit?: boolean;
   children?: ReactNode;
 }) {
   // The thumbnail (position 1 — what buyers see in the Grailed feed) renders
@@ -22,7 +27,8 @@ export function PhotoTile({
     <div
       className={`relative flex flex-col justify-end overflow-hidden rounded-md border p-1.5 ${
         thumbnail ? 'h-[240px] w-[192px]' : 'h-[116px] w-[116px]'
-      }`}
+      } ${overLimit ? 'border-warning ring-1 ring-warning' : ''}`}
+      title={overLimit ? `Past Grailed's ${GRAILED_PHOTO_LIMIT}-photo limit — drag it into the first ${GRAILED_PHOTO_LIMIT} or delete it` : undefined}
       style={{ background: photo.tint }}
     >
       {photo.src && (
@@ -68,6 +74,7 @@ interface Props {
 
 export function PhotoRow({ item, update }: Props) {
   const dragFrom = useRef<number | null>(null);
+  const over = item.photos.length - GRAILED_PHOTO_LIMIT;
 
   const move = (from: number, to: number) =>
     update((d) => {
@@ -81,11 +88,20 @@ export function PhotoRow({ item, update }: Props) {
   return (
     <section className="mb-5">
       <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-foreground">
-        Photos ({item.photos.length}){' '}
+        Photos (<span className={over > 0 ? 'text-warning' : undefined}>{item.photos.length}</span>){' '}
         <span className="font-normal normal-case tracking-normal text-muted-foreground">
           — drag to reorder · position 1 is the Grailed thumbnail
         </span>
       </label>
+      {over > 0 && (
+        <div className="mb-2 flex items-start gap-2 rounded-md border border-l-[3px] border-l-warning bg-secondary/40 p-2.5 text-[13px] text-muted-foreground">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+          <span>
+            Grailed allows {GRAILED_PHOTO_LIMIT} photos per listing — remove {over} photo{over === 1 ? '' : 's'}{' '}
+            (the outlined tiles are past the limit; the fill won’t upload until this is {GRAILED_PHOTO_LIMIT} or fewer).
+          </span>
+        </div>
+      )}
       {/* Streamlined layout: the tall thumbnail sits left; the rest pack a tight
           grid beside it. Two 116px rows + gap ≈ the 240px thumbnail, so there's
           no dead band under the small tiles. */}
@@ -127,7 +143,7 @@ export function PhotoRow({ item, update }: Props) {
                   dragFrom.current = null;
                 }}
               >
-                <PhotoTile photo={p} position={i + 1}>
+                <PhotoTile photo={p} position={i + 1} overLimit={i + 1 > GRAILED_PHOTO_LIMIT}>
                   <DeleteButton onDelete={() => update((d) => { d.photos.splice(i, 1); d.dirty = true; })} />
                 </PhotoTile>
               </div>

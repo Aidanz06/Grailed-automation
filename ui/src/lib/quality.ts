@@ -9,7 +9,7 @@
  */
 
 import type { Item } from '@/types';
-import { readiness, type Readiness } from '@/lib/readiness';
+import { GRAILED_PHOTO_LIMIT, readiness, type Readiness } from '@/lib/readiness';
 
 export type QualityState = 'review' | 'attention' | 'ready' | 'listed';
 
@@ -38,7 +38,8 @@ const BOOSTS: Array<{ points: number; label: string; earned: (item: Item, r: Rea
   {
     points: 6,
     label: '5+ photos',
-    earned: (item) => item.photos.length >= 5,
+    // Within Grailed's cap — an over-limit set is a problem, not a boost.
+    earned: (item) => item.photos.length >= 5 && item.photos.length <= GRAILED_PHOTO_LIMIT,
   },
   {
     points: 6,

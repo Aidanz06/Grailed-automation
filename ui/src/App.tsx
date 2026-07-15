@@ -12,7 +12,7 @@ import { Onboarding, ONBOARDED_KEY } from '@/components/Onboarding';
 import { CheckUpdatesButton, UpdateBanner, UpdateModal, useUpdater } from '@/components/Updater';
 import { editsOf } from '@/components/DraftEditor';
 import { Home } from '@/components/Home';
-import { FinishScreen } from '@/components/FinishScreen';
+import { ConfirmScreen } from '@/components/ConfirmScreen';
 import { Sidebar } from '@/components/Sidebar';
 import { Editor } from '@/components/Editor';
 import { FillTracker } from '@/components/FillTracker';
@@ -21,7 +21,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { BatchProgressBar } from '@/components/BatchProgressBar';
 
 export type Selection = number | 'import';
-export type View = 'home' | 'workspace' | 'finish';
+export type View = 'home' | 'workspace' | 'confirm';
 export type UpdateItem = (id: number, recipe: (draft: Item) => void) => void;
 
 // Persisted dock-Chrome intent (audit §2.5).
@@ -32,7 +32,7 @@ export default function App() {
   const [albums, setAlbums] = useState<Album[]>([]);
   const [view, setView] = useState<View>('home');
   const [selected, setSelected] = useState<Selection>('import');
-  // Where a batch pass (Finish drafts) was launched from, so "Done" returns
+  // Where a batch pass (Confirm drafts) was launched from, so "Done" returns
   // there (audit §2.2: passes are reachable from Home AND workspace).
   const [passReturn, setPassReturn] = useState<View>('home');
   // One-shot: "New batch" opens the OS folder picker on the Import screen
@@ -208,9 +208,9 @@ export default function App() {
     setSelected('import');
     setView('workspace');
   };
-  const openFinish = (from: View) => {
+  const openConfirm = (from: View) => {
     setPassReturn(from);
-    setView('finish');
+    setView('confirm');
   };
 
   const selectedItem = typeof selected === 'number' ? items.find((it) => it.id === selected) ?? null : null;
@@ -368,14 +368,14 @@ export default function App() {
               .then(() => setToastMsg(`Deleted “${title}” from the app. Grailed and your photo files are untouched.`))
               .catch((err) => setToastMsg(`Delete failed: ${errorMessage(err)}`));
           }}
-          onFinish={() => openFinish('home')}
+          onFinish={() => openConfirm('home')}
           onOpenGuide={() => setGuide('how')}
           boardAlbumId={boardAlbum}
           toast={setToastMsg}
           updater={updater}
         />
-      ) : view === 'finish' ? (
-        <FinishScreen
+      ) : view === 'confirm' ? (
+        <ConfirmScreen
           drafts={draftQueue}
           toast={setToastMsg}
           onOpenItem={(id) => {
@@ -408,10 +408,10 @@ export default function App() {
               <Button
                 variant="ghost"
                 size="sm"
-                title="One pass over every draft that still needs something — only the gaps are shown, complete drafts are skipped."
-                onClick={() => openFinish('workspace')}
+                title="One card per draft that still needs something — confirm the key fields, correct the AI's text, keyboard through the queue. Complete drafts are skipped."
+                onClick={() => openConfirm('workspace')}
               >
-                <ClipboardCheck /> Finish drafts ({unreadyCount})
+                <ClipboardCheck /> Confirm drafts ({unreadyCount})
               </Button>
             )}
             <Button

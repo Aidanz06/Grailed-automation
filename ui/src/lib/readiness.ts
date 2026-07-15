@@ -11,6 +11,12 @@ import { suggestGrailedCategory } from '@/lib/grailedCategory';
 
 export type RowState = 'done' | 'warn' | 'todo';
 
+/** Grailed's per-listing photo cap — one file input per slot on the sell
+ * form. Twin of grailed-selectors.json `photos.slots` (the driver's source;
+ * the renderer can't read that file): the fill REFUSES to upload when the
+ * item has more photos than empty slots, so surface it before the fill. */
+export const GRAILED_PHOTO_LIMIT = 9;
+
 export interface ReadinessRow {
   key: string;
   label: string;
@@ -39,9 +45,16 @@ export function buildRows(item: Item): ReadinessRow[] {
       label: 'Photos',
       required: true,
       jumpTo: 'sec-photos',
-      state: nPhotos ? 'done' : 'todo',
-      sub: nPhotos ? `${nPhotos} photo${nPhotos === 1 ? '' : 's'} — uploaded by Fill listing` : 'no photos in this group',
-      short: 'no photos',
+      state: !nPhotos ? 'todo' : nPhotos > GRAILED_PHOTO_LIMIT ? 'warn' : 'done',
+      sub: !nPhotos
+        ? 'no photos in this group'
+        : nPhotos > GRAILED_PHOTO_LIMIT
+          ? `${nPhotos} photos — Grailed allows ${GRAILED_PHOTO_LIMIT}, remove ${nPhotos - GRAILED_PHOTO_LIMIT}`
+          : `${nPhotos} photo${nPhotos === 1 ? '' : 's'} — uploaded by Fill listing`,
+      short:
+        nPhotos > GRAILED_PHOTO_LIMIT
+          ? `remove ${nPhotos - GRAILED_PHOTO_LIMIT} photo${nPhotos - GRAILED_PHOTO_LIMIT === 1 ? '' : 's'}`
+          : 'no photos',
     },
     {
       key: 'title',

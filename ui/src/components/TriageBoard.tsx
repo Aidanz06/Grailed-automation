@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { CheckCircle2, Trash2 } from 'lucide-react';
 import type { Item } from '@/types';
 import type { Album } from '@/lib/api';
-import { triageSort } from '@/lib/readiness';
+import { GRAILED_PHOTO_LIMIT, triageSort } from '@/lib/readiness';
 import { quality, qualityTitle, type Quality, type QualityState } from '@/lib/quality';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
@@ -218,7 +218,17 @@ export function TriageBoard({ items, albums, initialAlbumId, onOpenItem, onDelet
                       />
                     )}
                     {it.photos.length > 1 && (
-                      <span className="absolute bottom-1 right-1 rounded bg-black/60 px-1 text-[9px] tabular-nums text-white">
+                      <span
+                        className={cn(
+                          'absolute bottom-1 right-1 rounded bg-black/60 px-1 text-[9px] tabular-nums',
+                          it.photos.length > GRAILED_PHOTO_LIMIT ? 'font-semibold text-warning' : 'text-white'
+                        )}
+                        title={
+                          it.photos.length > GRAILED_PHOTO_LIMIT
+                            ? `Grailed allows ${GRAILED_PHOTO_LIMIT} photos — remove ${it.photos.length - GRAILED_PHOTO_LIMIT}`
+                            : undefined
+                        }
+                      >
                         {it.photos.length}
                       </span>
                     )}

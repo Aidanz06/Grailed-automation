@@ -191,7 +191,7 @@ interface Props {
   onDeleteItem: (id: number) => void;
   /** Hide/show a whole import batch on this screen (nothing is deleted). */
   onToggleAlbum: (id: number, hidden: boolean) => void;
-  /** Finish-drafts pass (R2): resolve every draft's remaining gaps in one queue. */
+  /** Confirm-drafts pass: one card per draft with gaps, keyboard-walked. */
   onFinish: () => void;
   /** Open the in-app Guide (beta Part G) — the "?" button. */
   onOpenGuide: () => void;
@@ -269,10 +269,10 @@ export function Home({ items, albums, onOpenItem, onNewBatch, onDeleteItem, onTo
         {unready > 0 && (
           <Button
             variant="outline"
-            title="One pass over every draft that still needs something — only the gaps are shown, complete drafts are skipped."
+            title="One card per draft that still needs something — confirm the key fields, correct the AI's text, keyboard through the queue. Complete drafts are skipped."
             onClick={onFinish}
           >
-            <ClipboardCheck /> Finish drafts ({unready})
+            <ClipboardCheck /> Confirm drafts ({unready})
           </Button>
         )}
         <Button onClick={onNewBatch}>
