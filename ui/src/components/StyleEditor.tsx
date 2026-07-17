@@ -1,9 +1,8 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Check, Pencil, Plus, RotateCcw, Trash2, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import {
   BUILTIN_STYLES,
-  CHIP_DEFS,
   DEFAULT_ACTIVE,
   chipValues,
   composeDescription,
@@ -13,20 +12,20 @@ import {
   styleFooter,
   type ResolvedStyles,
 } from '@/lib/description';
+import { ChipTemplateEditor } from '@/components/ChipTemplateEditor';
 import { errorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
 
 /*
  * Description Styles editor (Phase 1, docs/DESIGN-description-styles.md).
  * One template per named style: plain typed text is CONSTANT (footer, labels
- * like "Condition:"), [chips] are dynamic — data chips substitute from the
+ * like "Condition:"), chips are dynamic — data chips substitute from the
  * item's attributes, prose chips are written by the AI; an empty chip drops
- * its whole line. The merge-tag fallback pattern: a plain-text template with
- * [token]s plus an insert-at-caret picker, with the chips and a live preview
- * rendered alongside (not a contenteditable chip editor).
+ * its whole line. The template is edited inline in ChipTemplateEditor (details
+ * render as atomic pills among typed text); it still round-trips to the same
+ * persisted [token] string the engine composes from.
  */
 
 // The sample item behind the live preview — rich enough that every chip has a
@@ -62,7 +61,6 @@ export function StyleEditor({ stylesRaw, onSaved, onClose, toast }: Props) {
   );
   const [renaming, setRenaming] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const taRef = useRef<HTMLTextAreaElement>(null);
 
   const current = resolved.styles.find((s) => s.name === selected);
   const isBuiltin = !!current?.builtin;
@@ -74,29 +72,11 @@ export function StyleEditor({ stylesRaw, onSaved, onClose, toast }: Props) {
     return finalizeDescription(body, template);
   }, [template]);
   const footer = useMemo(() => styleFooter(template), [template]);
-  const usedChips = useMemo(() => CHIP_DEFS.filter((c) => template.includes(`[${c.key}]`)), [template]);
 
   const switchTo = (name: string) => {
     setSelected(name);
     setTemplate(resolved.styles.find((s) => s.name === name)?.template ?? '');
     setRenaming(null);
-  };
-
-  const insertChip = (key: string) => {
-    const ta = taRef.current;
-    const token = `[${key}]`;
-    if (!ta) {
-      setTemplate((t) => (t ? `${t}\n${token}` : token));
-      return;
-    }
-    const start = ta.selectionStart ?? template.length;
-    const end = ta.selectionEnd ?? start;
-    const next = template.slice(0, start) + token + template.slice(end);
-    setTemplate(next);
-    requestAnimationFrame(() => {
-      ta.focus();
-      ta.selectionStart = ta.selectionEnd = start + token.length;
-    });
   };
 
   const persist = (next: ResolvedStyles, note?: string) => {
@@ -167,7 +147,7 @@ export function StyleEditor({ stylesRaw, onSaved, onClose, toast }: Props) {
           <Pencil className="h-4 w-4 text-primary" />
           <span className="text-sm font-semibold">Description styles</span>
           <span className="text-xs text-muted-foreground">
-            typed text is constant · [chips] fill from the item · empty chips drop their line
+            typed text is constant · chips fill from the item · empty chips drop their line
           </span>
           <span className="flex-1" />
           <button aria-label="close style editor" className="text-muted-foreground hover:text-foreground" onClick={onClose}>
@@ -245,45 +225,10 @@ export function StyleEditor({ stylesRaw, onSaved, onClose, toast }: Props) {
 
         <div className="grid min-h-0 flex-1 grid-cols-2 gap-3">
           <div className="flex min-h-0 flex-col">
-            <div className="mb-1 flex items-center gap-2">
-              <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Template</span>
-              <span className="flex-1" />
-              <Select value="" onValueChange={insertChip}>
-                <SelectTrigger className="h-7 w-[170px] text-xs" aria-label="insert detail">
-                  <SelectValue placeholder="+ insert detail" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CHIP_DEFS.map((c) => (
-                    <SelectItem key={c.key} value={c.key}>
-                      {c.label} {c.kind === 'prose' ? '· AI' : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+              Template — click a detail to insert it at the caret
             </div>
-            <textarea
-              ref={taRef}
-              value={template}
-              onChange={(e) => setTemplate(e.target.value)}
-              spellCheck={false}
-              className="min-h-[220px] flex-1 resize-none rounded-md border bg-background p-2.5 font-mono text-xs leading-relaxed focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-            <div className="mt-1.5 flex flex-wrap items-center gap-1">
-              {usedChips.map((c) => (
-                <span
-                  key={c.key}
-                  title={c.hint}
-                  className={cn(
-                    'rounded-full border px-2 py-0.5 text-[11px]',
-                    c.kind === 'prose' ? 'border-primary/50 text-primary' : 'border-border text-muted-foreground'
-                  )}
-                >
-                  {c.label}
-                  {c.kind === 'prose' ? ' · AI' : ''}
-                </span>
-              ))}
-              {!usedChips.length && <span className="text-[11px] text-muted-foreground">no chips yet — plain constant text</span>}
-            </div>
+            <ChipTemplateEditor value={template} onChange={setTemplate} />
             <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">
               {footer
                 ? `Constant footer (always the last line, on every draft): “${footer.split('\n')[0]}${footer.includes('\n') ? '…' : ''}”`
