@@ -33,7 +33,7 @@ export interface ResolvedStyles {
 }
 
 export const CHIP_DEFS: ChipDef[] = [
-  { key: 'overview', label: 'Overview', kind: 'prose', hint: 'AI one-line item overview' },
+  { key: 'overview', label: 'Overview', kind: 'prose', hint: 'AI overview — brand + item + key detail; drops when the title already says it all' },
   { key: 'brand', label: 'Brand', kind: 'data', hint: 'resembled brand (only when confident)' },
   { key: 'color', label: 'Color', kind: 'data', hint: 'primary color' },
   { key: 'material', label: 'Material', kind: 'data', hint: 'visible materials' },

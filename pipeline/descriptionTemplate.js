@@ -31,7 +31,7 @@
 // The insertable variables. `source` documents where the value comes from —
 // chipValues() below implements it.
 const CHIP_DEFS = [
-  { key: 'overview', label: 'Overview', kind: 'prose', hint: 'AI one-line item overview' },
+  { key: 'overview', label: 'Overview', kind: 'prose', hint: 'AI overview — brand + item + key detail; drops when the title already says it all' },
   { key: 'brand', label: 'Brand', kind: 'data', hint: 'resembled brand (only when confident)' },
   { key: 'color', label: 'Color', kind: 'data', hint: 'primary color' },
   { key: 'material', label: 'Material', kind: 'data', hint: 'visible materials' },

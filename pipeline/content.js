@@ -76,7 +76,15 @@ const CONTENT_SCHEMA = {
         'by you. Each is a short standalone snippet (no headers, no labels). Use "" (empty string) ' +
         'where there is nothing factual to say — an empty part simply drops from the composed listing.',
       properties: {
-        overview: { type: 'string', description: 'One-line item overview. Always present.' },
+        overview: {
+          type: 'string',
+          description:
+            'One-line item overview: brand (when stated per the brand rules) + item + colorway/key ' +
+            'detail. CONDITIONAL — write it ONLY when it adds something the title does not already ' +
+            'say (the brand usually does, since titles never carry it). If the title already fully ' +
+            'conveys the item and there is no brand or detail to add, use "" — the listing then ' +
+            'opens straight on the condition line.',
+        },
         condition_note: {
           type: 'string',
           description:
@@ -111,6 +119,7 @@ const SYSTEM_PROMPT = [
   '(6) Objective tone only — this is plain product description, not marketing. BANNED: hype and subjective filler such as "modern streetwear classic", "timeless", "must-have", "grail", "iconic", "versatile", "clean", "elevate your wardrobe", "wardrobe staple", "statement piece", "sought-after", "coveted", "effortless", and anything similar.',
   '(7) No cosmetic/wear adjectives in overview, materials, or fit (no "faded", "worn-in", "distressed" unless it is a GIVEN design attribute of the item). Real, sale-relevant flaws go ONLY in the `flaws` section; the condition line is rating-based ("Good used condition"), not a wear inventory.',
   '(8) Skip trivial cosmetic minutiae EVERYWHERE, including `flaws`: minor lint, fuzz, pilling, stray threads, light creasing, faint fading, small scuffs are NOT worth mentioning. Mention only defects a buyer would care about (holes, stains, tears, broken zips/hardware, heavy fading). When in doubt, leave it out — the condition rating already covers general wear.',
+  '(9) The `desc_parts.overview` line is where the brand belongs (titles never carry it, rule 5). It is CONDITIONAL: write it only when it adds information beyond the title (brand, colorway, a key detail); when the title already fully conveys the item and nothing remains to add, return "" so the description opens on the condition line.',
   'Everything you produce is an editable draft the seller reviews before posting.',
 ].join(' ');
 

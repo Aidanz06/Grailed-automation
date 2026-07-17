@@ -77,6 +77,18 @@ test('unset config → the default: overview + condition + footer (flaws-less it
   );
 });
 
+test('conditional overview: empty overview (title already says it) → opens on the Condition line', () => {
+  // The owner's "UTOPIA Circus Maximus Tour I KNOW Shirt" case: the AI returns
+  // "" for overview and the composed listing goes straight to Condition + footer.
+  const t = activeTemplate(null);
+  const values = chipValues(
+    { condition_rating: 'Gently used' },
+    { overview: '', condition_note: 'no stains or holes' }
+  );
+  const body = finalizeDescription(composeDescription(t, values), t);
+  assert.strictEqual(body, 'Condition: Gently used, no stains or holes\n\n' + DEFAULT_FOOTER);
+});
+
 test('a constant label line drops when everything under it dropped ("Note:" with no flaws)', () => {
   const t = BUILTIN_STYLES.find((s) => s.name === 'Standard').template;
   const body = composeDescription(t, chipValues(FULL_ATTRS, { ...FULL_PARTS, flaws: '' }));
