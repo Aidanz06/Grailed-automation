@@ -1,0 +1,433 @@
+{
+  "_note": "Designer tee with real sold twins: brand + model narrow query targets them directly. canned.narrow is a REAL Algolia response (40 sold Horseshoe tees); canned.broad empty on purpose — a regression that falls back to broad returns zero comps and fails loudly.",
+  "cannedFetchedAt": "2026-07-16",
+  "attributes": {
+    "resembles_brand": "Chrome Hearts",
+    "brand_confidence": 0.85,
+    "model": "Horseshoe Tee",
+    "visible_text": "",
+    "distinctive_features": [],
+    "category": "tops",
+    "subcategory": "t-shirt",
+    "primary_color": "black",
+    "condition_rating": "Gently used",
+    "comp_query": "chrome hearts tee",
+    "search_keywords": [
+      "chrome hearts",
+      "designer tee"
+    ]
+  },
+  "known": {
+    "url": "https://www.grailed.com/listings/99102292",
+    "price": 500,
+    "title": "Chrome Hearts Horseshoe Tee"
+  },
+  "expectTier": "narrow",
+  "recallK": 10,
+  "priceTolerancePct": 30,
+  "canned": {
+    "narrow": [
+      {
+        "price": 575,
+        "soldDate": "2026-06-22T15:16:50.372Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/98899283",
+        "sold": true,
+        "title": "Chrome hearts horseshoe tee",
+        "condition": "is_new",
+        "size": "xl"
+      },
+      {
+        "price": 500,
+        "soldDate": "2026-06-22T05:00:18.087Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/99102292",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee",
+        "condition": "is_new",
+        "size": "m"
+      },
+      {
+        "price": 660,
+        "soldDate": "2026-06-15T06:56:47.585Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/97296165",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee Black L",
+        "condition": "is_gently_used",
+        "size": "l"
+      },
+      {
+        "price": 425,
+        "soldDate": "2026-06-09T01:41:57.186Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/98248077",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe tee",
+        "condition": "is_gently_used",
+        "size": "xl"
+      },
+      {
+        "price": 218,
+        "soldDate": "2026-06-08T23:20:37.236Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/98002815",
+        "sold": true,
+        "title": "black chrome hearts horseshoe tee (fits M)",
+        "condition": "is_used",
+        "size": "s"
+      },
+      {
+        "price": 699,
+        "soldDate": "2026-06-05T18:10:42.124Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/98087716",
+        "sold": true,
+        "title": "Size Large - Chrome Hearts Horseshoe Tee Black Yellow",
+        "condition": "is_new",
+        "size": "l"
+      },
+      {
+        "price": 600,
+        "soldDate": "2026-05-28T21:36:47.827Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/91280789",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee",
+        "condition": "is_new",
+        "size": "l"
+      },
+      {
+        "price": 475,
+        "soldDate": "2026-05-25T16:56:15.482Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/97339662",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee White",
+        "condition": "is_new",
+        "size": "xl"
+      },
+      {
+        "price": 250,
+        "soldDate": "2026-05-07T18:49:23.469Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/86448272",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee",
+        "condition": "is_gently_used",
+        "size": "l"
+      },
+      {
+        "price": 678,
+        "soldDate": "2026-05-04T01:37:17.143Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/96276871",
+        "sold": true,
+        "title": "(L)Chrome Hearts Horseshoe Tee T-Shirt Black",
+        "condition": "is_new",
+        "size": "l"
+      },
+      {
+        "price": 275,
+        "soldDate": "2026-05-02T17:50:38.048Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/96188217",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee",
+        "condition": "is_gently_used",
+        "size": "s"
+      },
+      {
+        "price": 250,
+        "soldDate": "2026-04-27T01:41:39.351Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/86448205",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee",
+        "condition": "is_gently_used",
+        "size": "xl"
+      },
+      {
+        "price": 220,
+        "soldDate": "2026-04-14T09:46:06.268Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/94067581",
+        "sold": true,
+        "title": "STEAL - LOS ANGELES EXCLUSIVE CHROME HEARTS HORSESHOE TEE",
+        "condition": "is_gently_used",
+        "size": "m"
+      },
+      {
+        "price": 250,
+        "soldDate": "2026-04-12T22:49:59.112Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/95241979",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee",
+        "condition": "is_gently_used",
+        "size": "m"
+      },
+      {
+        "price": 250,
+        "soldDate": "2026-04-12T19:20:49.475Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/95266193",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee",
+        "condition": "is_gently_used",
+        "size": "m"
+      },
+      {
+        "price": 400,
+        "soldDate": "2026-03-20T19:07:00.083Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/93593540",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee",
+        "condition": "is_gently_used",
+        "size": "xl"
+      },
+      {
+        "price": 314,
+        "soldDate": "2026-02-17T01:23:46.672Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/92360847",
+        "sold": true,
+        "title": "Chrome Hearts horseshoe tee",
+        "condition": "is_gently_used",
+        "size": "s"
+      },
+      {
+        "price": 300,
+        "soldDate": "2026-02-16T18:27:53.271Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/89689753",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee Miami Exclusive",
+        "condition": "is_used",
+        "size": "m"
+      },
+      {
+        "price": 300,
+        "soldDate": "2026-01-13T16:57:54.719Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/90714936",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe tee - XL",
+        "condition": "is_gently_used",
+        "size": "xl"
+      },
+      {
+        "price": 320,
+        "soldDate": "2025-12-31T06:09:01.528Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/89643174",
+        "sold": true,
+        "title": "Chrome hearts horseshoe tee",
+        "condition": "is_used",
+        "size": "m"
+      },
+      {
+        "price": 180,
+        "soldDate": "2025-11-04T12:23:48.550Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/86974212",
+        "sold": true,
+        "title": "White Classic Chrome Hearts Horseshoe Tee",
+        "condition": "is_used",
+        "size": "l"
+      },
+      {
+        "price": 280,
+        "soldDate": "2025-10-20T19:35:35.422Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/86257146",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee",
+        "condition": "is_gently_used",
+        "size": "s"
+      },
+      {
+        "price": 240,
+        "soldDate": "2025-10-05T02:59:22.928Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/80799108",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee",
+        "condition": "is_used",
+        "size": "s"
+      },
+      {
+        "price": 150,
+        "soldDate": "2025-08-23T23:55:00.296Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/84067226",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee White XXL USED",
+        "condition": "is_new",
+        "size": "xxl"
+      },
+      {
+        "price": 225,
+        "soldDate": "2025-07-08T05:52:47.843Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/81768665",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee",
+        "condition": "is_gently_used",
+        "size": "m"
+      },
+      {
+        "price": 497,
+        "soldDate": "2025-07-02T23:41:24.450Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/78340005",
+        "sold": true,
+        "title": "Bape x Chrome Hearts Horseshoe Tee",
+        "condition": "is_used",
+        "size": "s"
+      },
+      {
+        "price": 250,
+        "soldDate": "2025-07-01T22:52:51.407Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/81633200",
+        "sold": true,
+        "title": "NEW YORK EXCLUSIVE CHROME HEARTS HORSESHOE TEE",
+        "condition": "is_gently_used",
+        "size": "m"
+      },
+      {
+        "price": 194,
+        "soldDate": "2025-06-13T01:51:09.490Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/80356353",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee",
+        "condition": "is_gently_used",
+        "size": "m"
+      },
+      {
+        "price": 250,
+        "soldDate": "2025-06-08T04:13:12.410Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/80695626",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee",
+        "condition": "is_used",
+        "size": "l"
+      },
+      {
+        "price": 195,
+        "soldDate": "2025-05-19T07:40:24.580Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/79842587",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe tee Vintage",
+        "condition": "is_used",
+        "size": "m"
+      },
+      {
+        "price": 400,
+        "soldDate": "2025-05-05T13:27:28.120Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/78730749",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee",
+        "condition": "is_new",
+        "size": "l"
+      },
+      {
+        "price": 200,
+        "soldDate": "2025-04-30T12:26:17.367Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/76656495",
+        "sold": true,
+        "title": "STEAL! CHROME HEARTS HORSESHOE TEE",
+        "condition": "is_gently_used",
+        "size": "m"
+      },
+      {
+        "price": 550,
+        "soldDate": "2025-04-27T18:22:41.230Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/75495263",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee Black",
+        "condition": "is_new",
+        "size": "m"
+      },
+      {
+        "price": 340,
+        "soldDate": "2025-04-15T14:39:18.147Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/76676236",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee",
+        "condition": "is_gently_used",
+        "size": "m"
+      },
+      {
+        "price": 175,
+        "soldDate": "2025-04-13T10:19:31.622Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/77793905",
+        "sold": true,
+        "title": "chrome hearts horseshoe tee",
+        "condition": "is_gently_used",
+        "size": "xs"
+      },
+      {
+        "price": 440,
+        "soldDate": "2025-04-09T19:43:24.548Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/75757709",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee",
+        "condition": "is_new",
+        "size": "m"
+      },
+      {
+        "price": 215,
+        "soldDate": "2025-04-07T15:45:58.320Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/77793814",
+        "sold": true,
+        "title": "chrome hearts horseshoe tee",
+        "condition": "is_gently_used",
+        "size": "xs"
+      },
+      {
+        "price": 350,
+        "soldDate": "2025-04-05T16:32:24.527Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/77774966",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee",
+        "condition": "is_new",
+        "size": "l"
+      },
+      {
+        "price": 210,
+        "soldDate": "2025-03-29T15:41:28.097Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/77294921",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe tee white/black",
+        "condition": "is_gently_used",
+        "size": "s"
+      },
+      {
+        "price": 550,
+        "soldDate": "2025-03-17T02:57:19.026Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/76283203",
+        "sold": true,
+        "title": "Chrome Hearts Horseshoe Tee Sz XL Black Classic Logo Tshirt",
+        "condition": "is_new",
+        "size": "xl"
+      }
+    ],
+    "broad": []
+  }
+}

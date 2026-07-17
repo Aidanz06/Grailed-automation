@@ -1,0 +1,14 @@
+{
+  "_note": "A PASSING case — correct primary brand + collaboration split.",
+  "resembles_brand": "Supreme",
+  "collaboration": "Comme des Garcons",
+  "brand_confidence": 0.85,
+  "category": "tops",
+  "subcategory": "t-shirt",
+  "primary_color": "white",
+  "secondary_colors": [],
+  "condition_rating": "Gently used",
+  "condition_markers": [],
+  "size": "M",
+  "search_keywords": ["supreme box logo", "cdg tee"]
+}

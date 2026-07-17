@@ -49,11 +49,47 @@ const ATTRIBUTE_SCHEMA = {
     resembles_brand: {
       type: 'string',
       description:
-        'Brand the item most resembles, or "unclear". Phrase as resemblance, never confirmed identity.',
+        'The PRIMARY brand the item most resembles — ONE label, never a combined collab string ' +
+        '(a Supreme x Comme des Garçons piece → "Supreme"; a Nike NOCTA piece → "Nike" — the partner/' +
+        'sub-line goes in `collaboration`). "unclear" if no brand is legible. Phrase as resemblance, ' +
+        'never confirmed identity.',
+    },
+    collaboration: {
+      type: 'string',
+      description:
+        'Collab partner or sub-line when the item is visibly a collaboration ("Comme des Garçons", ' +
+        '"NOCTA", "Stüssy") — only when clearly shown on the item/tags, never guessed. "" if none.',
     },
     brand_confidence: {
       type: 'number',
-      description: 'Confidence 0.0–1.0 that the resembled brand is correct.',
+      description:
+        'Confidence 0.0–1.0 that the resembled brand is correct. Calibrate to the evidence: a clearly ' +
+        'legible logo/tag OR an unmistakable well-known silhouette warrants 0.75–0.95; do not under-rate ' +
+        'a confident visual identification (a Nike Dunk is not a 0.4). Reserve <0.5 for genuinely ' +
+        'ambiguous evidence.',
+    },
+    model: {
+      type: 'string',
+      description:
+        'The specific model / silhouette / graphic name when identifiable — the price-defining identity: ' +
+        '"Dunk Low", "Air Force 1", "Detroit Jacket", "Box Logo", "550". Identify well-known models by ' +
+        'their SHAPE even without a legible logo. "" if unclear — never guess a model name.',
+    },
+    visible_text: {
+      type: 'string',
+      description:
+        'VERBATIM text visible on tags, labels, prints, or graphics — brand names, wordmarks, tour dates, ' +
+        'style names — exactly as written (e.g. "ISOKNOCK"). This is how niche brands you do not recognize ' +
+        'still get found: the literal words become an exact search term. Transcribe only what is legible; ' +
+        '"" if none.',
+    },
+    distinctive_features: {
+      type: 'array',
+      items: { type: 'string' },
+      description:
+        'Variant details that change price: colorway name, distinctive panel/material, hardware, collab ' +
+        'mark, edition marking ("gum sole", "reverse panda colorway", "leather sleeves"). Only what is ' +
+        'visible. Empty if none.',
     },
     category: {
       type: 'string',
@@ -130,7 +166,11 @@ const ATTRIBUTE_SCHEMA = {
   },
   required: [
     'resembles_brand',
+    'collaboration',
     'brand_confidence',
+    'model',
+    'visible_text',
+    'distinctive_features',
     'category',
     'subcategory',
     'primary_color',
@@ -150,8 +190,15 @@ const ATTRIBUTE_SCHEMA = {
 const SYSTEM_PROMPT = [
   'You are a resale cataloging assistant analyzing photos of a single second-hand clothing item.',
   'Describe only what is visibly evidenced in the photos. Never assert a confirmed brand or authenticity —',
-  'always frame brand as what the item RESEMBLES, and set brand_confidence accordingly (low when a logo/tag is not clearly legible).',
-  'If you cannot tell, use "unclear" rather than guessing confidently.',
+  'always frame brand as what the item RESEMBLES, and set brand_confidence to match the visual evidence.',
+  'Identify well-known models and silhouettes by their SHAPE, not only by a legible logo: a Nike Dunk,',
+  'Air Force 1, or Carhartt Detroit jacket is recognizable from its design alone — when the design is',
+  'unmistakable, name the brand and model and give a confidence that reflects that recognition (0.75+),',
+  'not a hedge. When the visual evidence is genuinely weak or ambiguous, use "unclear" — never over-assert.',
+  'Transcribe any legible text on tags, labels, or graphics VERBATIM into visible_text — for brands you do',
+  'not recognize, the exact words on the item are the identification.',
+  'Collaborations: resembles_brand carries ONLY the primary brand; the visible partner or sub-line goes in',
+  'collaboration (Grailed lists items under the primary designer — the collab belongs in the text, not the brand).',
   'Condition is evidence-based, not assumed: attached retail tags or a clearly unworn garment → "New with tags";',
   '"Used" requires VISIBLE wear; when ambiguous say "Unclear" — never default to "Used".',
   'You are identifying probable style/brand for pricing research, not authenticating.',

@@ -1,0 +1,12 @@
+{
+  "_note": "Tester failure: a new-with-tags item was rated Used, dragging copy + price.",
+  "brand": "Stussy",
+  "brand_min_confidence": 0.5,
+  "model": [],
+  "collaboration": "",
+  "category": "tops",
+  "subcategory_any": ["t-shirt", "tee", "short sleeve t-shirt", "graphic tee"],
+  "condition_rating": "New with tags",
+  "primary_color": "white",
+  "size": ""
+}

@@ -1,0 +1,14 @@
+{
+  "_note": "Mimics CURRENT (buggy) output — brand missed, no model field. Dry-run should FAIL brand + model.",
+  "resembles_brand": "unclear",
+  "collaboration": "",
+  "brand_confidence": 0.4,
+  "category": "footwear",
+  "subcategory": "high top sneaker",
+  "primary_color": "brown",
+  "secondary_colors": ["white"],
+  "condition_rating": "Gently used",
+  "condition_markers": [],
+  "size": "",
+  "search_keywords": ["brown sneaker", "high top", "leather sneaker"]
+}

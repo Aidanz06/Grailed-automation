@@ -1,0 +1,12 @@
+{
+  "_note": "Collab: brand must be the PRIMARY (Supreme); partner goes in collaboration.",
+  "brand": "Supreme",
+  "brand_min_confidence": 0.6,
+  "model": [],
+  "collaboration": "Comme des Garcons",
+  "category": "tops",
+  "subcategory_any": ["t-shirt", "tee", "box logo"],
+  "condition_rating": "Gently used",
+  "primary_color": "white",
+  "size": ""
+}

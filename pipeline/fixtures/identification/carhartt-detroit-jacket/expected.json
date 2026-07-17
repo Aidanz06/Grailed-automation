@@ -1,0 +1,12 @@
+{
+  "_note": "Baseline good case — well-known brand + model.",
+  "brand": "Carhartt",
+  "brand_min_confidence": 0.6,
+  "model": ["Detroit"],
+  "collaboration": "",
+  "category": "outerwear",
+  "subcategory_any": ["jacket", "work jacket", "chore jacket", "denim jacket"],
+  "condition_rating": "Used",
+  "primary_color": "brown",
+  "size": ""
+}

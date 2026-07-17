@@ -1,0 +1,14 @@
+{
+  "_note": "Mimics the reported bug — tags attached but rated Used. Dry-run should FAIL condition + flag an NWT VIOLATION.",
+  "resembles_brand": "Stussy",
+  "collaboration": "",
+  "brand_confidence": 0.72,
+  "category": "tops",
+  "subcategory": "t-shirt",
+  "primary_color": "white",
+  "secondary_colors": ["black"],
+  "condition_rating": "Used",
+  "condition_markers": ["hang tag attached"],
+  "size": "L",
+  "search_keywords": ["graphic tee", "white t-shirt"]
+}

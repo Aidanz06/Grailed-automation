@@ -1,0 +1,433 @@
+{
+  "_note": "Tester failure: the Dunk was never identified so no Nike comps were found at all. With model captured, the narrow tier returns real Dunk Low sales. Price check SKIPPED (priceTolerancePct null): colorway/collab variance across Dunk Low sales is huge, so one known sale is not representative — identity recall is the assertion here.",
+  "cannedFetchedAt": "2026-07-16",
+  "attributes": {
+    "resembles_brand": "Nike",
+    "brand_confidence": 0.85,
+    "model": "Dunk Low",
+    "visible_text": "",
+    "distinctive_features": [],
+    "category": "footwear",
+    "subcategory": "low top sneakers",
+    "primary_color": "brown",
+    "condition_rating": "Gently used",
+    "comp_query": "nike sneakers low",
+    "search_keywords": [
+      "nike dunk",
+      "low top sneakers"
+    ]
+  },
+  "known": {
+    "url": "https://www.grailed.com/listings/99516552",
+    "price": 60,
+    "title": "Nike dunk low orange"
+  },
+  "expectTier": "narrow",
+  "recallK": 10,
+  "priceTolerancePct": null,
+  "canned": {
+    "narrow": [
+      {
+        "price": 130,
+        "soldDate": "2026-07-17T02:36:26.935Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/100534309",
+        "sold": true,
+        "title": "THERE Skateboard x Nike Dunk Low SB “Ultra Humanized”",
+        "condition": "is_used",
+        "size": "11"
+      },
+      {
+        "price": 160,
+        "soldDate": "2026-07-17T02:06:01.062Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/96762754",
+        "sold": true,
+        "title": "Off White x Nike Dunk Low ‘Lot 16 of 50’ Shoes Size: 9 M",
+        "condition": "is_gently_used",
+        "size": "9"
+      },
+      {
+        "price": 180,
+        "soldDate": "2026-07-16T14:34:41.330Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/100680285",
+        "sold": true,
+        "title": "CPFM x Nike Dunk Low Swamp Sponge Pack Photo Blue Size 9.5",
+        "condition": "is_used",
+        "size": "9.5"
+      },
+      {
+        "price": 60,
+        "soldDate": "2026-07-16T01:32:04.438Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/99516552",
+        "sold": true,
+        "title": "Nike dunk low orange",
+        "condition": "is_gently_used",
+        "size": "12"
+      },
+      {
+        "price": 35,
+        "soldDate": "2026-07-15T21:49:04.047Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/98956830",
+        "sold": true,
+        "title": "Nike Dunk Low Cacao Wow",
+        "condition": "is_gently_used",
+        "size": "9.5"
+      },
+      {
+        "price": 230,
+        "soldDate": "2026-07-14T18:46:08.030Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/100657600",
+        "sold": true,
+        "title": "Nike Dunk Low SB \"Futura\"",
+        "condition": "is_gently_used",
+        "size": "9.5"
+      },
+      {
+        "price": 80,
+        "soldDate": "2026-07-13T20:40:47.007Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/93854076",
+        "sold": true,
+        "title": "Nike dunk low “veneer”",
+        "condition": "is_new",
+        "size": "12.5"
+      },
+      {
+        "price": 110,
+        "soldDate": "2026-07-13T04:31:48.060Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/99072614",
+        "sold": true,
+        "title": "Union LA X Nike Dunk Low ‘Passport Pack-Argon’",
+        "condition": "is_used",
+        "size": "10.5"
+      },
+      {
+        "price": 50,
+        "soldDate": "2026-07-11T20:45:39.551Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/97257290",
+        "sold": true,
+        "title": "Nike Dunk Low Grey Suede",
+        "condition": "is_gently_used",
+        "size": "10"
+      },
+      {
+        "price": 145,
+        "soldDate": "2026-07-10T22:01:27.112Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/94977579",
+        "sold": true,
+        "title": "Nike Dunk Low 'Dusty Olive’",
+        "condition": "is_gently_used",
+        "size": "12"
+      },
+      {
+        "price": 262,
+        "soldDate": "2026-07-08T21:02:02.935Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/98748061",
+        "sold": true,
+        "title": "Nike dunk low cactus plant flea market swamp sponge blue",
+        "condition": "is_gently_used",
+        "size": "13"
+      },
+      {
+        "price": 295,
+        "soldDate": "2026-07-08T13:55:57.391Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/90739412",
+        "sold": true,
+        "title": "Nike Dunk Low Pro SB Hunter Reese Forbes 2004",
+        "condition": "is_gently_used",
+        "size": "11"
+      },
+      {
+        "price": 80,
+        "soldDate": "2026-07-08T04:17:44.122Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/98778022",
+        "sold": true,
+        "title": "Nike Dunk Low SE \"Splash Volt\"",
+        "condition": "is_new",
+        "size": "10.5"
+      },
+      {
+        "price": 360,
+        "soldDate": "2026-07-06T23:48:41.872Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/99937387",
+        "sold": true,
+        "title": "2015 Nike Dunk Low DE LA SOL Mens US12 *9.5/10*",
+        "condition": "is_gently_used",
+        "size": "12"
+      },
+      {
+        "price": 220,
+        "soldDate": "2026-07-06T18:43:02.888Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/99372755",
+        "sold": true,
+        "title": "Concepts x Nike Dunk Low SB Orange Lobster Size 8",
+        "condition": "is_gently_used",
+        "size": "8"
+      },
+      {
+        "price": 20,
+        "soldDate": "2026-07-06T18:42:49.958Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/95414145",
+        "sold": true,
+        "title": "Nike Dunk Low Sneakers Midnight Navy White Smoke Grey Swoosh",
+        "condition": "is_worn",
+        "size": "9.5"
+      },
+      {
+        "price": 20,
+        "soldDate": "2026-07-06T08:32:46.197Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/98117944",
+        "sold": true,
+        "title": "Nike Dunk Low 'Athletic Department - Deep Jungle' / US8.5",
+        "condition": "is_gently_used",
+        "size": "8.5"
+      },
+      {
+        "price": 140,
+        "soldDate": "2026-07-05T15:07:48.181Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/92836671",
+        "sold": true,
+        "title": "Vintage 2004 Nike Dunk Low Pro SB ‘Red Hemp’ Shoes Sz 9.5",
+        "condition": "is_used",
+        "size": "9"
+      },
+      {
+        "price": 180,
+        "soldDate": "2026-07-05T05:54:43.137Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/97692668",
+        "sold": true,
+        "title": "Supreme x Nike Dunk Low SB ‘Rammellzee Black’",
+        "condition": "is_used",
+        "size": "11.5"
+      },
+      {
+        "price": 404,
+        "soldDate": "2026-07-04T19:01:09.777Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/97711668",
+        "sold": true,
+        "title": "Nike Dunk Low Off-White Lot 7",
+        "condition": "is_new",
+        "size": "11.5"
+      },
+      {
+        "price": 200,
+        "soldDate": "2026-07-04T02:28:11.263Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/96723117",
+        "sold": true,
+        "title": "Nike Dunk Low Cactus Plant Flea Market Swamp Sponge Sequoia",
+        "condition": "is_gently_used",
+        "size": "9"
+      },
+      {
+        "price": 282,
+        "soldDate": "2026-07-03T20:39:35.007Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/97464587",
+        "sold": true,
+        "title": "Nike Dunk Low Pro SB ‘Raygun’",
+        "condition": "is_gently_used",
+        "size": "10"
+      },
+      {
+        "price": 99,
+        "soldDate": "2026-07-01T22:44:03.580Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/95024140",
+        "sold": true,
+        "title": "Nike Dunk Low Dusty Olive",
+        "condition": "is_gently_used",
+        "size": "9.5"
+      },
+      {
+        "price": 89,
+        "soldDate": "2026-07-01T20:51:03.467Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/74887994",
+        "sold": true,
+        "title": "New W Box Size 12 2021 Men’s Nike Dunk Low Dusty Olive Shoes",
+        "condition": "is_new",
+        "size": "12"
+      },
+      {
+        "price": 40,
+        "soldDate": "2026-06-30T20:08:02.484Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/97405559",
+        "sold": true,
+        "title": "Nike Dunk Low \"Brazil\" 2020",
+        "condition": "is_gently_used",
+        "size": "8"
+      },
+      {
+        "price": 90,
+        "soldDate": "2026-06-27T19:34:25.686Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/98193889",
+        "sold": true,
+        "title": "Nike Dunk Low Union Passport Pack Pistachio Size 8",
+        "condition": "is_gently_used",
+        "size": "8"
+      },
+      {
+        "price": 200,
+        "soldDate": "2026-06-27T04:23:44.851Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/97947607",
+        "sold": true,
+        "title": "Nike Dunk Low SE Crazy Camo Patchwork Size 10.5",
+        "condition": "is_gently_used",
+        "size": "10.5"
+      },
+      {
+        "price": 310,
+        "soldDate": "2026-06-23T03:30:36.292Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/78905736",
+        "sold": true,
+        "title": "Nike Dunk Low Pro SB De La Soul \"Money Cat\" 2007",
+        "condition": "is_gently_used",
+        "size": "10.5"
+      },
+      {
+        "price": 119,
+        "soldDate": "2026-06-22T17:01:55.168Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/97107124",
+        "sold": true,
+        "title": "Nike Dunk Low x Off-White ‘Lot 39’ DJ0950-109 Men's Size 9.5",
+        "condition": "is_used",
+        "size": "9.5"
+      },
+      {
+        "price": 125,
+        "soldDate": "2026-06-22T16:36:19.574Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/96251323",
+        "sold": true,
+        "title": "Nike Dunk Low SB “Purple Suede”",
+        "condition": "is_gently_used",
+        "size": "10"
+      },
+      {
+        "price": 220,
+        "soldDate": "2026-06-20T15:41:33.619Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/96068493",
+        "sold": true,
+        "title": "Nike Dunk Low SB X Supreme 94 Black Size 10",
+        "condition": "is_used",
+        "size": "10"
+      },
+      {
+        "price": 285,
+        "soldDate": "2026-06-18T19:57:48.734Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/96800761",
+        "sold": true,
+        "title": "Nike Dunk Low ‘Off-White Lot 32’ Size 8M",
+        "condition": "is_gently_used",
+        "size": "8"
+      },
+      {
+        "price": 20,
+        "soldDate": "2026-06-18T05:08:22.320Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/97483654",
+        "sold": true,
+        "title": "Nike Dunk Low Panda",
+        "condition": "is_worn",
+        "size": "12"
+      },
+      {
+        "price": 130,
+        "soldDate": "2026-06-18T00:15:54.544Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/98107767",
+        "sold": true,
+        "title": "Nike Dunk Low Retro SE Lottery Pack Grey Fog",
+        "condition": "is_gently_used",
+        "size": "10.5"
+      },
+      {
+        "price": 350,
+        "soldDate": "2026-06-17T21:31:05.180Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/92168285",
+        "sold": true,
+        "title": "Nike Dunk Low x OW \"Lot 50\" [9.5] PREOWNED",
+        "condition": "is_gently_used",
+        "size": "9.5"
+      },
+      {
+        "price": 45,
+        "soldDate": "2026-06-15T13:25:32.693Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/98177465",
+        "sold": true,
+        "title": "Nike dunk low Michigan",
+        "condition": "is_gently_used",
+        "size": "8"
+      },
+      {
+        "price": 80,
+        "soldDate": "2026-06-15T04:15:59.963Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/97255091",
+        "sold": true,
+        "title": "Nike Dunk Low SB Mineral Slate",
+        "condition": "is_gently_used",
+        "size": "10.5"
+      },
+      {
+        "price": 110,
+        "soldDate": "2026-06-14T19:17:54.660Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/81223616",
+        "sold": true,
+        "title": "Nike Dunk Low KicksHawaii Aloha Dunk Low",
+        "condition": "is_worn",
+        "size": "9"
+      },
+      {
+        "price": 108,
+        "soldDate": "2026-06-14T19:09:26.943Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/97880542",
+        "sold": true,
+        "title": "Nike Dunk Low Premium SB QS Nontourage",
+        "condition": "is_gently_used",
+        "size": "9"
+      },
+      {
+        "price": 115,
+        "soldDate": "2026-06-14T12:35:42.288Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/86364079",
+        "sold": true,
+        "title": "Nike Dunk Low ‘Cider’",
+        "condition": "is_gently_used",
+        "size": "12.5"
+      }
+    ],
+    "broad": []
+  }
+}

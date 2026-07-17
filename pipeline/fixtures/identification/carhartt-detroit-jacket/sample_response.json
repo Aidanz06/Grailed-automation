@@ -1,0 +1,15 @@
+{
+  "_note": "A PASSING case with a model field (what good future output looks like).",
+  "resembles_brand": "Carhartt",
+  "collaboration": "",
+  "brand_confidence": 0.9,
+  "model": "Detroit Jacket",
+  "category": "outerwear",
+  "subcategory": "work jacket",
+  "primary_color": "brown",
+  "secondary_colors": [],
+  "condition_rating": "Used",
+  "condition_markers": ["fading at seams", "worn cuffs"],
+  "size": "L",
+  "search_keywords": ["carhartt detroit jacket", "duck canvas jacket"]
+}

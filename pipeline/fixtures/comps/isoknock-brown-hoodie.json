@@ -1,0 +1,464 @@
+{
+  "_note": "Tester failure: the identical brown Isoknock hoodie sold on Grailed but the broad query (\"brown knit hoodie\") never surfaced it. The narrow tier finds it from visible_text. canned.* are REAL Algolia responses fetched via the guarded provider.",
+  "cannedFetchedAt": "2026-07-16",
+  "attributes": {
+    "resembles_brand": "unclear",
+    "brand_confidence": 0.3,
+    "model": "",
+    "visible_text": "ISOKNOCK",
+    "distinctive_features": [],
+    "category": "tops",
+    "subcategory": "hoodie",
+    "primary_color": "brown",
+    "condition_rating": "Gently used",
+    "comp_query": "brown knit hoodie",
+    "search_keywords": [
+      "brown hoodie",
+      "knit hoodie"
+    ]
+  },
+  "known": {
+    "url": "https://www.grailed.com/listings/65188996",
+    "price": 179,
+    "title": "ISOKNOCK - Exclusive Hoodie Brown - knock2 isoxo"
+  },
+  "expectTier": "narrow",
+  "recallK": 10,
+  "priceTolerancePct": 35,
+  "canned": {
+    "narrow": [
+      {
+        "price": 179,
+        "soldDate": "2026-06-05T22:04:24.071Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/65188996",
+        "sold": true,
+        "title": "ISOKNOCK - Exclusive Hoodie Brown - knock2 isoxo",
+        "condition": "is_new",
+        "size": "xl"
+      },
+      {
+        "price": 230,
+        "soldDate": "2025-05-31T01:32:27.769Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/79078720",
+        "sold": true,
+        "title": "ISOKNOCK - Exclusive Black Hoodie - knock2 isoxo",
+        "condition": "is_new",
+        "size": "xl"
+      },
+      {
+        "price": 150,
+        "soldDate": "2025-06-20T11:56:22.446Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/81233128",
+        "sold": true,
+        "title": "ISOKNOCK Knock2 IsoXO Niteharts Hoodie",
+        "condition": "is_new",
+        "size": "m"
+      }
+    ],
+    "broad": [
+      {
+        "price": 56,
+        "soldDate": "2025-06-10T21:59:43.216Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/80549765",
+        "sold": true,
+        "title": "Essentials Brown Knit Hoodie",
+        "condition": "is_new",
+        "size": "xl"
+      },
+      {
+        "price": 90,
+        "soldDate": "2024-12-24T22:46:49.470Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/72397814",
+        "sold": true,
+        "title": "Pure Linen - Faded Brown Knit Hoodie",
+        "condition": "is_gently_used",
+        "size": "l"
+      },
+      {
+        "price": 30,
+        "soldDate": "2024-09-01T07:36:40.582Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/65435031",
+        "sold": true,
+        "title": "Vintage G-Star Raw Brown Knit Sweater Hoodie Avant Garde",
+        "condition": "is_gently_used",
+        "size": "m"
+      },
+      {
+        "price": 90,
+        "soldDate": "2024-07-07T23:12:34.048Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/60987623",
+        "sold": true,
+        "title": "Black Brown Striped Knit Hoodie 2 Zip",
+        "condition": "is_used",
+        "size": "m"
+      },
+      {
+        "price": 30,
+        "soldDate": "2022-11-25T15:57:19.952Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/36097209",
+        "sold": true,
+        "title": "J.Crew 100% Cashmere Brown Waffle-Knit Hoodie",
+        "condition": "is_gently_used",
+        "size": "xl"
+      },
+      {
+        "price": 225,
+        "soldDate": "2022-01-22T04:39:04.227Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/27156902",
+        "sold": true,
+        "title": "Brown Adante Knit Hoodie",
+        "condition": "is_new",
+        "size": "s"
+      },
+      {
+        "price": 75,
+        "soldDate": "2021-12-19T17:48:19.507Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/25389445",
+        "sold": true,
+        "title": "Brown Stussy Knit Hoodie",
+        "condition": "is_used",
+        "size": "m"
+      },
+      {
+        "price": 18,
+        "soldDate": "2026-05-28T23:40:56.801Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/76436692",
+        "sold": true,
+        "title": "Vintage Y2K Striped Brown Knit Zip-Up Hoodie",
+        "condition": "is_gently_used",
+        "size": "s"
+      },
+      {
+        "price": 180,
+        "soldDate": "2025-10-11T00:56:04.560Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/86099126",
+        "sold": true,
+        "title": "Fear Of God 7th Collection Knit Brown Hoodie Sz. Large",
+        "condition": "is_used",
+        "size": "l"
+      },
+      {
+        "price": 210,
+        "soldDate": "2025-09-01T14:47:58.795Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/83263132",
+        "sold": true,
+        "title": "Madhappy alpaca Hear Boucle Brown Logo Knit Oversized Hoodie",
+        "condition": "is_gently_used",
+        "size": "l"
+      },
+      {
+        "price": 135,
+        "soldDate": "2025-03-09T20:33:18.907Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/76067012",
+        "sold": true,
+        "title": "ERL Wave Knit Hoodie Brown",
+        "condition": "is_gently_used",
+        "size": "l"
+      },
+      {
+        "price": 70,
+        "soldDate": "2024-11-12T04:15:03.531Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/62057060",
+        "sold": true,
+        "title": "Vuja de Andante knit hoodie brown",
+        "condition": "is_gently_used",
+        "size": "l"
+      },
+      {
+        "price": 190,
+        "soldDate": "2024-02-09T06:03:57.019Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/55208459",
+        "sold": true,
+        "title": "Vuja de Andante Knit Hoodie Brown (Size 2)",
+        "condition": "is_new",
+        "size": "m"
+      },
+      {
+        "price": 195,
+        "soldDate": "2023-02-23T11:31:19.097Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/37813519",
+        "sold": true,
+        "title": "XXS ESSENTIALS fog knit hoodie brown",
+        "condition": "is_gently_used",
+        "size": "xxs"
+      },
+      {
+        "price": 195,
+        "soldDate": "2022-12-15T16:48:01.638Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/38176320",
+        "sold": true,
+        "title": "HIDDEN NY CASHMERE BLEND KNIT HOODIE BROWN LARGE FW21",
+        "condition": "is_gently_used",
+        "size": "m"
+      },
+      {
+        "price": 145,
+        "soldDate": "2022-12-01T15:55:06.052Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/35810484",
+        "sold": true,
+        "title": "HIDDEN NY CASHMERE BLEND KNIT HOODIE BROWN LARGE FW21",
+        "condition": "is_new",
+        "size": "s"
+      },
+      {
+        "price": 37,
+        "soldDate": "2022-11-26T00:10:42.744Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/36375970",
+        "sold": true,
+        "title": "Vintage Dickies Thermal Knit Brown Hoodie 90s",
+        "condition": "is_used",
+        "size": "l"
+      },
+      {
+        "price": 160,
+        "soldDate": "2022-11-07T16:38:40.280Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/36016363",
+        "sold": true,
+        "title": "Vuja De Adante Knit Hoodie Brown Brown (Size 1)",
+        "condition": "is_new",
+        "size": "m"
+      },
+      {
+        "price": 120,
+        "soldDate": "2022-10-08T06:43:10.066Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/35341966",
+        "sold": true,
+        "title": "Fear Of God Essential Knit Hoodie Brown",
+        "condition": "is_used",
+        "size": "m"
+      },
+      {
+        "price": 600,
+        "soldDate": "2026-03-26T08:08:56.324Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/76203933",
+        "sold": true,
+        "title": "Rick Owens FW24 brown alpaca wool knit zip hoodie",
+        "condition": "is_gently_used",
+        "size": "l"
+      },
+      {
+        "price": 205,
+        "soldDate": "2025-12-25T17:59:00.413Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/87770300",
+        "sold": true,
+        "title": "Ne-net Green and Brown Bear Ear Knit Cardigan Hoodie",
+        "condition": "is_used",
+        "size": "l"
+      },
+      {
+        "price": 189,
+        "soldDate": "2024-03-14T18:07:48.628Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/56618471",
+        "sold": true,
+        "title": "Fear of God Essentials Knit Hoodie - Harvest Brown",
+        "condition": "is_gently_used",
+        "size": "l"
+      },
+      {
+        "price": 140,
+        "soldDate": "2024-02-20T22:08:18.473Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/56840895",
+        "sold": true,
+        "title": "Essentials Knit Hoodie Harvest Brown Size Small",
+        "condition": "is_gently_used",
+        "size": "s"
+      },
+      {
+        "price": 400,
+        "soldDate": "2023-12-07T22:17:57.611Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/53608441",
+        "sold": true,
+        "title": "Brown Fear of God Knit Hoodie",
+        "condition": "is_new",
+        "size": "xl"
+      },
+      {
+        "price": 72,
+        "soldDate": "2023-05-16T09:42:11.764Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/44830230",
+        "sold": true,
+        "title": "Stussy vintage Waffle Knit Hoodie Military brown Medium",
+        "condition": "is_gently_used",
+        "size": "l"
+      },
+      {
+        "price": 240,
+        "soldDate": "2022-12-03T04:57:33.970Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/37543675",
+        "sold": true,
+        "title": "Brand New ERL Wave Swill Oversized Knit Hoodie in Brown",
+        "condition": "is_new",
+        "size": "m"
+      },
+      {
+        "price": 210,
+        "soldDate": "2022-10-15T13:36:23.458Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/35315943",
+        "sold": true,
+        "title": "Vuja De Andante Knit Hoodie (Hazel Brown) Size 2",
+        "condition": "is_new",
+        "size": "m"
+      },
+      {
+        "price": 170,
+        "soldDate": "2022-08-17T06:31:33.389Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/32817059",
+        "sold": true,
+        "title": "Vuja De Andante Knit Hoodie Hazel Brown",
+        "condition": "is_gently_used",
+        "size": "m"
+      },
+      {
+        "price": 210,
+        "soldDate": "2022-08-10T16:37:24.100Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/32898018",
+        "sold": true,
+        "title": "Vuja De Andante Knit Hoodie (Hazel Brown) Size 2",
+        "condition": "is_new",
+        "size": "m"
+      },
+      {
+        "price": 151,
+        "soldDate": "2022-05-26T03:33:30.803Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/30585020",
+        "sold": true,
+        "title": "Vuja De Andante Knit Hoodie (Hazel Brown) Size 1",
+        "condition": "is_new",
+        "size": "s"
+      },
+      {
+        "price": 220,
+        "soldDate": "2022-04-14T22:19:59.279Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/29506929",
+        "sold": true,
+        "title": "Vuja De Andante Knit Hoodie Hazel Brown",
+        "condition": "is_gently_used",
+        "size": "m"
+      },
+      {
+        "price": 317,
+        "soldDate": "2022-04-01T00:51:06.869Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/27418131",
+        "sold": true,
+        "title": "Vuja De Andante Knit Hoodie (Hazel Brown) Size 2",
+        "condition": "is_new",
+        "size": "m"
+      },
+      {
+        "price": 260,
+        "soldDate": "2022-01-13T15:56:46.933Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/26702611",
+        "sold": true,
+        "title": "VUJA DE Andante Knit Hoodie (Hazel Brown)",
+        "condition": "is_new",
+        "size": "l"
+      },
+      {
+        "price": 35,
+        "soldDate": "2025-03-17T15:11:39.082Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/75647722",
+        "sold": true,
+        "title": "Vintage Y2K Polo Ralph Lauren Knit Sweater Brown Hoodie 90s",
+        "condition": "is_gently_used",
+        "size": "xl"
+      },
+      {
+        "price": 90,
+        "soldDate": "2024-03-23T19:50:46.318Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/58432106",
+        "sold": true,
+        "title": "Fear of God Essentials Heavy Knit Hoodie in Light Brown XL",
+        "condition": "is_gently_used",
+        "size": "xl"
+      },
+      {
+        "price": 19,
+        "soldDate": "2023-11-07T21:42:09.312Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/50925301",
+        "sold": true,
+        "title": "Under armour waffle knit brown green large hoodie",
+        "condition": "is_used",
+        "size": "l"
+      },
+      {
+        "price": 38,
+        "soldDate": "2022-12-29T21:44:34.964Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/38518344",
+        "sold": true,
+        "title": "Vintage Y2K Faded Brown Boxy Waffle Knit All Cotton Hoodie M",
+        "condition": "is_used",
+        "size": "m"
+      },
+      {
+        "price": 44,
+        "soldDate": "2025-03-08T02:20:15.090Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/75150948",
+        "sold": true,
+        "title": "Vintage Y2K Ralph Lauren Cable Knit zip hoodie USA Brown",
+        "condition": "is_gently_used",
+        "size": "s"
+      },
+      {
+        "price": 45,
+        "soldDate": "2024-08-06T06:09:47.819Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/65171322",
+        "sold": true,
+        "title": "Vintage Versace Classic Knit Zip Hoodie Leather Brown",
+        "condition": "is_gently_used",
+        "size": "l"
+      },
+      {
+        "price": 210,
+        "soldDate": "2021-11-18T05:09:45.265Z",
+        "source": "grailed",
+        "url": "https://www.grailed.com/listings/26083651",
+        "sold": true,
+        "title": "Fear of God Essentials Knit Pullover Hoodie Harvest Brown",
+        "condition": "is_new",
+        "size": "l"
+      }
+    ]
+  }
+}

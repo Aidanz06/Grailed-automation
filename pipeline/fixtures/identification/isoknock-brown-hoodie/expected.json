@@ -1,0 +1,12 @@
+{
+  "_note": "Tester failure: niche brand not recognized; exact sold comp never found.",
+  "brand": "Isoknock",
+  "brand_min_confidence": 0.5,
+  "model": [],
+  "collaboration": "",
+  "category": "tops",
+  "subcategory_any": ["hoodie", "hoodies", "sweatshirt", "pullover"],
+  "condition_rating": "Gently used",
+  "primary_color": "brown",
+  "size": ""
+}

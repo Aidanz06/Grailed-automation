@@ -8,7 +8,7 @@
  */
 
 const { extractAttributes } = require('./vision');
-const { GrailedScrapeProvider, MockCompProvider } = require('./priceProvider');
+const { GrailedScrapeProvider, MockCompProvider, getCompsTiered } = require('./priceProvider');
 const { GuardedCompProvider } = require('./compGuard');
 const { generateContent } = require('./content');
 
@@ -38,7 +38,11 @@ async function processItem(photos, opts = {}) {
   let comps = [];
   let range = null;
   try {
-    ({ comps, range } = await provider.getComps(attributes));
+    // Narrow-first (§B): target an identical sale before broadening. Both
+    // tiers go through the same (guarded) provider — cache/pacing/breaker hold.
+    const res = await getCompsTiered(provider, attributes);
+    ({ comps, range } = res);
+    if (res.tier === 'narrow') log(`${tag}narrow comp match: "${res.narrowQuery}" (${comps.length} hits)`);
   } catch (err) {
     log(`${tag}[warn] comp lookup failed: ${err.message}`);
     range = { low: null, median: null, high: null, sampleSize: 0, note: 'comp lookup failed' };

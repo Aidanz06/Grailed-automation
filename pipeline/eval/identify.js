@@ -1,0 +1,107 @@
+#!/usr/bin/env node
+/*
+ * AI identification eval harness (docs/DIAGNOSIS-AND-TEST-SUITE.md §B).
+ * Scores extractAttributes() against labeled fixtures and reports per-field
+ * accuracy + the hard NWT-never-Used rule. Mirrors the clustering-gate style:
+ * offline-friendly, JSON output, an optional pass/fail gate.
+ *
+ * Fixtures: pipeline/fixtures/identification/<case>/
+ *   expected.json         ground truth (see the README)
+ *   sample_response.json  a canned extractAttributes output (for --dry-run)
+ *   *.jpg|*.png|*.webp     the item's photos (used by the LIVE run)
+ *
+ * Usage:
+ *   node pipeline/eval/identify.js --dry-run          # no API key, uses sample_response.json
+ *   node pipeline/eval/identify.js                    # LIVE: real extractAttributes (needs ANTHROPIC_API_KEY + real photos)
+ *   node pipeline/eval/identify.js --runs=5           # LIVE stability (N runs per case)
+ *   node pipeline/eval/identify.js --gate             # exit 1 if the gate fails (for CI-style checks)
+ *   node pipeline/eval/identify.js --json             # machine-readable
+ *   node pipeline/eval/identify.js --case=nike-dunk-low
+ */
+
+const fs = require('fs');
+const path = require('path');
+const { scoreCase, aggregate, gate } = require('./score');
+
+const FIX_DIR = path.join(__dirname, '..', 'fixtures', 'identification');
+const IMG_RE = /\.(jpe?g|png|webp)$/i;
+
+const args = process.argv.slice(2);
+const has = (f) => args.includes(f);
+const val = (k, d) => { const a = args.find((x) => x.startsWith(k + '=')); return a ? a.split('=')[1] : d; };
+const DRY = has('--dry-run');
+const JSON_OUT = has('--json');
+const DO_GATE = has('--gate');
+const RUNS = Math.max(1, Number(val('--runs', DRY ? 1 : 1)));
+const ONLY = val('--case', null);
+
+function loadCases() {
+  if (!fs.existsSync(FIX_DIR)) return [];
+  return fs.readdirSync(FIX_DIR)
+    .filter((n) => fs.statSync(path.join(FIX_DIR, n)).isDirectory())
+    .filter((n) => !ONLY || n === ONLY)
+    .map((name) => {
+      const dir = path.join(FIX_DIR, name);
+      const expected = JSON.parse(fs.readFileSync(path.join(dir, 'expected.json'), 'utf8'));
+      const photos = fs.readdirSync(dir).filter((f) => IMG_RE.test(f)).map((f) => path.join(dir, f));
+      return { name, dir, expected, photos };
+    })
+    .filter((c) => c.expected);
+}
+
+async function actualFor(c) {
+  if (DRY) {
+    const p = path.join(c.dir, 'sample_response.json');
+    if (!fs.existsSync(p)) throw new Error(`${c.name}: --dry-run needs sample_response.json`);
+    return JSON.parse(fs.readFileSync(p, 'utf8'));
+  }
+  if (!c.photos.length) throw new Error(`${c.name}: no photos to run LIVE — add real item photos or use --dry-run`);
+  const { extractAttributes } = require('../vision'); // lazy: only LIVE needs the SDK/key
+  return extractAttributes(c.photos, { model: process.env.ATTRIBUTE_MODEL });
+}
+
+const SYMB = { pass: '✓', fail: '✗', skip: '·' };
+
+async function main() {
+  const cases = loadCases();
+  if (!cases.length) { console.error(`No fixtures in ${FIX_DIR}`); process.exit(2); }
+
+  const results = [];
+  for (const c of cases) {
+    // For LIVE stability, run each case RUNS times and score every run.
+    for (let i = 0; i < RUNS; i++) {
+      let actual;
+      try { actual = await actualFor(c); }
+      catch (e) { console.error(`[${c.name}] run ${i + 1}: ${e.message}`); process.exit(2); }
+      const r = scoreCase(c.expected, actual);
+      results.push({ case: c.name, run: i + 1, ...r, actual });
+      if (!JSON_OUT) {
+        const line = Object.entries(r.fields).map(([f, v]) => `${SYMB[v]}${f}`).join(' ');
+        const tag = RUNS > 1 ? ` (run ${i + 1})` : '';
+        console.log(`\n${c.name}${tag}  ${line}`);
+        r.notes.forEach((n) => console.log(`    • ${n}`));
+      }
+    }
+  }
+
+  const agg = aggregate(results);
+  const g = gate(agg);
+
+  if (JSON_OUT) {
+    console.log(JSON.stringify({ mode: DRY ? 'dry-run' : 'live', runs: RUNS, agg: { per: agg.per, overall: agg.overall, nwtViolations: agg.nwtViolations }, gate: g }, null, 2));
+  } else {
+    console.log('\n──────── summary' + (DRY ? ' (dry-run — sample_response.json, not live)' : ' (live)') + ' ────────');
+    for (const f of Object.keys(agg.per)) {
+      const r = agg.rate(f);
+      console.log(`  ${f.padEnd(13)} ${r == null ? 'n/a' : (r * 100).toFixed(0) + '%'}  (${agg.per[f].pass}/${agg.per[f].evaluated})`);
+    }
+    console.log(`  overall       ${agg.overall == null ? 'n/a' : (agg.overall * 100).toFixed(0) + '%'}`);
+    console.log(`  NWT→Used      ${agg.nwtViolations} violation(s)`);
+    console.log(`\n  GATE: ${g.pass ? 'PASS' : 'FAIL — ' + g.fails.join('; ')}`);
+    if (DRY) console.log('  (dry-run uses the canned sample_response.json — some cases fail ON PURPOSE to prove the harness catches the tester bugs. Add real photos + run live for true numbers.)');
+  }
+
+  if (DO_GATE && !g.pass) process.exit(1);
+}
+
+main().catch((e) => { console.error(e); process.exit(2); });

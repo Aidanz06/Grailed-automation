@@ -33,6 +33,13 @@ class PriceCompProvider {
 // removeWordsIfNoResults=allOptional (set in getComps) so an over-specific query
 // degrades gracefully instead of returning zero.
 function buildQueryText(attributes = {}) {
+  // Narrow-first tier (docs/VISION-MATCHING-CHANGES §B): an explicit narrow
+  // query rides in on the attributes (set ONLY by getCompsTiered) so the
+  // guard's cache key and the scrape provider agree on what was searched —
+  // narrow and broad results cache separately for free.
+  if (attributes._narrowQuery && String(attributes._narrowQuery).trim()) {
+    return String(attributes._narrowQuery).trim();
+  }
   // Prefer the model's dedicated broad comp query (best recall for pricing).
   if (attributes.comp_query && String(attributes.comp_query).trim()) {
     return String(attributes.comp_query).trim();
@@ -47,6 +54,92 @@ function buildQueryText(attributes = {}) {
   if (attributes.subcategory) parts.push(attributes.subcategory);
   else if (attributes.category) parts.push(attributes.category);
   return parts.join(' ').trim();
+}
+
+// ---- narrow exact-identity query (docs/VISION-MATCHING-CHANGES §B) ----
+// The broad comp_query is deliberately generic ("many comparable sales"), so an
+// IDENTICAL sold listing is never targeted. This builds the exact-match query
+// from the identity fields vision now extracts: brand + model, or — the niche-
+// brand lever — the literal text seen on the item ("ISOKNOCK"). Returns null
+// when extraction didn't capture enough identity to be meaningfully narrower
+// than the broad query; callers then go straight to the broad tier.
+function buildNarrowQueryText(attributes = {}) {
+  const clean = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
+  const words = (s) => clean(s).split(' ').filter(Boolean);
+  // Keep first occurrence of each word (case-insensitive) so "Carhartt" +
+  // "Carhartt Detroit Jacket" doesn't double up.
+  const dedupe = (toks) => {
+    const seen = new Set();
+    return toks.filter((t) => {
+      const k = t.toLowerCase();
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  };
+
+  // Twin of ui/main.js primaryBrand(): legacy/hand-typed collab strings still
+  // carry "A x B" — search under the primary label only.
+  const brandRaw = clean(attributes.resembles_brand).split(/\s+[x×]\s+/i)[0].trim();
+  const brand = /^unclear$/i.test(brandRaw) ? '' : brandRaw;
+  const model = clean(attributes.model);
+  // Cap verbatim tag/graphic text — Algolia ANDs query words, so a long
+  // transcription would match nothing and defeat the tier.
+  const visible = words(attributes.visible_text).slice(0, 6);
+  const distinctive = clean(
+    Array.isArray(attributes.distinctive_features) ? attributes.distinctive_features[0] : ''
+  );
+  const subcat = clean(attributes.subcategory);
+
+  // Niche-brand path: no recognized brand, but literal text on the item — the
+  // words on the tag ARE the search term (the Isoknock case).
+  if (!brand) {
+    if (!visible.length) return null;
+    return dedupe([...visible, ...words(subcat)]).join(' ');
+  }
+
+  if (model) return dedupe([...words(brand), ...words(model)]).join(' ');
+
+  // Visible text that says more than the brand name itself (a style/graphic
+  // name printed on the piece) → brand + those words.
+  const brandWords = new Set(words(brand).map((w) => w.toLowerCase()));
+  const extraText = visible.filter((w) => !brandWords.has(w.toLowerCase()));
+  if (extraText.length) return dedupe([...words(brand), ...extraText]).join(' ');
+
+  if (distinctive) return dedupe([...words(brand), ...words(subcat), ...words(distinctive)]).join(' ');
+
+  return null; // brand alone ≈ the broad tier already
+}
+
+// Narrow-first comp lookup (§B): run the exact-identity query WITHOUT Algolia's
+// removeWordsIfNoResults broadening; if it returns ≥ minSold sold hits, those
+// near-identical sales ARE the comps (range.js's exact-match tier then prices
+// off them). Otherwise fall back to the current broad query. Works through any
+// provider — pass the GUARDED provider so both tiers get the cache, the
+// rate-limit pacing, and the §8.1 circuit breaker (never call around it).
+const NARROW_MIN_SOLD = 3;
+async function getCompsTiered(provider, attributes = {}, opts = {}) {
+  const minSold = opts.minSold ?? NARROW_MIN_SOLD;
+  const narrowQuery = buildNarrowQueryText(attributes);
+  if (narrowQuery) {
+    const res = await provider.getComps({ ...attributes, _narrowQuery: narrowQuery });
+    const sold = (res.comps || []).filter((c) => c && c.sold !== false && c.price > 0);
+    if (sold.length >= minSold) {
+      return {
+        ...res,
+        tier: 'narrow',
+        narrowQuery,
+        range: res.range ? { ...res.range, compTier: 'narrow', narrowQuery } : res.range,
+      };
+    }
+  }
+  const broad = await provider.getComps(attributes);
+  return {
+    ...broad,
+    tier: 'broad',
+    narrowQuery,
+    range: broad.range ? { ...broad.range, compTier: 'broad' } : broad.range,
+  };
 }
 
 class GrailedScrapeProvider extends PriceCompProvider {
@@ -74,12 +167,16 @@ class GrailedScrapeProvider extends PriceCompProvider {
       );
     }
     const query = buildQueryText(attributes);
+    // The narrow tier must stay EXACT: zero hits means "no identical sale
+    // found — fall back to broad", not "quietly broaden the words" (which is
+    // what made identical sales unfindable in the first place).
+    const narrow = Boolean(attributes._narrowQuery);
     const params = new URLSearchParams({
       query,
       hitsPerPage: String(this.hitsPerPage),
-      // If the full query matches nothing, retry with all words optional so an
-      // over-specific query still returns the closest comps instead of zero.
-      removeWordsIfNoResults: 'allOptional',
+      // Broad tier: if the full query matches nothing, retry with all words
+      // optional so an over-specific query still returns the closest comps.
+      ...(narrow ? {} : { removeWordsIfNoResults: 'allOptional' }),
     }).toString();
 
     const controller = new AbortController();
@@ -186,4 +283,12 @@ class MockCompProvider extends PriceCompProvider {
   }
 }
 
-module.exports = { PriceCompProvider, GrailedScrapeProvider, MockCompProvider, buildQueryText };
+module.exports = {
+  PriceCompProvider,
+  GrailedScrapeProvider,
+  MockCompProvider,
+  buildQueryText,
+  buildNarrowQueryText,
+  getCompsTiered,
+  NARROW_MIN_SOLD,
+};

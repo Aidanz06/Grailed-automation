@@ -99,6 +99,44 @@ function brandMatchFactor(compTitle, brand, brandConfidence) {
   return brandToks.some((t) => title.includes(t)) ? 1.0 : 0.55;
 }
 
+// ---- exact-match tier (docs/VISION-MATCHING-CHANGES §C) ----
+// A comp whose title carries the item's brand AND full model name (or, for
+// niche brands the model couldn't identify, the literal text seen on the item)
+// is treated as the SAME piece sold before — it gets a much higher weight
+// ceiling so a handful of identical sales drive the median instead of being
+// diluted by dozens of loose comps. Own normalization, NOT tokenize():
+// STOPWORDS deliberately drops brand words (nike/adidas) that are load-bearing
+// here, same reason as brandMatchFactor.
+const EXACT_RELEVANCE = 0.95; // counts as a "strong match" in confidenceFor
+const EXACT_WEIGHT_BOOST = 5;
+function normWords(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').split(' ').filter(Boolean);
+}
+function exactMatchTier(compTitle, attributes = {}) {
+  const titleToks = new Set(normWords(compTitle));
+  if (!titleToks.size) return false;
+
+  const brandRaw = String(attributes.resembles_brand || '').split(/\s+[x×]\s+/i)[0];
+  const brand = /^\s*unclear\s*$/i.test(brandRaw) ? '' : brandRaw;
+  const brandToks = normWords(brand).filter((t) => t.length >= 2);
+
+  if (brandToks.length) {
+    // Brand + model path: every brand token AND every model token in the title
+    // ("Nike Dunk Low" ≠ a "Nike Dunk High" comp — ALL model tokens required,
+    // precision over recall).
+    const modelToks = normWords(attributes.model).filter((t) => !brandToks.includes(t));
+    if (!modelToks.length) return false;
+    return brandToks.every((t) => titleToks.has(t)) && modelToks.every((t) => titleToks.has(t));
+  }
+
+  // Niche-brand path (brand unclear): the verbatim text seen on the item, all
+  // words present. Requires one substantial word so "the"-style fragments
+  // can't fake a match.
+  const visToks = normWords(attributes.visible_text).slice(0, 6).filter((t) => t.length >= 3);
+  if (!visToks.length || !visToks.some((t) => t.length >= 4)) return false;
+  return visToks.every((t) => titleToks.has(t));
+}
+
 // ---- size proximity ----
 const ADULT_SIZES = ['xs', 's', 'm', 'l', 'xl', 'xxl', 'xxxl'];
 function normSize(s) {
@@ -213,19 +251,26 @@ function computeRange(comps = [], attributes = {}, opts = {}) {
   const itemSize = attributes.size;
 
   let highDownweighted = 0;
+  let exactCount = 0;
   const weighted = usable
     .map((c) => {
-      const relevance =
+      const exact = exactMatchTier(c.title, attributes);
+      if (exact) exactCount++;
+      let relevance =
         conditionProximity(c.condition, itemOrd) *
         sizeFactor(itemSize, c.size) *
         titleOverlapFactor(c.title, iTokens) *
         brandMatchFactor(c.title, attributes.resembles_brand, attributes.brand_confidence);
-      let weight = recencyWeight(c.soldDate, now) * relevance;
+      // Exact-tier comps (§C): the same piece sold before — floor their
+      // relevance at "strong" and boost their weight so they drive the median;
+      // loose comps become context. High-outlier downweight still applies.
+      if (exact) relevance = Math.max(relevance, EXACT_RELEVANCE);
+      let weight = recencyWeight(c.soldDate, now) * relevance * (exact ? EXACT_WEIGHT_BOOST : 1);
       if (c.price > highFence) {
         weight *= HIGH_OUTLIER_DOWNWEIGHT;
         highDownweighted++;
       }
-      return { ...c, weight, relevance };
+      return { ...c, weight, relevance, exact };
     })
     .sort((a, b) => a.price - b.price);
 
@@ -240,6 +285,7 @@ function computeRange(comps = [], attributes = {}, opts = {}) {
       // Keep the listing URL — the UI's comp rows open it (dropping it here
       // made every real comp render as an unlinked row, found 2026-07-04).
       url: c.url || null,
+      exact: c.exact || false,
     }));
 
   const q25 = weightedQuantile(weighted, 0.25);
@@ -269,11 +315,13 @@ function computeRange(comps = [], attributes = {}, opts = {}) {
     outliersDropped: lowDropped,
     outliersDownweighted: highDownweighted,
     newCompCount,
+    exactMatchCount: exactCount,
     basis:
-      `relevance-weighted (condition × size × title/era × brand match × recency); ` +
+      `relevance-weighted (condition × size × title/era × brand match × recency` +
+      `${exactCount ? ` · ${exactCount} exact-tier match${exactCount === 1 ? '' : 'es'} boosted` : ''}); ` +
       `list = ${Math.round(LIST_PERCENTILE * 100)}th pct of sold, sells = weighted sold median`,
     mostRelevantComps: topComps,
-    confidence: confidenceFor(weighted, { q25, median: soldMedian, q75 }, { nwtThin }),
+    confidence: confidenceFor(weighted, { q25, median: soldMedian, q75 }, { nwtThin, exactCount }),
   };
 }
 
@@ -307,7 +355,10 @@ function confidenceFor(weighted, { q25, median, q75 }, opts = {}) {
   const halfCi = 1.96 * (sigma / Math.sqrt(Math.max(1, effectiveN)));
 
   // Level: matches set the base, spread/sample can only pull it DOWN.
-  let level = strong >= 3 ? 'high' : strong >= 1 || moderate >= 4 ? 'medium' : 'low';
+  // Exact-tier matches (§C — the same piece sold before) are the strongest
+  // signal there is: 2+ set the base high even when the loose-comp count is thin.
+  const exactCount = opts.exactCount || 0;
+  let level = exactCount >= 2 || strong >= 3 ? 'high' : strong >= 1 || moderate >= 4 ? 'medium' : 'low';
   const demote = () => { level = level === 'high' ? 'medium' : 'low'; };
   if (cv > 0.45) demote();
   // 2.5, not 3: one strong comp dominating the weights shouldn't by itself
@@ -318,16 +369,19 @@ function confidenceFor(weighted, { q25, median, q75 }, opts = {}) {
   if (opts.nwtThin) demote();
 
   const matchPart =
-    strong >= 3
-      ? `${strong} near-identical sold listings`
-      : strong >= 1
-        ? `${strong} close match${strong === 1 ? '' : 'es'}, rest loosely similar`
-        : 'no close matches — based on loosely similar sales';
+    exactCount >= 1
+      ? `${exactCount} sale${exactCount === 1 ? '' : 's'} of this exact piece`
+      : strong >= 3
+        ? `${strong} near-identical sold listings`
+        : strong >= 1
+          ? `${strong} close match${strong === 1 ? '' : 'es'}, rest loosely similar`
+          : 'no close matches — based on loosely similar sales';
   const spreadPart = cv <= 0.25 ? 'tight price spread' : cv <= 0.45 ? 'moderate price spread' : 'wide price spread';
 
   return {
     level,
     ci95: [round(Math.max(0, median - halfCi)), round(median + halfCi)],
+    exactMatches: exactCount,
     strongMatches: strong,
     moderateMatches: moderate,
     effectiveN: Number(effectiveN.toFixed(1)),
@@ -344,4 +398,5 @@ module.exports = {
   sizeFactor,
   conditionProximity,
   brandMatchFactor,
+  exactMatchTier,
 };
