@@ -107,9 +107,6 @@ export interface GeneratedContent extends ListingContent {
 // templates (category-specific), not from fixed keys here.
 const BLANK_MEASUREMENTS: Measurements = {};
 
-// Settings key for the seller's style template (plan §A). Twin constant lives
-// in ui/main.js (the main process reads the setting for batch + Regenerate).
-const STYLE_TEMPLATE_KEY = 'descriptionStyleTemplate';
 // Settings key for the seller's always-on tags (saved defaults). Twin in
 // ui/main.js, which merges them into every newly generated draft's tags.
 const DEFAULT_TAGS_KEY = 'defaultTags';
@@ -424,11 +421,6 @@ export interface Api {
   cancelUpdate(): Promise<{ ok: boolean; message?: string }>;
   /** Live step/output stream during applyUpdate; returns an unsubscribe fn. */
   onUpdateProgress(cb: (p: UpdateProgress) => void): () => void;
-  /** Plan §A: the seller's saved example listing — a persistent setting the
-   * PIPELINE reads at import and on Regenerate (style guidance only; the
-   * hard rules and each item's facts always win). "" = none set. */
-  getStyleTemplate(): Promise<string>;
-  setStyleTemplate(template: string): Promise<void>;
   /** Saved defaults: comma-separated tags appended to every new draft. */
   getDefaultTags(): Promise<string>;
   setDefaultTags(tags: string): Promise<void>;
@@ -887,24 +879,6 @@ const mockApi: Api = {
     mockUpdateSubs.add(cb);
     return () => mockUpdateSubs.delete(cb);
   },
-  // Preview style template: localStorage stands in for the SQLite setting so
-  // the save → survives-reload walk works without a backend.
-  async getStyleTemplate() {
-    try {
-      return localStorage.getItem(STYLE_TEMPLATE_KEY) ?? '';
-    } catch {
-      return '';
-    }
-  },
-  async setStyleTemplate(template) {
-    console.log('[mock] setStyleTemplate — persisted to localStorage for this preview');
-    try {
-      if (template.trim()) localStorage.setItem(STYLE_TEMPLATE_KEY, template);
-      else localStorage.removeItem(STYLE_TEMPLATE_KEY);
-    } catch {
-      /* private mode — session-only */
-    }
-  },
   // Preview default tags: localStorage stands in for the SQLite setting (the
   // real merge-into-new-drafts happens in ui/main.js at generation time).
   async getDefaultTags() {
@@ -1131,12 +1105,6 @@ function realApi(bridge: TailorBridge): Api {
     },
     onUpdateProgress(cb) {
       return bridge.onUpdateProgress(cb);
-    },
-    async getStyleTemplate() {
-      return (await bridge.getSetting(STYLE_TEMPLATE_KEY)) ?? '';
-    },
-    async setStyleTemplate(template) {
-      await bridge.setSetting(STYLE_TEMPLATE_KEY, template.trim() ? template : null);
     },
     async getDefaultTags() {
       return (await bridge.getSetting(DEFAULT_TAGS_KEY)) ?? '';

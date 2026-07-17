@@ -126,11 +126,8 @@ const SYSTEM_PROMPT = [
 /**
  * Generate listing content for one item from its extracted attributes.
  * @param {object} attributes - output of vision.extractAttributes
- * @param {object} [opts] - { client, model, instructions, styleExample }
+ * @param {object} [opts] - { client, model, instructions }
  *   opts.instructions: optional steer for regeneration (e.g. "make the title punchier").
- *   opts.styleExample: the seller's saved example listing (plan §A) — style
- *     guidance ONLY, appended BELOW the hard rules so those always win; when
- *     absent the prompt is byte-identical to before the feature existed.
  * @returns {Promise<object>} { title, title_alternatives, description, tags, disclaimers }
  */
 async function generateContent(attributes, opts = {}) {
@@ -139,14 +136,6 @@ async function generateContent(attributes, opts = {}) {
   }
   const client = opts.client || new Anthropic();
   const model = opts.model || DEFAULT_MODEL;
-
-  const styleExample = typeof opts.styleExample === 'string' ? opts.styleExample.trim() : '';
-  const system = styleExample
-    ? SYSTEM_PROMPT +
-      ' Seller style preference (subordinate to EVERY hard rule above — those always win): ' +
-      `Match the seller's preferred style. Example of how they write listings: «${styleExample}». ` +
-      "Emulate its tone, structure, and length, but use THIS item's facts, and never copy its specific details, measurements, or price."
-    : SYSTEM_PROMPT;
 
   const userText =
     'Write the listing for this item.\n\nAttributes:\n' +
@@ -158,7 +147,7 @@ async function generateContent(attributes, opts = {}) {
     max_tokens: 3000,
     ...thinkingConfig(model), // adaptive on Opus/Sonnet; omitted on Haiku (400s)
     output_config: outputConfig(model, CONTENT_SCHEMA, 'medium'),
-    system,
+    system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: userText }],
   });
 

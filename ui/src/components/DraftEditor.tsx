@@ -213,41 +213,6 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.id]);
 
-  // Plan §A: the persistent description style template (SQLite setting —
-  // batch imports and Regenerate both read it main-side). This panel only
-  // edits the setting; generation picks it up automatically.
-  const [styleOpen, setStyleOpen] = useState(false);
-  const [styleText, setStyleText] = useState('');
-  const [styleSaving, setStyleSaving] = useState(false);
-  const openStyleEditor = () => {
-    if (styleOpen) return setStyleOpen(false);
-    api
-      .getStyleTemplate()
-      .then((t) => {
-        setStyleText(t);
-        setStyleOpen(true);
-      })
-      .catch((err) => toast(`Couldn’t load the style template: ${errorMessage(err)}`));
-  };
-  const saveStyle = (regenerateAfter: boolean) => {
-    setStyleSaving(true);
-    api
-      .setStyleTemplate(styleText)
-      .then(() => {
-        toast(
-          styleText.trim()
-            ? 'Style template saved — imports and Regenerate now match it.'
-            : 'Style template removed — generations use the default style.'
-        );
-        if (regenerateAfter) {
-          setStyleOpen(false);
-          regenerate();
-        }
-      })
-      .catch((err) => toast(`Couldn’t save the style template: ${errorMessage(err)}`))
-      .finally(() => setStyleSaving(false));
-  };
-
   // Grailed's fixed color/style lists + the department→category tree (from
   // grailed-selectors.json via IPC; static mirror in mock mode).
   const [fillOptions, setFillOptions] = useState<AutofillOptions>({ colors: [], styles: [], categoryTree: {} });
@@ -697,38 +662,6 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
           </button>
         ) : (
         <>
-        {/* Plan §A: the seller's style template — one persistent example
-            listing every generation (import + Regenerate) emulates. Style
-            only: facts still come from each item, and the generation hard
-            rules always win. */}
-        {styleOpen && (
-          <div className="mb-2.5 rounded-md border bg-secondary/40 p-3">
-            <div className="mb-1.5 text-xs font-medium">Description style template</div>
-            <p className="mb-2 text-xs text-muted-foreground">
-              Used as a style example for all generations — tone, structure, and length. Facts still come from each
-              item; its specific details, measurements, and price are never copied. Leave empty to remove.
-            </p>
-            <Textarea
-              value={styleText}
-              placeholder="Paste one of your own listings here…"
-              className="min-h-[120px] font-mono text-[13px]"
-              onChange={(e) => setStyleText(e.target.value)}
-            />
-            <div className="mt-2 flex gap-2">
-              <Button size="sm" variant="outline" disabled={styleSaving} onClick={() => saveStyle(false)}>
-                {styleSaving ? 'Saving…' : 'Save style'}
-              </Button>
-              <Button size="sm" disabled={styleSaving || item.regenerating || !styleText.trim()} onClick={() => saveStyle(true)}>
-                <RefreshCw className={item.regenerating ? 'animate-spin' : ''} />
-                Save &amp; regenerate with my style
-              </Button>
-              <span className="flex-1" />
-              <Button size="sm" variant="ghost" onClick={() => setStyleOpen(false)}>
-                Close
-              </Button>
-            </div>
-          </div>
-        )}
         {/* Global style pointer (Description Styles Phase 1); items generated
             before structured descriptions get a Regenerate nudge instead. */}
         {item.descParts ? (
@@ -745,9 +678,11 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
             </Button>
           </div>
         )}
-        {/* The style-template editor opens from a floating circular button in
-            the textarea's bottom-right corner (a tiny header pencil wasn't
-            discoverable — owner feedback 2026-07-14). */}
+        {/* Description styles open from a floating circular button in the
+            textarea's bottom-right corner (a tiny header pencil wasn't
+            discoverable — owner feedback 2026-07-14). It opens the global
+            chip-template editor (StyleEditor), which replaced the old
+            style-example panel. */}
         <div className="relative">
           <Textarea
             ref={descRef}
@@ -762,15 +697,10 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
           />
           <button
             type="button"
-            aria-label="edit description style template"
-            title="Your style template — paste an example listing and every generation matches its tone and format."
-            className={cn(
-              'absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full border shadow-sm transition-colors',
-              styleOpen
-                ? 'border-primary bg-primary text-primary-foreground'
-                : 'border-input bg-card text-muted-foreground hover:border-primary hover:text-primary'
-            )}
-            onClick={() => (styleOpen ? setStyleOpen(false) : openStyleEditor())}
+            aria-label="edit description styles"
+            title="Description styles — the template every generated description composes from (constant footer included)."
+            className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full border border-input bg-card text-muted-foreground shadow-sm transition-colors hover:border-primary hover:text-primary"
+            onClick={onEditStyles}
           >
             <Pencil className="h-4 w-4" />
           </button>

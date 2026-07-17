@@ -94,9 +94,9 @@ function openStore(dbPath = DEFAULT_DB, opts = {}) {
   // most recent fill + per-field results, so a re-fill can target only what the
   // user changed since. NULL = never filled.
   try { db.exec('ALTER TABLE items ADD COLUMN last_fill_json TEXT'); } catch {}
-  // App settings the PIPELINE also reads (plan §A: the description style
-  // template must reach generation at import AND on Regenerate, so it can't
-  // live in renderer state). Plain key/value; V1 key: descriptionStyleTemplate.
+  // App settings the PIPELINE also reads (description styles must reach
+  // generation at import AND on Regenerate, so they can't live in renderer
+  // state). Plain key/value; keys: descriptionStyles, defaultTags.
   db.exec('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)');
   const now = () => (opts.now ? new Date(opts.now).toISOString() : new Date().toISOString());
 

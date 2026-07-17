@@ -105,21 +105,10 @@ ipcMain.handle('items:duplicate', (_e, id) => {
 ipcMain.handle('albums:list', () => getStore().listAlbums());
 ipcMain.handle('albums:setHidden', (_e, id, hidden) => getStore().setAlbumHidden(id, hidden));
 // App settings (plan §A): plain key/value in the SQLite store so the PIPELINE
-// can read them too (the description style template must reach generation at
-// import and on Regenerate). Generic get/set — the renderer owns which keys
-// exist; V1 key: descriptionStyleTemplate (see STYLE_TEMPLATE_KEY below and
-// its twin in ui/src/lib/api.ts).
+// can read them too (description styles must reach generation at import and
+// on Regenerate). Generic get/set — the renderer owns which keys exist.
 ipcMain.handle('settings:get', (_e, key) => getStore().getSetting(String(key)));
 ipcMain.handle('settings:set', (_e, key, value) => getStore().setSetting(String(key), value));
-// Key duplicated in ui/src/lib/api.ts (renderer can't import main constants).
-const STYLE_TEMPLATE_KEY = 'descriptionStyleTemplate';
-function styleTemplate() {
-  try {
-    return getStore().getSetting(STYLE_TEMPLATE_KEY) || undefined;
-  } catch {
-    return undefined; // settings must never block generation
-  }
-}
 
 // Description Styles Phase 1 (docs/DESIGN-description-styles.md): the stored
 // description is COMPOSED from the active style template — constants (footer,
@@ -177,15 +166,9 @@ function applyDefaultTags(content) {
 }
 
 // Slice 3: regenerate listing content from (possibly user-edited) attributes.
-// The persisted style template rides along so Regenerate matches import.
 ipcMain.handle('content:generate', async (_e, attributes, instructions) =>
   composeItemDescription(
-    applyDefaultTags(
-      await generateContent(attributes, {
-        ...(instructions ? { instructions } : {}),
-        ...(styleTemplate() ? { styleExample: styleTemplate() } : {}),
-      })
-    ),
+    applyDefaultTags(await generateContent(attributes, instructions ? { instructions } : {})),
     attributes
   )
 );
@@ -306,7 +289,6 @@ ipcMain.handle('batch:process', async (e, folder) => {
           providerName: shared.providerName,
           content: true,
           label: `[group ${g.groupId}]`,
-          styleExample: styleTemplate(), // plan §A: imports match the seller's saved style
         });
         applyDefaultTags(item.content); // saved defaults: the seller's always-on tags
         composeItemDescription(item.content, item.attributes); // active style template + footer
@@ -380,7 +362,6 @@ ipcMain.handle('review:confirm', async (_e, itemId) => {
     providerName,
     content: true,
     label: `[review ${itemId}]`,
-    styleExample: styleTemplate(), // plan §A: review-confirm drafts match the saved style too
   });
   applyDefaultTags(run.content); // saved defaults: the seller's always-on tags
   composeItemDescription(run.content, run.attributes); // active style template + footer
