@@ -5,7 +5,7 @@ import type { AutofillOptions } from '@/lib/api';
 import { readiness } from '@/lib/readiness';
 import { quality, qualityTitle } from '@/lib/quality';
 import { suggestGrailedCategory } from '@/lib/grailedCategory';
-import { cn } from '@/lib/utils';
+import { cn, isCollabBrand, primaryBrand } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -146,6 +146,12 @@ export function ConfirmCard({ item, fillOptions, pendingCatKey, onPendingCat, re
             >
               I checked — it’s right
             </Button>
+          )}
+          {(isCollabBrand(attrs.resembles_brand) || attrs.collaboration) && (
+            <span className="text-[11px] text-muted-foreground">
+              collab{attrs.collaboration ? ` with ${attrs.collaboration}` : ''} — fill sets designer “
+              {primaryBrand(attrs.resembles_brand)}” (Grailed has no collab designers)
+            </span>
           )}
         </Field>
 

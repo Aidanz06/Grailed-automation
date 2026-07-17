@@ -1,29 +1,31 @@
 import { useEffect, useState } from 'react';
-import { Settings2, X } from 'lucide-react';
-import type { DescProfile } from '@/types';
+import { Pencil, Settings2, X } from 'lucide-react';
 import { api } from '@/lib/api';
-import { PRESETS } from '@/lib/description';
+import { resolveStyles, serializeStyles } from '@/lib/description';
 import { errorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 /*
  * Saved defaults (refinement plan §E4, the honest V1 slice): the two
  * repetitive-typing killers that actually apply to this app — tags added to
  * every new draft (a seller's standing shop tags), and the default
- * description detail level. Everything else the plan lists (brand, condition,
- * size) is per-item truth and deliberately NOT defaultable. Defaults shape
- * new drafts only; existing drafts and per-draft overrides are untouched.
+ * description STYLE (Description Styles Phase 1 — the named template that
+ * composes every new description, constants/footer included). Everything else
+ * the plan lists (brand, condition, size) is per-item truth and deliberately
+ * NOT defaultable. Defaults shape new drafts only.
  */
 
 interface Props {
-  defaultProfile: DescProfile;
-  setDefaultProfile: (p: DescProfile) => void;
+  stylesRaw: string | null;
+  onStylesChanged: (raw: string | null) => void;
+  onEditStyles: () => void;
   toast: (msg: string) => void;
 }
 
-export function DefaultsMenu({ defaultProfile, setDefaultProfile, toast }: Props) {
+export function DefaultsMenu({ stylesRaw, onStylesChanged, onEditStyles, toast }: Props) {
+  const resolved = resolveStyles(stylesRaw);
   const [open, setOpen] = useState(false);
   const [tags, setTags] = useState('');
   const [loaded, setLoaded] = useState(false);
@@ -98,22 +100,40 @@ export function DefaultsMenu({ defaultProfile, setDefaultProfile, toast }: Props
               </div>
 
               <div>
-                <div className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">Default description detail</div>
+                <div className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">Description style</div>
                 <div className="flex items-center gap-1.5">
-                  {(Object.keys(PRESETS) as Array<keyof typeof PRESETS>).map((name) => (
-                    <Button
-                      key={name}
-                      variant={defaultProfile.preset === name ? 'secondary' : 'outline'}
-                      size="sm"
-                      className={cn('h-7 px-2.5 text-xs', defaultProfile.preset === name && 'border-primary text-primary')}
-                      onClick={() => setDefaultProfile({ preset: name, sections: { ...PRESETS[name] } })}
-                    >
-                      {name}
-                    </Button>
-                  ))}
+                  <Select
+                    value={resolved.active}
+                    onValueChange={(name) => {
+                      const raw = serializeStyles({ ...resolved, active: name });
+                      const value = JSON.parse(raw).styles.length === 0 && name === 'Standard' ? null : raw;
+                      api
+                        .setDescriptionStyles(value)
+                        .then(() => {
+                          onStylesChanged(value);
+                          toast(`New drafts will use the “${name}” style.`);
+                        })
+                        .catch((err) => toast(`Couldn’t save: ${errorMessage(err)}`));
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-[200px] text-xs" aria-label="default description style">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {resolved.styles.map((s) => (
+                        <SelectItem key={s.name} value={s.name}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={onEditStyles}>
+                    <Pencil /> Edit styles…
+                  </Button>
                 </div>
                 <p className="mt-1 text-xs leading-snug text-muted-foreground">
-                  What new drafts show by default — a draft’s own detail setting (in its editor) always wins.
+                  The template every new description is composed with — its constant footer is always the last line.
+                  Existing drafts keep their text until you regenerate them.
                 </p>
               </div>
 

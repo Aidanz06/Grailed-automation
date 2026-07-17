@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import type { DescProfile, Item } from '@/types';
+import type { Item } from '@/types';
 import type { Selection, UpdateItem } from '@/App';
 import type { BatchResult } from '@/lib/api';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -10,8 +10,9 @@ import { ImportScreen } from '@/components/ImportScreen';
 interface EditorProps {
   selection: Selection;
   item: Item | null;
-  defaultProfile: DescProfile;
-  setDefaultProfile: (p: DescProfile) => void;
+  /** Description Styles: raw persisted styles JSON + the global editor opener. */
+  stylesRaw: string | null;
+  onEditStyles: () => void;
   updateItem: UpdateItem;
   toast: (msg: string) => void;
   onImported: (result: BatchResult) => void;
@@ -33,9 +34,11 @@ interface EditorProps {
   fillSignal: number;
   /** Fill-activity report — passed through to the DraftEditor (updater guard). */
   onFillingChange?: (busy: boolean) => void;
+  /** §E8: a duplicate draft was created — reload and select it. */
+  onDuplicated?: (newId: number) => void;
 }
 
-export function Editor({ selection, item, defaultProfile, setDefaultProfile, updateItem, toast, onImported, onOpenItem, onOpenBoard, onReviewResolved, nextDraft, autoFillId, onAutoFillConsumed, onMarkListedAndNext, autoPickImport, onAutoPickConsumed, fillSignal, onFillingChange }: EditorProps) {
+export function Editor({ selection, item, stylesRaw, onEditStyles, updateItem, toast, onImported, onOpenItem, onOpenBoard, onReviewResolved, nextDraft, autoFillId, onAutoFillConsumed, onMarkListedAndNext, autoPickImport, onAutoPickConsumed, fillSignal, onFillingChange, onDuplicated }: EditorProps) {
   // §J: pin draft-vs-review to the SELECTION, not to every items refresh — a
   // background reload (import streaming, etc.) must never yank an open draft
   // editor to the Review screen mid-edit. The mode recomputes when the user
@@ -67,8 +70,8 @@ export function Editor({ selection, item, defaultProfile, setDefaultProfile, upd
       <DraftEditor
         item={item}
         update={(recipe) => updateItem(item.id, recipe)}
-        defaultProfile={defaultProfile}
-        setDefaultProfile={setDefaultProfile}
+        stylesRaw={stylesRaw}
+        onEditStyles={onEditStyles}
         toast={toast}
         nextDraft={nextDraft && nextDraft.id !== item.id ? nextDraft : null}
         autoFill={autoFillId === item.id}
@@ -76,6 +79,7 @@ export function Editor({ selection, item, defaultProfile, setDefaultProfile, upd
         onMarkListedAndNext={onMarkListedAndNext}
         fillSignal={fillSignal}
         onFillingChange={onFillingChange}
+        onDuplicated={onDuplicated}
       />
     );
   }

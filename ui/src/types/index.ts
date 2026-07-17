@@ -20,7 +20,22 @@ export interface Photo {
 
 export interface ExtractedAttributes {
   resembles_brand: string;
+  /** Collab partner or sub-line ("Comme des Garçons", "NOCTA") — the fill
+   * always sends resembles_brand as the designer (Grailed has no collab
+   * entries in its designer list); this rides along as a fact for text/tags.
+   * Absent on items extracted before 2026-07-14. */
+  collaboration?: string;
   brand_confidence: number;
+  /** Specific model / silhouette / graphic name ("Dunk Low", "Detroit Jacket")
+   * — the price-defining identity behind the narrow comp query. Absent on
+   * items extracted before 2026-07-16. */
+  model?: string;
+  /** Verbatim text seen on tags/labels/graphics ("ISOKNOCK") — how niche
+   * brands get found. Absent on items extracted before 2026-07-16. */
+  visible_text?: string;
+  /** Variant details that move price (colorway name, panel/material, collab
+   * mark). Absent on items extracted before 2026-07-16. */
+  distinctive_features?: string[];
   category: string;
   subcategory: string;
   era_style: string;
@@ -116,11 +131,17 @@ export interface ListingContent {
 
 export interface DescParts {
   overview: string;
-  materials: string;
-  condition: string;
+  /** AI specifics behind the condition rating (Description Styles Phase 1) —
+   * reads after "Condition: <rating>, ". Absent on items generated before
+   * 2026-07-17; those carried the whole line in the legacy `condition` key. */
+  condition_note?: string;
   fit: string;
   flaws: string;
-  care: string;
+  // Legacy pre-styles keys — still present on old stored items; the template
+  // engine falls back to `condition` for the condition_note chip.
+  materials?: string;
+  condition?: string;
+  care?: string;
 }
 
 // "measurements" was removed from the section set (owner decision 2026-07-14):

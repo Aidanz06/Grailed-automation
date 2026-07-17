@@ -14,7 +14,7 @@
 
 import type { Comp, DescParts, ExtractedAttributes, Item, ItemStatus, ListingContent, Measurements, PriceRange } from '@/types';
 import { MOCK_ITEMS } from '@/mock/items';
-import { DEFAULT_PROFILE, assembleDescription } from '@/lib/description';
+import { assembleDescription } from '@/lib/description';
 
 // ---- Raw shapes as returned by pipeline/store.js over IPC ----
 interface StorePhoto {
@@ -113,17 +113,23 @@ const STYLE_TEMPLATE_KEY = 'descriptionStyleTemplate';
 // Settings key for the seller's always-on tags (saved defaults). Twin in
 // ui/main.js, which merges them into every newly generated draft's tags.
 const DEFAULT_TAGS_KEY = 'defaultTags';
+// Settings key for Description Styles (Phase 1): the named template styles +
+// active style, as a JSON string (see lib/description.ts resolveStyles). Twin
+// in ui/main.js, which composes descriptions at generation time.
+const DESCRIPTION_STYLES_KEY = 'descriptionStyles';
 
 /** Normalize the model's snake_case desc_parts into the UI DescParts shape. */
 function adaptDescParts(dp: DescParts | null | undefined): DescParts | null {
   if (!dp) return null;
   return {
     overview: dp.overview ?? '',
-    materials: dp.materials ?? '',
-    condition: dp.condition ?? '',
+    condition_note: dp.condition_note ?? undefined,
     fit: dp.fit ?? '',
     flaws: dp.flaws ?? '',
-    care: dp.care ?? '',
+    // legacy pre-styles keys (old stored items) — kept for the engine fallback
+    materials: dp.materials ?? undefined,
+    condition: dp.condition ?? undefined,
+    care: dp.care ?? undefined,
   };
 }
 
@@ -234,6 +240,7 @@ interface TailorBridge {
   saveItem(id: number, edits: ItemEdits): Promise<boolean>;
   markSubmitted(id: number): Promise<boolean>;
   deleteItem(id: number): Promise<boolean>;
+  duplicateItem(id: number): Promise<{ itemId: number }>;
   listAlbums(): Promise<StoreAlbum[]>;
   setAlbumHidden(id: number, hidden: boolean): Promise<boolean>;
   reviewConfirm(id: number): Promise<ReviewConfirmResult>;
@@ -375,6 +382,9 @@ export interface Api {
   markSubmitted(id: number): Promise<void>;
   /** Permanently delete an item from the app's DB (never touches Grailed). */
   deleteItem(id: number): Promise<void>;
+  /** §E8: clone a draft as a NEW draft — text/details copied; photos, fill
+   * history, flags, and the Smart Pricing opt-in reset. Returns the new id. */
+  duplicateItem(id: number): Promise<{ itemId: number }>;
   /** Albums: one per import batch; hide finished batches from the Home lists. */
   listAlbums(): Promise<Album[]>;
   setAlbumHidden(id: number, hidden: boolean): Promise<void>;
@@ -422,6 +432,10 @@ export interface Api {
   /** Saved defaults: comma-separated tags appended to every new draft. */
   getDefaultTags(): Promise<string>;
   setDefaultTags(tags: string): Promise<void>;
+  /** Description Styles (Phase 1): the raw persisted styles JSON (null = unset
+   * → built-in presets, "Standard" active). Parse with resolveStyles(). */
+  getDescriptionStyles(): Promise<string | null>;
+  setDescriptionStyles(raw: string | null): Promise<void>;
   /** Read-only Chrome tab probe — header chip + fresh-Sell-form fill gate. */
   getChromeStatus(): Promise<ChromeStatus>;
   /** Launch the dedicated CDP Chrome (no-op if already up). Login stays manual. */
@@ -615,13 +629,32 @@ const mockAlbums: Album[] = [
   { id: 2, name: 'closet-clearout — 2026-06-20', folder: '/mock/closet-clearout', createdAt: '2026-06-20', hidden: false, itemCount: 0, listedCount: 0, reviewCount: 0 },
 ];
 
+// Preview-only drafts created in-session (Duplicate) — appended to the
+// static mocks so the walk survives list reloads (not page reloads).
+const mockAddedItems: Item[] = [];
+let mockNextId = 1000;
+
+// The preview's persisted styles value (localStorage stand-in for SQLite).
+function mockStylesRaw(): string | null {
+  try {
+    return localStorage.getItem(DESCRIPTION_STYLES_KEY);
+  } catch {
+    return null;
+  }
+}
+
 function assembledMocks(): Item[] {
-  const items = structuredClone(MOCK_ITEMS).filter((it) => !mockDeletedIds.has(it.id));
+  const items = [...structuredClone(MOCK_ITEMS), ...structuredClone(mockAddedItems)].filter(
+    (it) => !mockDeletedIds.has(it.id)
+  );
   for (const it of items) {
-    if (it.descParts && it.content) it.content.description = assembleDescription(it, DEFAULT_PROFILE);
-    // Spread the mocks across the two fake albums (odd/even), like real
-    // imports would land in one album per batch.
-    it.albumId = it.id % 2 === 1 ? 1 : 2;
+    // Compose from the ACTIVE style (Description Styles) — in the real app
+    // ui/main.js does this at generation time; the mock does it on read so
+    // template edits show immediately across the preview.
+    if (it.descParts && it.content) it.content.description = assembleDescription(it, mockStylesRaw());
+    // Spread the STATIC mocks across the two fake albums (odd/even), like
+    // real imports would; in-session clones keep their source's album.
+    if (it.id < 1000) it.albumId = it.id % 2 === 1 ? 1 : 2;
   }
   return items;
 }
@@ -632,6 +665,23 @@ const mockApi: Api = {
   },
   async getItem(id) {
     return assembledMocks().find((it) => it.id === id) ?? null;
+  },
+  async duplicateItem(id) {
+    const src = assembledMocks().find((it) => it.id === id);
+    if (!src?.content) throw new Error('Only drafts with a generated listing can be duplicated.');
+    console.log('[mock] duplicateItem — preview-only clone');
+    const clone = structuredClone(src);
+    clone.id = mockNextId++;
+    clone.status = 'draft';
+    clone.photos = [];
+    clone.flags = [];
+    clone.submittedAt = undefined;
+    clone.createdAt = new Date().toISOString();
+    clone.dirty = false;
+    delete clone.attributes.smart_pricing_enabled;
+    delete clone.attributes.smart_pricing_floor;
+    mockAddedItems.push(clone);
+    return { itemId: clone.id };
   },
   // No backend in the browser preview — edits live only in React state.
   async saveItem(id) {
@@ -678,21 +728,24 @@ const mockApi: Api = {
     const brand = attributes.resembles_brand || 'Item';
     const sub = attributes.subcategory || attributes.category || '';
     const base = `${brand} ${sub}`.trim();
-    const cond = attributes.condition_rating || 'see photos';
+    const descParts: DescParts = {
+      overview: `${base}.`,
+      condition_note: 'no notable wear in photos',
+      fit: attributes.size ? `Tagged ${attributes.size}.` : '',
+      flaws: '',
+    };
     return {
       title: (base + (attributes.size ? ` - ${attributes.size}` : '')).trim(),
-      description: `${base}.\nCondition: ${cond}.`,
+      // Composed exactly like ui/main.js does at generation time: active
+      // style template + chips + constant footer.
+      description: assembleDescription(
+        { attributes: attributes as Item['attributes'], descParts, content: null } as unknown as Item,
+        mockStylesRaw()
+      ),
       tags: [brand, sub, attributes.primary_color].filter(Boolean).map((t) => String(t).toLowerCase()),
       disclaimers: ['Mock regeneration — no API call.'],
       title_alternatives: [],
-      descParts: {
-        overview: `${base}.`,
-        materials: attributes.primary_color ? `${attributes.primary_color} colorway.` : '',
-        condition: `Condition: ${cond}.`,
-        fit: attributes.size ? `Tagged ${attributes.size}.` : '',
-        flaws: '',
-        care: 'Ships promptly, well packed.',
-      },
+      descParts,
     };
   },
   async recomputeComps(attributes) {
@@ -870,6 +923,21 @@ const mockApi: Api = {
       /* private mode — session-only */
     }
   },
+  // Preview description styles: localStorage stands in for the SQLite setting;
+  // assembledMocks() + the mock generateContent compose from the same value so
+  // the template editor's effects show everywhere in the walk.
+  async getDescriptionStyles() {
+    return mockStylesRaw();
+  },
+  async setDescriptionStyles(raw) {
+    console.log('[mock] setDescriptionStyles — persisted to localStorage for this preview');
+    try {
+      if (raw && raw.trim()) localStorage.setItem(DESCRIPTION_STYLES_KEY, raw);
+      else localStorage.removeItem(DESCRIPTION_STYLES_KEY);
+    } catch {
+      /* private mode — session-only */
+    }
+  },
   // No CDP in the browser preview — reports per mockChromeState ('ready' by
   // default so the normal flow renders; flip it above to walk the other UI).
   async getChromeStatus() {
@@ -996,6 +1064,9 @@ function realApi(bridge: TailorBridge): Api {
     async deleteItem(id) {
       await bridge.deleteItem(id);
     },
+    async duplicateItem(id) {
+      return bridge.duplicateItem(id);
+    },
     async listAlbums() {
       return (await bridge.listAlbums()).map(adaptAlbum);
     },
@@ -1072,6 +1143,12 @@ function realApi(bridge: TailorBridge): Api {
     },
     async setDefaultTags(tags) {
       await bridge.setSetting(DEFAULT_TAGS_KEY, tags.trim() ? tags : null);
+    },
+    async getDescriptionStyles() {
+      return (await bridge.getSetting(DESCRIPTION_STYLES_KEY)) ?? null;
+    },
+    async setDescriptionStyles(raw) {
+      await bridge.setSetting(DESCRIPTION_STYLES_KEY, raw && raw.trim() ? raw : null);
     },
     async getChromeStatus() {
       return bridge.getChromeStatus();

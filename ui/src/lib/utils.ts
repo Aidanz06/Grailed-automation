@@ -46,3 +46,17 @@ export function errorMessage(err: unknown): string {
     ''
   );
 }
+
+/** First segment of a collab brand string ("Supreme x Comme des Garçons" →
+ * "Supreme"). Grailed's designer list has NO collab entries (verified live),
+ * so the fill always sends the primary label — this mirrors the twin
+ * normalization in ui/main.js buildFillPayload. Splits ONLY on "x"/"×" with
+ * whitespace around it, so "Dolce & Gabbana" and hyphenated brands survive. */
+export function primaryBrand(raw: string | null | undefined): string {
+  return String(raw ?? '').split(/\s+[x×]\s+/i)[0].trim();
+}
+
+/** True when a brand string is a collab the designer field can't take as-is. */
+export function isCollabBrand(raw: string | null | undefined): boolean {
+  return /\s+[x×]\s+/i.test(String(raw ?? ''));
+}

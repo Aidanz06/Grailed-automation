@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, ExternalLink, RefreshCw } from 'lucide-react';
-import type { Comp, Item } from '@/types';
+import type { Comp, Item, PriceRange } from '@/types';
 import { api } from '@/lib/api';
 import { cn, errorMessage } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -8,18 +8,20 @@ import { Button } from '@/components/ui/button';
 
 const money = (n: number | null | undefined) => (n == null ? '—' : '$' + n);
 
-// Estimate-confidence badge (owner request 2026-07-05): duplicate sold
-// listings of the item → high; only loosely similar sales → low. Level and
-// the 95% CI on the median come from pipeline/range.js.
+// Estimate-confidence pill (owner request 2026-07-05; restyled to the
+// owner's 2026-07-14 mock — outlined, rounded-full). Level and the 95% CI
+// on the median come from pipeline/range.js; details live in the tooltip.
 const CONF_CLASS: Record<string, string> = {
-  high: 'border-transparent bg-success/15 text-success',
-  medium: 'border-transparent bg-warning/15 text-warning',
-  low: 'border-input bg-secondary/60 text-muted-foreground',
+  high: 'border-success/60 text-success',
+  medium: 'border-warning/60 text-warning',
+  low: 'border-input text-muted-foreground',
 };
 
-// Estimated-price card for the right rail (UI redesign 2026-07-04): big
-// editable price up top, comps trend sparkline under it, compact comps list
-// behind an expander. Same data + recompute behavior as the old inline panel.
+// Suggested-price card for the right rail (owner mock 2026-07-14): editable
+// serif price + range + confidence pill on one row, a range bar whose
+// geometry is the REAL data (track = full comp span, brass segment = the
+// comp range, marker = your price), comps count + CI95 under it, then the
+// top comps. Same data + recompute behavior as before.
 
 interface Props {
   item: Item;
@@ -27,33 +29,35 @@ interface Props {
   toast: (msg: string) => void;
 }
 
-/** Sold prices oldest→newest as a small trend line. Pure SVG, no deps. */
-function Sparkline({ prices }: { prices: number[] }) {
-  if (prices.length < 2) return null;
-  const w = 100;
-  const h = 30;
-  const min = Math.min(...prices);
-  const max = Math.max(...prices);
-  const span = max - min || 1;
-  const pts = prices.map((p, i) => [
-    (i / (prices.length - 1)) * w,
-    h - 3 - ((p - min) / span) * (h - 6),
-  ]);
-  const line = pts.map((p) => p.map((v) => v.toFixed(1)).join(',')).join(' ');
-  const area = `M0,${h} L${pts.map((p) => p.map((v) => v.toFixed(1)).join(',')).join(' L')} L${w},${h} Z`;
-  const last = pts[pts.length - 1];
+/** Where the range and your price sit inside everything that actually sold.
+ * Track = min→max of the comp prices (padded); brass segment = the comps
+ * range (low–high); bright marker = the editable price. Pure CSS, real
+ * numbers — every position is a computed percentage of the price domain. */
+function RangeBar({ r, comps }: { r: PriceRange; comps: Comp[] }) {
+  if (r.low == null || r.high == null) return null;
+  const prices = comps.map((c) => c.price).filter((p) => p > 0);
+  const dMin = Math.min(r.low, ...(prices.length ? prices : [r.low]));
+  const dMax = Math.max(r.high, ...(prices.length ? prices : [r.high]));
+  const pad = (dMax - dMin || dMax || 1) * 0.06;
+  const min = Math.max(0, dMin - pad);
+  const span = dMax + pad - min || 1;
+  const pct = (v: number) => Math.min(100, Math.max(0, ((v - min) / span) * 100));
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="mt-2 h-10 w-full" aria-hidden>
-      <path d={area} fill="hsl(var(--success))" opacity="0.1" />
-      <polyline
-        points={line}
-        fill="none"
-        stroke="hsl(var(--success))"
-        strokeWidth="1.5"
-        vectorEffect="non-scaling-stroke"
+    <div
+      className="relative mt-3 h-1.5 w-full rounded-full bg-secondary/80"
+      title={`Sold comps span ${money(Math.round(dMin))}–${money(Math.round(dMax))} · weighted range ${money(r.low)}–${money(r.high)}${r.median != null ? ` · your price ${money(r.median)}` : ''}`}
+    >
+      <div
+        className="absolute inset-y-0 rounded-full bg-gradient-to-r from-primary/35 via-primary/90 to-primary/35"
+        style={{ left: pct(r.low) + '%', width: Math.max(2, pct(r.high) - pct(r.low)) + '%' }}
       />
-      <circle cx={last[0]} cy={last[1]} r="2" fill="hsl(var(--primary))" />
-    </svg>
+      {r.median != null && (
+        <div
+          className="absolute -bottom-0.5 -top-0.5 w-[3px] rounded-full bg-primary"
+          style={{ left: `calc(${pct(r.median)}% - 1.5px)`, boxShadow: '0 0 6px hsl(var(--primary))' }}
+        />
+      )}
+    </div>
   );
 }
 
@@ -103,16 +107,19 @@ export function PricePanel({ item, update, toast }: Props) {
   };
 
   const comps: Comp[] = r ? (r.allComps?.length ? r.allComps : r.mostRelevantComps) : [];
-  const sparkPrices = [...comps]
-    .filter((c) => c.price > 0)
-    .sort((a, b) => (a.soldDate || '').localeCompare(b.soldDate || ''))
-    .map((c) => c.price);
   const nComps = r?.sampleSize ?? comps.length;
+  const topComps = r?.mostRelevantComps.slice(0, 3) ?? [];
+
+  /** Open a comp on Grailed (system browser, main-process allowlist). */
+  const openComp = (c: Comp) => {
+    if (!/^https?:\/\//.test(c.url)) return;
+    api.openExternal(c.url).catch((err) => toast(`Couldn't open listing: ${errorMessage(err)}`));
+  };
 
   return (
     <section id="sec-price" className="rounded-xl border bg-card p-4">
       <div className="mb-1 flex items-center gap-2">
-        <label className="text-[11px] uppercase tracking-wider text-muted-foreground">Estimated price</label>
+        <label className="text-[11px] uppercase tracking-wider text-muted-foreground">Suggested price</label>
         <span className="flex-1" />
         <Button variant="outline" size="sm" disabled={recomputing} onClick={recompute}>
           <RefreshCw className={recomputing ? 'animate-spin' : ''} />
@@ -126,35 +133,54 @@ export function PricePanel({ item, update, toast }: Props) {
         </div>
       ) : (
         <>
-          <div className="flex items-center gap-1">
-            <span className="font-display text-3xl text-primary">$</span>
-            <Input
-              value={r.median ?? ''}
-              inputMode="numeric"
-              aria-label="Your price"
-              className="h-11 w-28 border-transparent px-1 font-display text-3xl text-primary shadow-none focus-visible:border-input"
-              onChange={(e) =>
-                update((d) => {
-                  const v = e.target.value;
-                  d.range!.median = v === '' ? null : Number(v);
-                  d.dirty = true;
-                })
-              }
-            />
-          </div>
-          {/* Plan §D2 list/sell split: the editable number above is the LIST
-              price (offer headroom built in); what comparable items actually
-              sold for is shown separately so neither is mistaken for the other. */}
-          <div className="mt-0.5 font-mono text-xs text-muted-foreground">
-            {r.soldMedian != null && r.soldMedian !== r.median ? (
-              <>list price — typically sells ~{money(r.soldMedian)} · comps {money(r.low)} – {money(r.high)}</>
-            ) : (
-              <>comps {money(r.low)} – {money(r.high)} · your price is editable</>
+          {/* Owner mock 2026-07-14: price + range + confidence on one row.
+              The number stays the EDITABLE list price (§D2). */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <div className="flex items-center">
+              <span className="font-display text-3xl text-primary">$</span>
+              <Input
+                value={r.median ?? ''}
+                inputMode="numeric"
+                aria-label="Your price"
+                className="h-11 w-24 border-transparent px-1 font-display text-3xl text-primary shadow-none focus-visible:border-input"
+                onChange={(e) =>
+                  update((d) => {
+                    const v = e.target.value;
+                    d.range!.median = v === '' ? null : Number(v);
+                    d.dirty = true;
+                  })
+                }
+              />
+            </div>
+            {r.low != null && r.high != null && (
+              <span className="font-mono text-sm text-muted-foreground">
+                range {money(r.low)}–{money(r.high)}
+              </span>
+            )}
+            <span className="flex-1" />
+            {r.confidence && (
+              <span
+                className={cn(
+                  'rounded-full border px-2.5 py-1 font-mono text-[11px] font-medium',
+                  CONF_CLASS[r.confidence.level]
+                )}
+                title={`${r.confidence.explanation} ${r.confidence.strongMatches} near-identical + ${r.confidence.moderateMatches} similar comps · effective sample ${r.confidence.effectiveN}. The CI95 below is where the true going rate likely sits, not the min–max of sales.`}
+              >
+                {r.confidence.level} confidence
+              </span>
             )}
           </div>
+          {/* Plan §D2 list/sell split: the editable number above is the LIST
+              price (offer headroom built in); the typical sale shows so
+              neither is mistaken for the other. */}
+          {r.soldMedian != null && r.soldMedian !== r.median && (
+            <div className="mt-0.5 font-mono text-xs text-muted-foreground">
+              list price — typically sells ~{money(r.soldMedian)}
+            </div>
+          )}
           {isNwt && (
             <div className="mt-1.5">
-              <span className="rounded-md border border-transparent bg-success/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success">
+              <span className="inline-block rounded-md border border-transparent bg-success/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success">
                 New with tags — priced against new-condition sales
               </span>
               {nwtThin && (
@@ -165,33 +191,48 @@ export function PricePanel({ item, update, toast }: Props) {
               )}
             </div>
           )}
-          {r.confidence && (
-            <div
-              className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1"
-              title={`${r.confidence.strongMatches} near-identical + ${r.confidence.moderateMatches} similar comps · effective sample ${r.confidence.effectiveN} · spread cv ${r.confidence.spreadCv}. The interval is where the true going rate likely sits, not the min–max of sales.`}
-            >
-              <span
-                className={cn(
-                  'rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                  CONF_CLASS[r.confidence.level]
-                )}
-              >
-                {r.confidence.level} confidence
-              </span>
-              <span className="font-mono text-xs text-muted-foreground">
-                likely sells {money(r.confidence.ci95[0])}–{money(r.confidence.ci95[1])}
-              </span>
-              <span className="w-full text-xs text-muted-foreground">{r.confidence.explanation}</span>
+          {/* The range bar — real geometry (see RangeBar). */}
+          <RangeBar r={r} comps={comps} />
+          <div
+            className="mt-1.5 font-mono text-xs text-muted-foreground"
+            title="CI95 = where the true going rate likely sits (95% interval on the estimate), not the min–max of sales."
+          >
+            {nComps} sold comp{nComps === 1 ? '' : 's'}
+            {r.confidence?.ci95[0] != null && (
+              <> · CI95 {money(r.confidence.ci95[0])}–{money(r.confidence.ci95[1])}</>
+            )}
+          </div>
+
+          {/* Top comps (owner mock): the three most relevant, price right. */}
+          {topComps.length > 0 && (
+            <div className="mt-3 border-t pt-2.5">
+              {topComps.map((c, i) => {
+                const hasLink = /^https?:\/\//.test(c.url);
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    disabled={!hasLink}
+                    title={hasLink ? `Sold ${c.soldDate} — open on Grailed` : `Sold ${c.soldDate}`}
+                    className="group flex w-full items-baseline gap-2 rounded px-1 py-1 text-left text-[13px] enabled:cursor-pointer enabled:hover:bg-secondary/50 disabled:cursor-default"
+                    onClick={() => openComp(c)}
+                  >
+                    <span className={cn('min-w-0 flex-1 truncate text-muted-foreground', hasLink && 'group-hover:text-foreground')}>
+                      {c.title || c.url}
+                    </span>
+                    <span className="shrink-0 font-medium tabular-nums">{money(c.price)}</span>
+                  </button>
+                );
+              })}
             </div>
           )}
-          <Sparkline prices={sparkPrices} />
-          {comps.length > 0 && (
+          {comps.length > topComps.length && (
             <button
               type="button"
-              className="mt-1.5 inline-flex items-center gap-0.5 text-[13px] text-primary hover:underline"
+              className="mt-1 inline-flex items-center gap-0.5 text-[13px] text-primary hover:underline"
               onClick={() => setOpen((o) => !o)}
             >
-              {nComps} sold comp{nComps === 1 ? '' : 's'}
+              all {nComps} comp{nComps === 1 ? '' : 's'}
               {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
             </button>
           )}

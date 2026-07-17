@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, ChevronDown, ChevronRight, Pencil, RefreshCw } from 'lucide-react';
-import type { DescProfile, Item } from '@/types';
+import type { Item } from '@/types';
 import { api, type AutofillOptions, type ChromeStatus, type FillChanges } from '@/lib/api';
 import { suggestGrailedCategory } from '@/lib/grailedCategory';
-import { assembleDescription, effectiveProfile } from '@/lib/description';
-import { agoLabel, cn, errorMessage } from '@/lib/utils';
+import { activeTemplate, finalizeDescription } from '@/lib/description';
+import { agoLabel, cn, errorMessage, isCollabBrand, primaryBrand } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -42,8 +42,10 @@ const BAND_LABEL = 'text-xs font-semibold uppercase tracking-wide text-foregroun
 interface Props {
   item: Item;
   update: (recipe: (draft: Item) => void) => void;
-  defaultProfile: DescProfile;
-  setDefaultProfile: (p: DescProfile) => void;
+  /** Raw persisted description-styles JSON (Description Styles Phase 1). */
+  stylesRaw: string | null;
+  /** Opens the global style editor (the App-root modal). */
+  onEditStyles: () => void;
   toast: (msg: string) => void;
   /** Next draft in sidebar order — target of the "listed, fill next" flow. */
   nextDraft: { id: number; title: string } | null;
@@ -60,6 +62,8 @@ interface Props {
   /** Reports fill activity upward (in-app updater guard: never rebuild the
    * app under a running fill). */
   onFillingChange?: (busy: boolean) => void;
+  /** §E8: a duplicate draft was created — reload and select it. */
+  onDuplicated?: (newId: number) => void;
 }
 
 // Everything a save persists — INCLUDING the photo list (order + membership):
@@ -78,10 +82,9 @@ export function editsOf(item: Item) {
   };
 }
 
-export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, toast, nextDraft, autoFill, onAutoFillConsumed, onMarkListedAndNext, fillSignal = 0, onFillingChange }: Props) {
+export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, nextDraft, autoFill, onAutoFillConsumed, onMarkListedAndNext, fillSignal = 0, onFillingChange, onDuplicated }: Props) {
   const content = item.content!;
   const attrs = item.attributes;
-  const eff = effectiveProfile(item, defaultProfile);
   const highConf = attrs.brand_confidence >= 0.65 && !!attrs.resembles_brand && attrs.resembles_brand !== 'unclear';
 
   // Slice 2: debounced auto-save of edits back to the store. Edits set
@@ -183,9 +186,9 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
             title_alternatives: generated.title_alternatives,
           };
           d.descParts = generated.descParts;
-          // With structured parts, the description is assembled from the current
-          // detail profile; without them, use the generated description as-is.
-          if (d.descParts) d.content.description = assembleDescription(d, effectiveProfile(d, defaultProfile));
+          // generated.description already arrives COMPOSED from the active
+          // style template (constants + footer included) — ui/main.js (or the
+          // mock) composes at generation time; re-assembling here would lose them.
           d.dirty = true; // auto-save persists the regenerated content + parts
         });
         toast('Regenerated listing content.');
@@ -586,8 +589,24 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
       });
   };
 
+  // §E8 duplicate: same garment type, new physical item — clone the text +
+  // details as a fresh draft (photos/fill history/Smart Pricing reset
+  // main-side) and jump to it so the next step (add photos) is obvious.
+  const duplicateItem = () => {
+    api
+      .duplicateItem(item.id)
+      .then(({ itemId }) => {
+        toast('Duplicated — text and details copied. Add the new item’s own photos before filling.');
+        onDuplicated?.(itemId);
+      })
+      .catch((err) => toast(`Duplicate failed: ${errorMessage(err)}`));
+  };
+
   const copyListing = () => {
-    const parts = [content.title, '', content.description];
+    // Footer backstop (Description Styles): the copied text carries the active
+    // style's constant footer even on legacy drafts stored before composition.
+    const desc = finalizeDescription(content.description, activeTemplate(stylesRaw));
+    const parts = [content.title, '', desc];
     parts.push('', 'Tags: ' + content.tags.join(', '), '', `Price: ${money(item.range?.median)}`);
     const text = parts.join('\n');
     if (navigator.clipboard?.writeText) {
@@ -710,16 +729,15 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
             </div>
           </div>
         )}
-        {/* The detail selector rebuilds the description from structured descParts.
-            Items generated before those existed can't drive it — say so and offer
-            the one-click fix (Q4) instead of silently hiding the control. */}
+        {/* Global style pointer (Description Styles Phase 1); items generated
+            before structured descriptions get a Regenerate nudge instead. */}
         {item.descParts ? (
-          <DetailPanel item={item} defaultProfile={defaultProfile} setDefaultProfile={setDefaultProfile} update={update} />
+          <DetailPanel stylesRaw={stylesRaw} onEditStyles={onEditStyles} />
         ) : (
           <div className="mb-2 flex items-center gap-2.5 rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
             <span className="min-w-0 flex-1">
-              This listing predates structured descriptions, so the Minimal / Standard / Detailed toggles aren’t
-              available. Regenerate once to unlock them — your attributes are kept.
+              This listing predates structured descriptions. Regenerate once to compose it with your description
+              style (constant footer included) — your attributes are kept.
             </span>
             <Button variant="outline" size="sm" disabled={item.regenerating} onClick={regenerate}>
               <RefreshCw className={item.regenerating ? 'animate-spin' : ''} />
@@ -820,6 +838,16 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
               >
                 I checked — it’s right
               </Button>
+            )}
+            {/* Collabs: Grailed's designer list has no collab entries (verified
+                live) — the fill sends the primary label; say so up front
+                instead of failing at fill time. */}
+            {(isCollabBrand(attrs.resembles_brand) || attrs.collaboration) && (
+              <span className="text-xs text-muted-foreground">
+                collab{attrs.collaboration ? ` with ${attrs.collaboration}` : ''} — the fill sets designer “
+                {primaryBrand(attrs.resembles_brand)}” (Grailed has no collab designers; the partner belongs in
+                tags/description)
+              </span>
             )}
           </div>
           <div className="order-3 flex min-w-0 flex-col gap-1">
@@ -1202,11 +1230,19 @@ export function DraftEditor({ item, update, defaultProfile, setDefaultProfile, t
             </div>
           )}
           <div className="mt-2 flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={copyListing}>
-              Copy listing
+            <Button variant="outline" className="flex-1 px-2" title="Copy the listing text to the clipboard" onClick={copyListing}>
+              Copy text
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1 px-2"
+              title="Start a new draft of a similar garment — text and details are copied; photos, fill history, and Smart Pricing start fresh."
+              onClick={duplicateItem}
+            >
+              Duplicate
             </Button>
             {item.status !== 'submitted' && (
-              <Button variant="outline" className="flex-1" onClick={() => setConfirmSubmit(true)}>
+              <Button variant="outline" className="flex-1 px-2" onClick={() => setConfirmSubmit(true)}>
                 Mark listed
               </Button>
             )}

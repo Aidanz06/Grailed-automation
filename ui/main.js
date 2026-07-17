@@ -47,6 +47,7 @@ loadEnvLocal();
 
 const { generateContent } = require('../pipeline/content');
 const { processItem, makeCompProvider } = require('../pipeline/processItem');
+const { getCompsTiered } = require('../pipeline/priceProvider');
 const { groupBatch } = require('../pipeline/cluster');
 
 // Slice 1: read-only IPC into the local SQLite store. Opened once, reused for
@@ -71,6 +72,34 @@ ipcMain.handle('items:markSubmitted', (_e, id) => {
 // Permanent delete (Home screen, mainly for testing): removes the item + all
 // attached rows from the app's DB. Never touches Grailed or the photo files.
 ipcMain.handle('items:delete', (_e, id) => getStore().deleteItem(id));
+// §E8 "Duplicate / list another like this": clone a draft's attributes +
+// text as a NEW draft with its identity reset — no photos (the similar
+// garment gets its own shoot), no fill snapshot, no flags, and no Smart
+// Pricing opt-in (that's a per-item decision, never inherited). Comps/range
+// copy over as a starting point; Recompute re-derives them if the new item
+// differs.
+ipcMain.handle('items:duplicate', (_e, id) => {
+  const store = getStore();
+  const src = store.getItem(id);
+  if (!src) throw new Error(`Item ${id} not found.`);
+  if (!src.listing?.content) throw new Error('Only drafts with a generated listing can be duplicated.');
+  const attrs = src.attributes ? { ...src.attributes } : null;
+  if (attrs) {
+    delete attrs.smart_pricing_enabled;
+    delete attrs.smart_pricing_floor;
+  }
+  const itemId = store.saveItemRun({
+    photos: [],
+    attributes: attrs,
+    content: JSON.parse(JSON.stringify(src.listing.content)),
+    range: src.listing.price_range ?? null,
+    comps: (src.comps || []).map((c) => ({ source: c.source, price: c.sold_price, soldDate: c.sold_date, url: c.url })),
+    flags: [],
+    status: 'draft',
+    albumId: src.album_id ?? null,
+  });
+  return { itemId };
+});
 // Albums (Lightroom-style): one per import batch; Home hides items of hidden
 // albums. Pure app-side organization — nothing touches Grailed.
 ipcMain.handle('albums:list', () => getStore().listAlbums());
@@ -90,6 +119,35 @@ function styleTemplate() {
   } catch {
     return undefined; // settings must never block generation
   }
+}
+
+// Description Styles Phase 1 (docs/DESIGN-description-styles.md): the stored
+// description is COMPOSED from the active style template — constants (footer,
+// labels) come from code, data chips from attributes, prose chips from the
+// AI's desc_parts. Applied at all three generation sites so the store always
+// holds the finalized body (the fill payload + copy paths then only need the
+// footer backstop). Key duplicated in ui/src/lib/api.ts.
+const { activeTemplate, chipValues, composeDescription, finalizeDescription } = require('../pipeline/descriptionTemplate');
+const DESCRIPTION_STYLES_KEY = 'descriptionStyles';
+function descriptionStylesRaw() {
+  try {
+    return getStore().getSetting(DESCRIPTION_STYLES_KEY) || null;
+  } catch {
+    return null; // settings must never block generation
+  }
+}
+function composeItemDescription(content, attributes) {
+  try {
+    if (!content) return content;
+    const t = activeTemplate(descriptionStylesRaw());
+    const body = composeDescription(t, chipValues(attributes, content.desc_parts));
+    // No usable parts (legacy shape, refusal edge) → keep the AI body, but the
+    // constant footer still lands — that is the whole point of the feature.
+    content.description = finalizeDescription(body || String(content.description || '').trim(), t);
+  } catch (err) {
+    console.error('[styles] compose failed, keeping raw description:', err);
+  }
+  return content;
 }
 
 // Saved defaults: the seller's always-on tags (comma-separated setting, twin
@@ -121,11 +179,14 @@ function applyDefaultTags(content) {
 // Slice 3: regenerate listing content from (possibly user-edited) attributes.
 // The persisted style template rides along so Regenerate matches import.
 ipcMain.handle('content:generate', async (_e, attributes, instructions) =>
-  applyDefaultTags(
-    await generateContent(attributes, {
-      ...(instructions ? { instructions } : {}),
-      ...(styleTemplate() ? { styleExample: styleTemplate() } : {}),
-    })
+  composeItemDescription(
+    applyDefaultTags(
+      await generateContent(attributes, {
+        ...(instructions ? { instructions } : {}),
+        ...(styleTemplate() ? { styleExample: styleTemplate() } : {}),
+      })
+    ),
+    attributes
   )
 );
 // Slice 4: recompute price/comps from (possibly user-edited) attributes via the
@@ -134,8 +195,10 @@ ipcMain.handle('content:generate', async (_e, attributes, instructions) =>
 // breaker is open, getComps throws and the message surfaces to the renderer.
 ipcMain.handle('comps:recompute', async (_e, attributes) => {
   const { provider, providerName } = makeCompProvider({}, (m) => console.error(m));
-  const { comps, range, cached } = await provider.getComps(attributes);
-  return { comps, range, providerName, cached: !!cached };
+  // Narrow-first (§B): target an identical sale before broadening — the same
+  // tiered path import uses, through the same guard.
+  const { comps, range, cached, tier } = await getCompsTiered(provider, attributes);
+  return { comps, range, providerName, cached: !!cached, tier };
 });
 
 // Open a comp's listing in the system default browser. Allowlisted to Grailed
@@ -246,6 +309,7 @@ ipcMain.handle('batch:process', async (e, folder) => {
           styleExample: styleTemplate(), // plan §A: imports match the seller's saved style
         });
         applyDefaultTags(item.content); // saved defaults: the seller's always-on tags
+        composeItemDescription(item.content, item.attributes); // active style template + footer
         // base last so confidence-annotated photos + flags win over plain paths.
         const id = store.saveItemRun({ ...item, ...base, status: 'draft' });
         const entry = { groupId: g.groupId, itemId: id, status: 'draft', title: item.content?.title ?? null };
@@ -319,6 +383,7 @@ ipcMain.handle('review:confirm', async (_e, itemId) => {
     styleExample: styleTemplate(), // plan §A: review-confirm drafts match the saved style too
   });
   applyDefaultTags(run.content); // saved defaults: the seller's always-on tags
+  composeItemDescription(run.content, run.attributes); // active style template + footer
   store.updateItemRun(itemId, { attributes: run.attributes, content: run.content, range: run.range, comps: run.comps });
   store.logCorrection('confirm', { itemId, photos: item.photos.length });
   return { itemId, title: run.content?.title ?? null };
@@ -359,6 +424,12 @@ ipcMain.handle('review:assign', (_e, itemId, photoIds, targetItemId) => {
  * driver receives (also what the last-fill snapshot stores). Photos ride
  * separately — they're filled but never diffed/re-filled (see below).
  */
+// First segment of a collab brand string — split ONLY on "x"/"×" with
+// whitespace around it, so "Dolce & Gabbana" and hyphenated brands survive.
+function primaryBrand(raw) {
+  return String(raw || '').split(/\s+[x×]\s+/i)[0].trim();
+}
+
 function buildFillPayload(item) {
   const listing = item.listing || {};
   const content = listing.content || {};
@@ -377,8 +448,13 @@ function buildFillPayload(item) {
   // Grailed bottoms sizes are waist digits ("US 32 /…") — "32x30" won't match.
   if (size && attrs.grailed_category === 'Bottoms') size = (size.match(/^\d{2}/) || [size])[0];
   // Designer comes from the (user-editable) brand attribute; never fill an
-  // unidentified brand.
-  const brand = (attrs.resembles_brand || '').trim();
+  // unidentified brand. Grailed's designer list has NO collab entries
+  // (verified live 2026-07-14), so a collab string would always fail the
+  // autocomplete — send the PRIMARY brand ("Supreme x Comme des Garçons" →
+  // "Supreme"). New extractions already split the partner into
+  // attrs.collaboration; this normalization covers older items and
+  // hand-typed collab strings. Twin helper in ui/src/lib/utils.ts.
+  const brand = primaryBrand(attrs.resembles_brand);
   const designer = confirmed && brand && brand.toLowerCase() !== 'unclear' ? brand : null;
   // The pipeline's subcategory is free text ("graphic t-shirt"); Grailed's
   // options are fixed labels ("Short Sleeve T-Shirts"). Translate via the
@@ -411,10 +487,24 @@ function buildFillPayload(item) {
       ? String(attrs.smart_pricing_floor).replace(/[^0-9]/g, '')
       : '';
 
+  // Footer backstop (Description Styles): whatever reaches Grailed carries the
+  // active style's constant footer as its exact last line — even for legacy
+  // drafts stored before composition existed. finalizeDescription is idempotent.
+  const rawDesc = content.description ?? listing.description ?? null;
+  let filledDesc = rawDesc;
+  if (rawDesc != null) {
+    try {
+      const t = activeTemplate(descriptionStylesRaw());
+      filledDesc = finalizeDescription(rawDesc, t);
+    } catch {
+      /* never block a fill on styles */
+    }
+  }
+
   return {
     fields: {
       title: content.title ?? listing.title ?? null,
-      description: content.description ?? listing.description ?? null,
+      description: filledDesc,
       price: listing.price_range?.median ?? null,
       smartPricing: spFloorDigits ? Number(spFloorDigits) : null,
       condition: attrs.condition_rating || null,

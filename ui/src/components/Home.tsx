@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ArrowRight, CircleHelp, ClipboardCheck, Eye, EyeOff, Images, LayoutGrid, Plus, Rows3, Trash2 } from 'lucide-react';
-import type { DescProfile, Item } from '@/types';
+import type { Item } from '@/types';
 import type { Album } from '@/lib/api';
 import { DefaultsMenu } from '@/components/DefaultsMenu';
 import { isTriageDraft, readiness } from '@/lib/readiness';
@@ -198,9 +198,11 @@ interface Props {
   onOpenGuide: () => void;
   /** Pre-scope the batch board to one album (post-import landing). */
   boardAlbumId?: number | null;
-  /** Saved defaults (App-owned): default description detail + the panel. */
-  defaultProfile: DescProfile;
-  setDefaultProfile: (p: DescProfile) => void;
+  /** Description Styles (App-owned): raw styles JSON, its setter (after a
+   * save), and the global style-editor opener. */
+  stylesRaw: string | null;
+  onStylesChanged: (raw: string | null) => void;
+  onEditStyles: () => void;
   /** App-level toast — carries the Chrome notifier's launch-result copy. */
   toast?: (msg: string) => void;
   /** In-app updater state (App-owned) — renders the header "Check for
@@ -211,7 +213,7 @@ interface Props {
 // Home = the batch triage board by default (refinement plan §C): garment
 // cards with a quality state and the next thing to fix. The classic status
 // lists remain one toggle away (owner decision 2026-07-14).
-export function Home({ items, albums, onOpenItem, onNewBatch, onDeleteItem, onToggleAlbum, onFinish, onOpenGuide, boardAlbumId, defaultProfile, setDefaultProfile, toast, updater }: Props) {
+export function Home({ items, albums, onOpenItem, onNewBatch, onDeleteItem, onToggleAlbum, onFinish, onOpenGuide, boardAlbumId, stylesRaw, onStylesChanged, onEditStyles, toast, updater }: Props) {
   const [homeView, setHomeView] = useState<HomeView>(() => {
     try {
       return localStorage.getItem(HOME_VIEW_KEY) === 'lists' ? 'lists' : 'board';
@@ -247,7 +249,7 @@ export function Home({ items, albums, onOpenItem, onNewBatch, onDeleteItem, onTo
         <Button variant="ghost" size="sm" title="How Tailor works — the guide" aria-label="open guide" onClick={onOpenGuide}>
           <CircleHelp />
         </Button>
-        <DefaultsMenu defaultProfile={defaultProfile} setDefaultProfile={setDefaultProfile} toast={toast ?? (() => {})} />
+        <DefaultsMenu stylesRaw={stylesRaw} onStylesChanged={onStylesChanged} onEditStyles={onEditStyles} toast={toast ?? (() => {})} />
         {/* Board (default) vs classic lists — a layout preference, persisted. */}
         <div className="flex rounded-md border p-0.5">
           {(

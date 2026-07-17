@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld('tailor', {
   markSubmitted: (id) => ipcRenderer.invoke('items:markSubmitted', id),
   // Permanent delete (app DB only — never touches Grailed or photo files).
   deleteItem: (id) => ipcRenderer.invoke('items:delete', id),
+  // §E8 duplicate: clone a draft as a new draft (photos/fill history reset).
+  duplicateItem: (id) => ipcRenderer.invoke('items:duplicate', id),
   // Albums: one per import batch; hidden albums drop off the Home lists.
   listAlbums: () => ipcRenderer.invoke('albums:list'),
   setAlbumHidden: (id, hidden) => ipcRenderer.invoke('albums:setHidden', id, hidden),

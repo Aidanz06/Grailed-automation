@@ -71,14 +71,20 @@ const CONTENT_SCHEMA = {
       type: 'object',
       additionalProperties: false,
       description:
-        'The SAME description content split into toggleable sections, so the seller can show/hide ' +
-        'parts in the sidebar. Each is a short standalone snippet (no headers). Use "" (empty string) ' +
-        'where a section does not apply. Do NOT put measurements here — those are separate blanks.',
+        'The PROSE pieces the description template composes from (Description Styles Phase 1). You ' +
+        'write ONLY these — constant text (footers, "Condition:" labels) is inserted by code, never ' +
+        'by you. Each is a short standalone snippet (no headers, no labels). Use "" (empty string) ' +
+        'where there is nothing factual to say — an empty part simply drops from the composed listing.',
       properties: {
         overview: { type: 'string', description: 'One-line item overview. Always present.' },
-        materials: { type: 'string', description: 'Materials/fabric line. "" if unknown.' },
-        condition: { type: 'string', description: 'Honest condition line derived from the condition fields.' },
-        fit: { type: 'string', description: 'Fit/sizing line. "" if nothing to say.' },
+        condition_note: {
+          type: 'string',
+          description:
+            'The SPECIFICS behind the condition rating as a short lowercase phrase that reads after ' +
+            '"Condition: <rating>, " — e.g. "light fading at the cuffs", "unworn with tags attached". ' +
+            'Do NOT repeat the rating itself. "" when there is nothing beyond the rating.',
+        },
+        fit: { type: 'string', description: 'A size/fit nuance worth stating (runs large, boxy cut). NOT a bare size. "" if nothing to say.' },
         flaws: {
           type: 'string',
           description:
@@ -86,9 +92,8 @@ const CONTENT_SCHEMA = {
             'fading/discoloration). NEVER trivia like lint, fuzz, stray threads, light creasing, ' +
             'or minor surface wear. "" if none.',
         },
-        care: { type: 'string', description: 'Care/shipping line. "" if nothing to say.' },
       },
-      required: ['overview', 'materials', 'condition', 'fit', 'flaws', 'care'],
+      required: ['overview', 'condition_note', 'fit', 'flaws'],
     },
   },
   required: ['title', 'title_alternatives', 'description', 'tags', 'disclaimers', 'desc_parts'],

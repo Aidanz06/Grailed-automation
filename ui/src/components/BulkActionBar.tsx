@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { RefreshCw, X } from 'lucide-react';
-import type { DescProfile, Item } from '@/types';
+import type { Item } from '@/types';
 import type { UpdateItem } from '@/App';
 import { api } from '@/lib/api';
-import { PRESETS, assembleDescription } from '@/lib/description';
 import { errorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -97,18 +96,9 @@ export function BulkActionBar({ targets, updateItem, toast, onClear }: Props) {
     );
   };
 
-  const applyStyle = (name: 'Minimal' | 'Standard' | 'Detailed') => {
-    const profile: DescProfile = { preset: name, sections: { ...PRESETS[name] } };
-    run(
-      `Applied ${name} description style`,
-      (d) => {
-        d.descProfile = profile;
-        if (d.descParts && d.content) d.content.description = assembleDescription(d, profile);
-      },
-      // Items generated before structured descriptions can't restyle — skip.
-      (it) => !!it.descParts && !!it.content
-    );
-  };
+  // The old per-item Minimal/Standard/Detailed bulk action is gone —
+  // description structure now comes from the global style templates
+  // (Description Styles Phase 1); Regenerate applies the active one.
 
   // Bulk Recompute: each item's price re-derives from its OWN comps — no
   // value is copied across items.
@@ -178,14 +168,6 @@ export function BulkActionBar({ targets, updateItem, toast, onClear }: Props) {
           <Button variant="outline" size="sm" className="h-8 px-2 text-xs" disabled={busy || !tag.trim()} onClick={removeTag}>
             Remove
           </Button>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11px] text-muted-foreground">Style:</span>
-          {(['Minimal', 'Standard', 'Detailed'] as const).map((name) => (
-            <Button key={name} variant="outline" size="sm" className="h-7 px-2 text-xs" disabled={busy} onClick={() => applyStyle(name)}>
-              {name}
-            </Button>
-          ))}
         </div>
         <Button
           variant="outline"

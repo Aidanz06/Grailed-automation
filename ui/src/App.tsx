@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ClipboardCheck, Link2, Unlink2 } from 'lucide-react';
-import type { DescProfile, Item } from '@/types';
-import { DEFAULT_PROFILE } from '@/lib/description';
+import type { Item } from '@/types';
 import { api, type Album, type ConfigStatus } from '@/lib/api';
 import { errorMessage } from '@/lib/utils';
 import { isTriageDraft, readiness, triageSort } from '@/lib/readiness';
@@ -16,6 +15,7 @@ import { ConfirmScreen } from '@/components/ConfirmScreen';
 import { CommandPalette, type PaletteCommand } from '@/components/CommandPalette';
 import { Sidebar } from '@/components/Sidebar';
 import { Editor } from '@/components/Editor';
+import { StyleEditor } from '@/components/StyleEditor';
 import { FillTracker } from '@/components/FillTracker';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -27,9 +27,6 @@ export type UpdateItem = (id: number, recipe: (draft: Item) => void) => void;
 
 // Persisted dock-Chrome intent (audit §2.5).
 const DOCK_PREF_KEY = 'tailor.dockChrome';
-// Persisted default description detail (saved defaults) — per-draft overrides
-// still live on the item; this is only what new/unset drafts start from.
-const DESC_PROFILE_KEY = 'tailor.defaultDescProfile';
 
 export default function App() {
   const [items, setItems] = useState<Item[]>([]);
@@ -50,26 +47,18 @@ export default function App() {
   // draft" — the DraftEditor for this item starts its fill on mount (that
   // click IS the per-item manual trigger; nothing fills without it).
   const [autoFillId, setAutoFillId] = useState<number | null>(null);
-  const [defaultProfile, setDefaultProfileState] = useState<DescProfile>(() => {
-    try {
-      const raw = localStorage.getItem(DESC_PROFILE_KEY);
-      if (raw) {
-        const p = JSON.parse(raw) as DescProfile;
-        if (p && typeof p === 'object' && p.preset && p.sections) return p;
-      }
-    } catch {
-      /* corrupt/unavailable — fall back to the built-in default */
-    }
-    return structuredClone(DEFAULT_PROFILE);
-  });
-  const setDefaultProfile = useCallback((p: DescProfile) => {
-    setDefaultProfileState(p);
-    try {
-      localStorage.setItem(DESC_PROFILE_KEY, JSON.stringify(p));
-    } catch {
-      /* private mode — session-only */
-    }
+  // Description Styles (Phase 1): the raw persisted styles JSON, loaded once —
+  // components resolve it with resolveStyles(); the StyleEditor modal saves it
+  // and pushes the new value back through setStylesRaw.
+  const [stylesRaw, setStylesRaw] = useState<string | null>(null);
+  const [styleEditorOpen, setStyleEditorOpen] = useState(false);
+  useEffect(() => {
+    api
+      .getDescriptionStyles()
+      .then(setStylesRaw)
+      .catch(() => {}); // unset/unavailable → built-in presets
   }, []);
+  const openStyleEditor = useCallback(() => setStyleEditorOpen(true), []);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   // §5.5 window docking: snap the real Chrome window against the app so
   // fill-review feels like one window. State lives in the main process
@@ -425,8 +414,9 @@ export default function App() {
           onFinish={() => openConfirm('home')}
           onOpenGuide={() => setGuide('how')}
           boardAlbumId={boardAlbum}
-          defaultProfile={defaultProfile}
-          setDefaultProfile={setDefaultProfile}
+          stylesRaw={stylesRaw}
+          onStylesChanged={setStylesRaw}
+          onEditStyles={openStyleEditor}
           toast={setToastMsg}
           updater={updater}
         />
@@ -508,8 +498,8 @@ export default function App() {
             <Editor
               selection={selected}
               item={selectedItem}
-              defaultProfile={defaultProfile}
-              setDefaultProfile={setDefaultProfile}
+              stylesRaw={stylesRaw}
+              onEditStyles={openStyleEditor}
               updateItem={updateItem}
               toast={setToastMsg}
               autoPickImport={autoPickImport}
@@ -538,6 +528,11 @@ export default function App() {
               fillSignal={fillSignal}
               onFillingChange={(b) => {
                 fillBusyRef.current = b;
+              }}
+              onDuplicated={(newId) => {
+                // Reload so the clone exists in state, then select it — the
+                // editor opens on the new draft with its "no photos" blocker.
+                reloadItems().then(() => setSelected(newId));
               }}
               autoFillId={autoFillId}
               onAutoFillConsumed={() => setAutoFillId(null)}
@@ -589,6 +584,21 @@ export default function App() {
 
       {/* Updater progress modal — App-rooted so navigation can't lose it. */}
       <UpdateModal u={updater} toast={setToastMsg} />
+
+      {/* Description Styles editor — App-rooted, opens from Defaults and the
+          draft editor's style row. Saving pushes the new raw value back and
+          reloads items (the mock preview composes descriptions on read). */}
+      {styleEditorOpen && (
+        <StyleEditor
+          stylesRaw={stylesRaw}
+          onSaved={(raw) => {
+            setStylesRaw(raw);
+            reloadItems();
+          }}
+          onClose={() => setStyleEditorOpen(false)}
+          toast={setToastMsg}
+        />
+      )}
 
       {toastMsg && (
         <div className="fixed bottom-5 left-1/2 max-w-[70%] -translate-x-1/2 rounded-md border bg-card px-4 py-2.5 text-sm shadow-lg">
