@@ -1,0 +1,61 @@
+name: tests
+
+# Automated test runs:
+#  - OFFLINE suite: on every push/PR + a weekly heartbeat. Free, no secrets,
+#    no real photos. Catches logic/pipeline regressions.
+#  - AI ACCURACY evals: manual (and optional monthly) — these cost API money and
+#    need real photos committed to the fixtures + repo secrets. They catch model/
+#    prompt drift, which is the real reason to run periodically.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 14 * * 1'   # weekly Mon 14:00 UTC — offline heartbeat
+    # - cron: '0 15 1 * *' # monthly — enable once real photos + secrets exist (AI drift check)
+
+jobs:
+  offline:
+    name: Offline suite (free, deterministic)
+    runs-on: ubuntu-latest
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'   # tests are pipeline-only; skip the Electron binary
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: npm run test:offline
+
+  ai-evals:
+    name: AI accuracy evals (live — needs secrets + real photos)
+    runs-on: ubuntu-latest
+    # Runs on the manual "Run workflow" button (and the monthly cron once enabled).
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GRAILED_ALGOLIA_KEY: ${{ secrets.GRAILED_ALGOLIA_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - name: Guard — skip if no API key configured
+        id: guard
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "No ANTHROPIC_API_KEY secret set — skipping live evals."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Identification accuracy (gated)
+        if: steps.guard.outputs.run == 'true'
+        run: node pipeline/eval/identify.js --runs=3 --gate
+      - name: Comp recall (gated)
+        if: steps.guard.outputs.run == 'true'
+        run: node pipeline/eval/comps.js --gate || node pipeline/eval/comps.js

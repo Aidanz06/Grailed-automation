@@ -29,7 +29,7 @@ const fs = require('fs');
 const http = require('http');
 
 const PORT = 9222;
-const PROFILE = path.join(__dirname, '.chrome-profile');
+const PROFILE = path.join(__dirname, '..', '.chrome-profile'); // repo root — scripts moved into phase0Test/
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const HOME = 'https://www.grailed.com';
 const SELL = 'https://www.grailed.com/sell';

@@ -24,7 +24,7 @@ const path = require('path');
 const PORT = 9222;
 const TEST_VALUE = 'TEST FILL — clear this before submitting';
 
-const selectors = JSON.parse(fs.readFileSync(path.join(__dirname, 'grailed-selectors.json'), 'utf8'));
+const selectors = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'grailed-selectors.json'), 'utf8'));
 const TITLE_SEL = selectors.textFields.title.selector;
 
 function getJSON(pathname) {

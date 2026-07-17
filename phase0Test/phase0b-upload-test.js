@@ -19,7 +19,7 @@ const path = require('path');
 const fs = require('fs');
 
 const PORT = 9222;
-const IMAGE = process.argv[2] || path.join(__dirname, 'grailed-vision-test', 'grailed-vision-test-4.jpg');
+const IMAGE = process.argv[2] || path.join(__dirname, '..', 'grailed-vision-test', 'grailed-vision-test-4.jpg');
 const SLOT = 'input[type="file"][id^="photo_input_"]'; // first slot
 
 function getJSON(pathname) {
