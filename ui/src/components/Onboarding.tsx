@@ -1,5 +1,6 @@
 import { FolderOpen, Globe, MousePointerClick, ShieldCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/Modal';
 
 /*
  * First-run orientation (friend-beta Part A): a one-time welcome that shows
@@ -87,8 +88,13 @@ interface Props {
 
 export function Onboarding({ onImport, onClose }: Props) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6">
-      <div className="rise-in w-full max-w-lg rounded-xl border bg-card p-6 shadow-xl">
+    // U6: first-run welcome must not vanish on a stray click or Escape —
+    // X-button-only (Modal close affordances stay at their off defaults).
+    <Modal
+      title="How Tailor works"
+      onClose={onClose}
+      className="rise-in left-1/2 top-1/2 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl border bg-card p-6 shadow-xl"
+    >
         <div className="mb-1 flex items-start">
           <h2 className="font-display text-xl tracking-tight">
             How <span className="italic text-primary">Tailor</span> works
@@ -111,7 +117,6 @@ export function Onboarding({ onImport, onClose }: Props) {
         <p className="mt-2 text-center text-xs text-muted-foreground">
           You can reopen this any time from the “?” button up top.
         </p>
-      </div>
-    </div>
+    </Modal>
   );
 }

@@ -13,6 +13,20 @@ beforeEach(() => {
   localStorage.setItem(ONBOARDED_KEY, '1');
 });
 
+describe('Onboarding (shared Modal)', () => {
+  it('shows on first run as a dialog; Escape ignored; X dismisses', async () => {
+    localStorage.removeItem(ONBOARDED_KEY); // simulate first run
+    render(<App />);
+    const dialog = await screen.findByRole('dialog', { name: 'How Tailor works' });
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.getByRole('dialog', { name: 'How Tailor works' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'close welcome' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'How Tailor works' })).toBeNull());
+    expect(localStorage.getItem(ONBOARDED_KEY)).toBe('1'); // dismissal persists
+  });
+});
+
 describe('GuideMenu (shared Modal)', () => {
   it('opens as a dialog; Escape does NOT close (U6 — X button only)', async () => {
     render(<App />);
