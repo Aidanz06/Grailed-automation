@@ -289,7 +289,7 @@ export function ConfirmCard({ item, fillOptions, pendingCatKey, onPendingCat, re
 
       {/* ---- Tier 2: AI-drafted — glance, correct only if wrong ---- */}
       <div className="mt-4 border-t pt-3">
-        <div className="mb-2 text-2xs uppercase tracking-wide text-muted-foreground/70">AI-drafted — glance, correct if wrong</div>
+        <div className="mb-2 text-2xs uppercase tracking-wide text-muted-foreground">AI-drafted — glance, correct if wrong</div>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Title" flag={row('title').state !== 'done' ? 'missing' : null} className="col-span-2">
             <Input

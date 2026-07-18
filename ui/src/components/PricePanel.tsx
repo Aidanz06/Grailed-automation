@@ -186,7 +186,7 @@ export function PricePanel({ item, update, toast }: Props) {
           )}
           {isNwt && (
             <div className="mt-1.5">
-              <span className="inline-block rounded-md border border-transparent bg-success/15 px-2 py-0.5 text-3xs font-semibold uppercase tracking-wide text-success">
+              <span className="inline-block rounded-md border border-transparent bg-success/15 px-2 py-0.5 text-2xs font-semibold uppercase tracking-wide text-success">
                 New with tags — priced against new-condition sales
               </span>
               {nwtThin && (
@@ -311,7 +311,7 @@ export function PricePanel({ item, update, toast }: Props) {
           />
           <span className="text-sm font-medium">Smart Pricing (Grailed)</span>
           {spOn && (
-            <span className="rounded-full border border-primary/50 px-2 py-0.5 font-mono text-3xs font-medium uppercase text-primary">
+            <span className="rounded-full border border-primary/50 px-2 py-0.5 font-mono text-2xs font-medium uppercase text-primary">
               set at next fill
             </span>
           )}

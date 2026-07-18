@@ -18,7 +18,7 @@ const VARIANT = {
     base: 'flex w-9 shrink-0 items-center justify-center rounded-lg border text-muted-foreground transition-colors',
     armed: 'border-destructive bg-destructive/15 text-destructive',
     idle: 'bg-card hover:border-destructive hover:text-destructive',
-    sure: 'px-1 text-3xs font-semibold uppercase',
+    sure: 'px-1 text-2xs font-semibold uppercase',
     icon: 'h-4 w-4',
   },
   /** Hover-revealed overlay pinned to a card's top-right corner. */
@@ -26,7 +26,7 @@ const VARIANT = {
     base: 'absolute right-1.5 top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-md border transition-all',
     armed: 'border-destructive bg-destructive/90 text-white opacity-100',
     idle: 'border-border bg-card/90 text-muted-foreground opacity-0 backdrop-blur-sm hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100',
-    sure: 'text-4xs font-semibold uppercase',
+    sure: 'text-2xs font-semibold uppercase',
     icon: 'h-3.5 w-3.5',
   },
 } as const;

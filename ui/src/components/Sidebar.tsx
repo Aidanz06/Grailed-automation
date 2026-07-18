@@ -153,7 +153,7 @@ export function Sidebar({ items, selected, onSelect }: SidebarProps) {
             {it.photos.length > 1 && (
               <span
                 className={cn(
-                  'absolute bottom-0.5 right-0.5 rounded bg-black/60 px-1 text-4xs tabular-nums',
+                  'absolute bottom-0.5 right-0.5 rounded bg-black/60 px-1 text-2xs tabular-nums',
                   it.photos.length > GRAILED_PHOTO_LIMIT ? 'font-semibold text-warning' : 'text-white'
                 )}
               >
@@ -166,20 +166,20 @@ export function Sidebar({ items, selected, onSelect }: SidebarProps) {
               {hasListing ? it.content!.title : '(needs review — no listing yet)'}
             </div>
             <div className="mt-1 flex items-center gap-2">
-              <Badge variant="outline" className={cn('px-2 py-0 text-3xs uppercase tracking-wide', STATUS_CLASS[it.status])}>
+              <Badge variant="outline" className={cn('px-2 py-0 text-2xs uppercase tracking-wide', STATUS_CLASS[it.status])}>
                 {STATUS_LABEL[it.status]}
               </Badge>
               {r &&
                 (r.ready ? (
                   <span
-                    className="inline-flex items-center gap-0.5 text-3xs font-medium uppercase tracking-wide text-success"
+                    className="inline-flex items-center gap-0.5 text-2xs font-medium uppercase tracking-wide text-success"
                     title={`Every required field is set — fill it whenever you're ready. ${qualityTitle(q!)}.`}
                   >
                     <CheckCircle2 className="h-3 w-3" /> Ready
                   </span>
                 ) : (
                   <span
-                    className="truncate text-3xs font-medium uppercase tracking-wide text-warning"
+                    className="truncate text-2xs font-medium uppercase tracking-wide text-warning"
                     title={`Next: ${r.blocker!.label} — ${r.blocker!.sub} (${r.doneCount}/${r.requiredCount} done). ${qualityTitle(q!)}.`}
                   >
                     {r.blocker!.short}
@@ -254,7 +254,7 @@ export function Sidebar({ items, selected, onSelect }: SidebarProps) {
 
           {/* Folders — drop targets; expanded members render the same rows. */}
           {(folders.length > 0 || newFolderOpen) && (
-            <li className="mt-3 px-2.5 pb-0.5 pt-2 text-3xs uppercase tracking-wider text-muted-foreground">
+            <li className="mt-3 px-2.5 pb-0.5 pt-2 text-2xs uppercase tracking-wider text-muted-foreground">
               Folders
             </li>
           )}
@@ -313,7 +313,7 @@ export function Sidebar({ items, selected, onSelect }: SidebarProps) {
               <input
                 autoFocus
                 placeholder="folder name — Enter to create"
-                className="w-full rounded-md border border-input bg-transparent px-2.5 py-1.5 text-sm- outline-none placeholder:text-muted-foreground/60 focus:border-primary"
+                className="w-full rounded-md border border-input bg-transparent px-2.5 py-1.5 text-sm- outline-none placeholder:text-muted-foreground focus:border-primary"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     addFolder(e.currentTarget.value);

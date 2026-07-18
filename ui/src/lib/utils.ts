@@ -6,7 +6,7 @@ import { extendTailwindMerge } from 'tailwind-merge';
 // font-size classes — otherwise `cn('text-sm-', 'text-white')` would treat
 // "sm-" as a color and drop one of them.
 const twMerge = extendTailwindMerge({
-  extend: { classGroups: { 'font-size': [{ text: ['2xs', '3xs', '4xs', 'sm-', 'sm+'] }] } },
+  extend: { classGroups: { 'font-size': [{ text: ['2xs', 'sm-', 'sm+'] }] } },
 });
 
 export function cn(...inputs: ClassValue[]) {

@@ -621,7 +621,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
           Brand confidence moved into the band (titles are brandless now). */}
       <section id="sec-title" className="mb-5 scroll-mt-4">
         <div className="mb-2 flex items-center gap-2.5">
-          <span className="text-3xs font-medium uppercase tracking-[0.14em] text-muted-foreground/70">
+          <span className="text-2xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
             AI-drafted — glance, correct if wrong
           </span>
           <span className="flex-1" />
@@ -735,7 +735,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
           Brand editing is NEW here (it previously needed the Confirm pass);
           it feeds the designer autofill + comps queries. */}
       <section id="sec-details" className="mb-5 scroll-mt-4">
-        <p className="mb-1.5 text-3xs font-semibold uppercase tracking-[0.14em] text-primary">
+        <p className="mb-1.5 text-2xs font-semibold uppercase tracking-[0.14em] text-primary">
           Your call — the fields that sell it
         </p>
         <div className="space-y-4 rounded-lg border border-primary/40 bg-card p-4">
@@ -1016,7 +1016,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
             >
               {moreOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
               More details — Grailed color · style · country
-              {t3Set > 0 && <span className="text-muted-foreground/60">({t3Set} set — filled even while collapsed)</span>}
+              {t3Set > 0 && <span className="text-muted-foreground">({t3Set} set — filled even while collapsed)</span>}
             </button>
           );
         })()}

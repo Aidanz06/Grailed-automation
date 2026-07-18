@@ -214,7 +214,7 @@ export function ImportScreen({ toast, onImported, onOpenItem, onOpenBoard, autoP
                   <Badge
                     variant="outline"
                     className={cn(
-                      'shrink-0 border-transparent px-2 py-0 text-3xs uppercase tracking-wide',
+                      'shrink-0 border-transparent px-2 py-0 text-2xs uppercase tracking-wide',
                       isDraft ? 'bg-primary/15 text-primary' : 'bg-warning/15 text-warning'
                     )}
                   >
@@ -292,7 +292,7 @@ export function ImportScreen({ toast, onImported, onOpenItem, onOpenBoard, autoP
                 return (
                   <li key={s.name} className="flex items-center gap-2.5 text-sm">
                     {state === 'done' ? <AnimatedCheck /> : state === 'active' ? <LiveDot /> : <PendingDot />}
-                    <span className={state === 'pending' ? 'text-muted-foreground/60' : 'text-foreground'}>{s.name}</span>
+                    <span className={state === 'pending' ? 'text-muted-foreground' : 'text-foreground'}>{s.name}</span>
                     <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">{s.sub}</span>
                   </li>
                 );

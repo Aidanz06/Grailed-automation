@@ -25,14 +25,12 @@ module.exports = {
         success: { DEFAULT: 'hsl(var(--success))', foreground: 'hsl(var(--success-foreground))' },
       },
       borderRadius: { lg: 'var(--radius)', md: 'calc(var(--radius) - 2px)', sm: 'calc(var(--radius) - 4px)' },
-      // M-3 typography micro-scale: named 1:1 replacements for the old
-      // text-[Npx] arbitrary values (gated in pipeline/test-all.js). Plain
-      // strings on purpose — no line-height, exactly like the arbitrary form
-      // they replace. Ladder below xs(12px): 2xs=11 · 3xs=10 · 4xs=9 (4xs is
-      // slated for removal by the M-4 contrast pass). sm ± 1px: sm-=13 · sm+=15.
+      // M-3 typography micro-scale: named replacements for the old text-[Npx]
+      // arbitrary values (gated in pipeline/test-all.js). Plain strings on
+      // purpose — no line-height, exactly like the arbitrary form they
+      // replaced. 2xs=11px is the floor (M-4 contrast pass: nothing renders
+      // below 11px). sm ± 1px: sm-=13 · sm+=15.
       fontSize: {
-        '4xs': '9px',
-        '3xs': '10px',
         '2xs': '11px',
         'sm-': '13px',
         'sm+': '15px',

@@ -43,7 +43,7 @@ export function PhotoTile({
       )}
       {/* Position badge on EVERY tile — this is also the Grailed upload order,
           so reordering/deleting renumbers instantly. */}
-      <span className="absolute left-1 top-1 z-10 rounded bg-black/55 px-1.5 py-0.5 text-4xs uppercase tracking-wide text-white">
+      <span className="absolute left-1 top-1 z-10 rounded bg-black/55 px-1.5 py-0.5 text-2xs uppercase tracking-wide text-white">
         {thumbnail ? '1 · thumbnail' : position}
       </span>
       {children}

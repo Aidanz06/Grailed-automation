@@ -47,7 +47,7 @@ export function ListingChecklist({ item }: { item: Item }) {
                 <span className="block text-sm- font-medium leading-tight">
                   {r.label}
                   {r.tag && (
-                    <span className="ml-1.5 align-middle text-3xs font-normal uppercase tracking-wide text-muted-foreground/70">
+                    <span className="ml-1.5 align-middle text-2xs font-normal uppercase tracking-wide text-muted-foreground">
                       {r.tag}
                     </span>
                   )}

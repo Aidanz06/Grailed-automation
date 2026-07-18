@@ -68,7 +68,7 @@ function HomeLists({ items, onOpenItem, onDeleteItem }: { items: Item[]; onOpenI
       {/* 2. Drafts waiting to post */}
       <section>
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Drafts waiting to post <span className="text-muted-foreground/60">({drafts.length})</span>
+          Drafts waiting to post <span className="text-muted-foreground">({drafts.length})</span>
         </h2>
         {drafts.length === 0 ? (
           <EmptyRow text="No drafts yet — import a batch of photos to create your first ones." />
@@ -102,7 +102,7 @@ function HomeLists({ items, onOpenItem, onDeleteItem }: { items: Item[]; onOpenI
       {/* 3. Currently listed on Grailed */}
       <section>
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Currently listed on Grailed <span className="text-muted-foreground/60">({listed.length})</span>
+          Currently listed on Grailed <span className="text-muted-foreground">({listed.length})</span>
         </h2>
         {listed.length === 0 ? (
           <EmptyRow text="Nothing listed yet — open a draft and Fill it in Chrome when you're ready." />
@@ -277,7 +277,7 @@ export function Home({ items, albums, onOpenItem, onNewBatch, onDeleteItem, onTo
             <section>
               <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Albums — past imports{' '}
-                {hiddenCount > 0 && <span className="text-muted-foreground/60">({hiddenCount} items hidden above)</span>}
+                {hiddenCount > 0 && <span className="text-muted-foreground">({hiddenCount} items hidden above)</span>}
               </h2>
               <ul className="space-y-2">
                 {albums.map((a) => (
