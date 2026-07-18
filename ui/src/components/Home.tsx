@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ArrowRight, CircleHelp, ClipboardCheck, Eye, EyeOff, Images, LayoutGrid, Plus, Rows3, Trash2 } from 'lucide-react';
 import type { Item } from '@/types';
 import type { Album } from '@/lib/api';
+import { CoverThumb } from '@/components/CoverThumb';
 import { DefaultsMenu } from '@/components/DefaultsMenu';
 import { isTriageDraft, readiness } from '@/lib/readiness';
 import { Button } from '@/components/ui/button';
@@ -17,23 +18,6 @@ import { cn, formatWhen, money } from '@/lib/utils';
 // (refinement plan §C); the classic status lists stay one toggle away.
 const HOME_VIEW_KEY = 'tailor.homeView';
 type HomeView = 'board' | 'lists';
-
-function Thumb({ tint, src }: { tint?: string; src?: string }) {
-  return (
-    <span className="relative h-10 w-8 shrink-0 overflow-hidden rounded" style={{ background: tint ?? '#333' }}>
-      {src && (
-        <img
-          src={src}
-          alt=""
-          className="h-full w-full object-cover"
-          onError={(e) => {
-            (e.currentTarget as HTMLImageElement).style.display = 'none';
-          }}
-        />
-      )}
-    </span>
-  );
-}
 
 function EmptyRow({ text }: { text: string }) {
   return <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">{text}</div>;
@@ -97,7 +81,7 @@ function HomeLists({ items, onOpenItem, onDeleteItem }: { items: Item[]; onOpenI
                   onClick={() => onOpenItem(it.id)}
                   className="flex min-w-0 flex-1 items-center gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:border-primary hover:bg-accent"
                 >
-                  <Thumb tint={it.photos[0]?.tint} src={it.photos[0]?.src} />
+                  <CoverThumb photo={it.photos[0]} className="h-10 w-8 rounded" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium">{it.content?.title ?? 'Ungrouped photos'}</div>
                     <div className="truncate text-xs text-warning">{reviewReason(it)}</div>
@@ -126,7 +110,7 @@ function HomeLists({ items, onOpenItem, onDeleteItem }: { items: Item[]; onOpenI
                   onClick={() => onOpenItem(it.id)}
                   className="flex min-w-0 flex-1 items-center gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:border-primary hover:bg-accent"
                 >
-                  <Thumb tint={it.photos[0]?.tint} src={it.photos[0]?.src} />
+                  <CoverThumb photo={it.photos[0]} className="h-10 w-8 rounded" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium">{it.content?.title}</div>
                     <div className="text-xs text-muted-foreground">created {formatWhen(it.createdAt)}</div>
@@ -160,7 +144,7 @@ function HomeLists({ items, onOpenItem, onDeleteItem }: { items: Item[]; onOpenI
                   onClick={() => onOpenItem(it.id)}
                   className="flex min-w-0 flex-1 items-center gap-3 rounded-lg border bg-card p-3 text-left transition-colors hover:border-primary hover:bg-accent"
                 >
-                  <Thumb tint={it.photos[0]?.tint} src={it.photos[0]?.src} />
+                  <CoverThumb photo={it.photos[0]} className="h-10 w-8 rounded" />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium">{it.content?.title}</div>
                     <div className="text-xs text-muted-foreground">listed {formatWhen(it.submittedAt)}</div>

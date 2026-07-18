@@ -3,6 +3,7 @@ import { ArrowRight, Command as CommandIcon } from 'lucide-react';
 import type { Item } from '@/types';
 import { cn } from '@/lib/utils';
 import { STATUS_WORD } from '@/lib/statusLabels';
+import { CoverThumb } from '@/components/CoverThumb';
 
 /*
  * ⌘K command palette (refinement plan §E9): navigation + actions + draft
@@ -133,21 +134,7 @@ export function CommandPalette({ open, onClose, commands, items, onOpenItem }: P
                   </>
                 ) : (
                   <>
-                    <span
-                      className="relative h-8 w-6 shrink-0 overflow-hidden rounded"
-                      style={{ background: e.item.photos[0]?.tint ?? '#333' }}
-                    >
-                      {e.item.photos[0]?.src && (
-                        <img
-                          src={e.item.photos[0].src}
-                          alt=""
-                          className="h-full w-full object-cover"
-                          onError={(ev) => {
-                            (ev.currentTarget as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                      )}
-                    </span>
+                    <CoverThumb photo={e.item.photos[0]} className="h-8 w-6 rounded" />
                     <span className="min-w-0 flex-1 truncate">{e.item.content?.title}</span>
                     <span className="shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">
                       {STATUS_WORD[e.item.status] ?? e.item.status}

@@ -7,6 +7,7 @@ import { GRAILED_PHOTO_LIMIT, isTriageDraft, readiness, triageSort } from '@/lib
 import { quality, qualityTitle } from '@/lib/quality';
 import { STATUS_LABEL } from '@/lib/statusLabels';
 import { Badge } from '@/components/ui/badge';
+import { CoverThumb } from '@/components/CoverThumb';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BulkActionBar } from '@/components/BulkActionBar';
 
@@ -146,20 +147,7 @@ export function Sidebar({ items, selected, onSelect, updateItem, toast }: Sideba
                     )}
                   />
                   {/* Item thumbnail (photo 1) — the fastest way to tell listings apart. */}
-                  <div
-                    className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border"
-                    style={{ background: cover?.tint ?? '#333' }}
-                  >
-                    {cover?.src && (
-                      <img
-                        src={cover.src}
-                        alt=""
-                        className="absolute inset-0 h-full w-full object-cover"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    )}
+                  <CoverThumb photo={cover} className="h-16 w-16 rounded-md border">
                     {it.photos.length > 1 && (
                       <span
                         className={cn(
@@ -170,7 +158,7 @@ export function Sidebar({ items, selected, onSelect, updateItem, toast }: Sideba
                         {it.photos.length}
                       </span>
                     )}
-                  </div>
+                  </CoverThumb>
                   <div className={cn('min-w-0 flex-1', r && 'pr-4')}>
                     <div className={cn('line-clamp-2 text-sm font-medium leading-snug', !hasListing && 'font-normal italic text-muted-foreground')}>
                       {hasListing ? it.content!.title : '(needs review — no listing yet)'}

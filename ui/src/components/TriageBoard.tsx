@@ -5,6 +5,7 @@ import type { Album } from '@/lib/api';
 import { GRAILED_PHOTO_LIMIT, triageSort } from '@/lib/readiness';
 import { quality, qualityTitle, type Quality, type QualityState } from '@/lib/quality';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CoverThumb } from '@/components/CoverThumb';
 import { cn, money } from '@/lib/utils';
 
 /*
@@ -204,17 +205,7 @@ export function TriageBoard({ items, albums, initialAlbumId, onOpenItem, onDelet
                     q.state === 'listed' && 'opacity-75 hover:opacity-100'
                   )}
                 >
-                  <div className="relative aspect-[4/5] w-full overflow-hidden" style={{ background: cover?.tint ?? '#333' }}>
-                    {cover?.src && (
-                      <img
-                        src={cover.src}
-                        alt=""
-                        className="absolute inset-0 h-full w-full object-cover"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    )}
+                  <CoverThumb photo={cover} className="aspect-[4/5] w-full">
                     {it.photos.length > 1 && (
                       <span
                         className={cn(
@@ -230,7 +221,7 @@ export function TriageBoard({ items, albums, initialAlbumId, onOpenItem, onDelet
                         {it.photos.length}
                       </span>
                     )}
-                  </div>
+                  </CoverThumb>
                   <div className="p-2.5">
                     {/* Fixed-height wrapper keeps card rows aligned; the clamp
                         lives on the inner div (a min-height ON the clamped

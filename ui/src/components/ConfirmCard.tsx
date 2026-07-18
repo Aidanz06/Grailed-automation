@@ -7,6 +7,7 @@ import { quality, qualityTitle } from '@/lib/quality';
 import { suggestGrailedCategory } from '@/lib/grailedCategory';
 import { cn, isCollabBrand, primaryBrand } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { CoverThumb } from '@/components/CoverThumb';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -76,18 +77,7 @@ export function ConfirmCard({ item, fillOptions, pendingCatKey, onPendingCat, re
     <div className="rounded-lg border bg-card p-4">
       {/* Header: what this item is + how much is left to check. */}
       <div className="mb-3 flex items-center gap-3">
-        <span className="relative h-16 w-12 shrink-0 overflow-hidden rounded" style={{ background: item.photos[0]?.tint ?? '#333' }}>
-          {item.photos[0]?.src && (
-            <img
-              src={item.photos[0].src}
-              alt=""
-              className="h-full w-full object-cover"
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = 'none';
-              }}
-            />
-          )}
-        </span>
+        <CoverThumb photo={item.photos[0]} className="h-16 w-12 rounded" />
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium">{item.content?.title || `(untitled — item #${item.id})`}</div>
           <div className="mt-0.5 flex items-center gap-2 text-xs">

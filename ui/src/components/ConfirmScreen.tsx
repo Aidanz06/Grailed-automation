@@ -6,6 +6,7 @@ import { readiness } from '@/lib/readiness';
 import { matchShortcut } from '@/lib/shortcuts';
 import { cn, errorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { CoverThumb } from '@/components/CoverThumb';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { ConfirmCard } from '@/components/ConfirmCard';
@@ -175,19 +176,9 @@ export function ConfirmScreen({ drafts, toast, onOpenItem, onDone }: Props) {
                         'relative h-11 w-9 overflow-hidden rounded border transition-all',
                         i === idx ? 'border-primary ring-1 ring-primary' : 'border-border opacity-70 hover:opacity-100'
                       )}
-                      style={{ background: v.photos[0]?.tint ?? '#333' }}
                       onClick={() => setIdx(i)}
                     >
-                      {v.photos[0]?.src && (
-                        <img
-                          src={v.photos[0].src}
-                          alt=""
-                          className="absolute inset-0 h-full w-full object-cover"
-                          onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                      )}
+                      <CoverThumb photo={v.photos[0]} className="absolute inset-0" />
                       <span
                         className={cn('absolute bottom-0.5 right-0.5 h-1.5 w-1.5 rounded-full', done ? 'bg-success' : 'bg-warning')}
                       />
