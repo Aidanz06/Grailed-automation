@@ -20,6 +20,7 @@ import { FillTracker } from '@/components/FillTracker';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { BatchProgressBar } from '@/components/BatchProgressBar';
+import { ToastStack, appendToast, type Toast } from '@/components/ToastStack';
 
 export type Selection = number | 'import';
 export type View = 'home' | 'workspace' | 'confirm';
@@ -59,7 +60,16 @@ export default function App() {
       .catch(() => {}); // unset/unavailable → built-in presets
   }, []);
   const openStyleEditor = useCallback(() => setStyleEditorOpen(true), []);
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  // Toast stack (QW-3): consumers keep the (msg: string) => void contract;
+  // only this implementation changed from the old single-string toastMsg.
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const toastIdRef = useRef(0);
+  const setToastMsg = useCallback((msg: string) => {
+    setToasts((prev) => appendToast(prev, { id: ++toastIdRef.current, msg }));
+  }, []);
+  const dismissToast = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
   // §5.5 window docking: snap the real Chrome window against the app so
   // fill-review feels like one window. State lives in the main process
   // (dock:start/stop); this flag just tracks the toggle. Chrome quitting
@@ -165,13 +175,6 @@ export default function App() {
     });
     return off;
   }, [reloadItems]);
-
-  useEffect(() => {
-    if (!toastMsg) return;
-    // Longer messages (fill summaries, error guidance) need longer than 2.8s.
-    const t = setTimeout(() => setToastMsg(null), Math.max(2800, Math.min(9000, toastMsg.length * 55)));
-    return () => clearTimeout(t);
-  }, [toastMsg]);
 
   // §8.1 circuit-breaker banner: surface the open state up front, not just on
   // a failed recompute/fill. Checked on load + every 60s (breaker can trip
@@ -600,11 +603,7 @@ export default function App() {
         />
       )}
 
-      {toastMsg && (
-        <div className="fixed bottom-5 left-1/2 max-w-[70%] -translate-x-1/2 rounded-md border bg-card px-4 py-2.5 text-sm shadow-lg">
-          {toastMsg}
-        </div>
-      )}
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }
