@@ -4,6 +4,7 @@ import { api } from '@/lib/api';
 import { resolveStyles, serializeStyles } from '@/lib/description';
 import { errorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/Modal';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -67,11 +68,13 @@ export function DefaultsMenu({ stylesRaw, onStylesChanged, onEditStyles, toast }
         <Settings2 />
       </Button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-[16vh]" onMouseDown={() => setOpen(false)}>
-          <div
-            className="rise-in w-[480px] max-w-[90vw] rounded-lg border bg-card p-4 shadow-xl"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
+        <Modal
+          title="Defaults"
+          onClose={() => setOpen(false)}
+          closeOnBackdrop
+          closeOnEscape
+          className="rise-in left-1/2 top-[16vh] w-[480px] max-w-[90vw] -translate-x-1/2 rounded-lg border bg-card p-4 shadow-xl"
+        >
             <div className="mb-3 flex items-center gap-2">
               <Settings2 className="h-4 w-4 text-primary" />
               <span className="text-sm font-semibold">Defaults</span>
@@ -146,8 +149,7 @@ export function DefaultsMenu({ stylesRaw, onStylesChanged, onEditStyles, toast }
                 </Button>
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </>
   );
