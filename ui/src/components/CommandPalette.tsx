@@ -4,6 +4,7 @@ import type { Item } from '@/types';
 import { cn } from '@/lib/utils';
 import { STATUS_WORD } from '@/lib/statusLabels';
 import { CoverThumb } from '@/components/CoverThumb';
+import { Modal } from '@/components/Modal';
 
 /*
  * ⌘K command palette (refinement plan §E9): navigation + actions + draft
@@ -95,11 +96,16 @@ export function CommandPalette({ open, onClose, commands, items, onOpenItem }: P
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-center bg-black/40 pt-[14vh]" onMouseDown={onClose}>
-      <div
-        className="rise-in h-fit w-[560px] max-w-[90vw] overflow-hidden rounded-lg border bg-card shadow-xl"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
+    // The palette keeps its own key handling (arrows/Enter/Escape on the
+    // input, which fires after Radix's capture-phase Escape — both routes
+    // land on the same idempotent onClose).
+    <Modal
+      title="Command palette"
+      onClose={onClose}
+      closeOnBackdrop
+      closeOnEscape
+      className="rise-in left-1/2 top-[14vh] h-fit w-[560px] max-w-[90vw] -translate-x-1/2 overflow-hidden rounded-lg border bg-card shadow-xl"
+    >
         <div className="flex items-center gap-2 border-b px-3">
           <CommandIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
           <input
@@ -145,7 +151,6 @@ export function CommandPalette({ open, onClose, commands, items, onOpenItem }: P
             ))
           )}
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

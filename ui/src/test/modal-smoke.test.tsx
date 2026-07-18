@@ -13,6 +13,19 @@ beforeEach(() => {
   localStorage.setItem(ONBOARDED_KEY, '1');
 });
 
+describe('CommandPalette (shared Modal)', () => {
+  it('opens on Cmd+K as a dialog with the search focused; Escape closes', async () => {
+    render(<App />);
+    await screen.findByRole('button', { name: /new batch/i });
+    fireEvent.keyDown(window, { key: 'k', metaKey: true });
+    const dialog = await screen.findByRole('dialog', { name: 'Command palette' });
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    const input = screen.getByPlaceholderText(/type a command/i);
+    fireEvent.keyDown(input, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Command palette' })).toBeNull());
+  });
+});
+
 describe('StyleEditor (shared Modal)', () => {
   it('opens from Defaults as a dialog and closes on Escape while clean', async () => {
     render(<App />);
