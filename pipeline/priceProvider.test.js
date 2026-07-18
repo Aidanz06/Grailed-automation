@@ -190,3 +190,36 @@ test('NWT logic intact: new item over mostly-used comps still demotes confidence
   assert.notStrictEqual(r.confidence.level, 'high', 'nwtThin demotion still applies over exact matches');
   assert.match(r.confidence.explanation, /new-condition comps/);
 });
+
+// ---- fetchWithRetry (security review 2026-07-17, flaw #2) ----
+
+const { fetchWithRetry } = require('./priceProvider');
+
+test('fetchWithRetry: retries once on a 5xx and returns the recovered response', async () => {
+  let calls = 0;
+  const fetchImpl = async () => {
+    calls++;
+    return calls === 1 ? { ok: false, status: 503, statusText: 'Service Unavailable' } : { ok: true, status: 200 };
+  };
+  const res = await fetchWithRetry('https://x.invalid', {}, { retries: 1, backoffMs: 1, fetchImpl });
+  assert.strictEqual(res.ok, true);
+  assert.strictEqual(calls, 2);
+});
+
+test('fetchWithRetry: retries a thrown network error, then surfaces it when retries are exhausted', async () => {
+  let calls = 0;
+  const fetchImpl = async () => { calls++; throw new Error('ECONNRESET'); };
+  await assert.rejects(
+    () => fetchWithRetry('https://x.invalid', {}, { retries: 1, backoffMs: 1, fetchImpl }),
+    /ECONNRESET/
+  );
+  assert.strictEqual(calls, 2, 'one original attempt + one retry');
+});
+
+test('fetchWithRetry: a 4xx is deterministic — returned immediately, never retried', async () => {
+  let calls = 0;
+  const fetchImpl = async () => { calls++; return { ok: false, status: 403, statusText: 'Forbidden' }; };
+  const res = await fetchWithRetry('https://x.invalid', {}, { retries: 2, backoffMs: 1, fetchImpl });
+  assert.strictEqual(res.status, 403);
+  assert.strictEqual(calls, 1);
+});

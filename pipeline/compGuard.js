@@ -69,7 +69,9 @@ class GuardedCompProvider {
     try { last = Number(fs.readFileSync(LAST_CALL_FILE, 'utf8')) || 0; } catch {}
     const since = Date.now() - last;
     if (since < this.minIntervalMs) {
-      const jitter = Math.floor(this.minIntervalMs * 0.25 * ((last % 1000) / 1000)); // deterministic-ish jitter
+      // True randomness, not derived from the previous timestamp — a
+      // deterministic "jitter" defeats the human-pacing intent (§8.1).
+      const jitter = Math.floor(Math.random() * this.minIntervalMs * 0.4);
       await sleep(this.minIntervalMs - since + jitter);
     }
     fs.mkdirSync(DATA_DIR, { recursive: true });

@@ -6,7 +6,7 @@
  * Everything is framed as "resembles / appears", never a confirmed
  * identification (PRD §8.8). The structured schema enforces that framing.
  *
- * Uses the official Anthropic SDK, model claude-opus-4-8 (override with
+ * Uses the official Anthropic SDK, model claude-sonnet-5 (override with
  * ATTRIBUTE_MODEL), adaptive thinking, and structured outputs so the response
  * is guaranteed-valid JSON.
  */
@@ -15,7 +15,11 @@ const fs = require('fs');
 const path = require('path');
 const Anthropic = require('@anthropic-ai/sdk');
 
-const DEFAULT_MODEL = process.env.ATTRIBUTE_MODEL || 'claude-opus-4-8';
+// Sonnet 5 by default (security review 2026-07-17, cost item #1): attribute
+// extraction into a fixed schema is not an Opus-class task, and Sonnet is
+// $3/$15 per MTok vs Opus 4.8's $5/$25. Gated by the identify eval — run
+// `ATTRIBUTE_MODEL=claude-opus-4-8 node pipeline/eval/identify.js` to compare.
+const DEFAULT_MODEL = process.env.ATTRIBUTE_MODEL || 'claude-sonnet-5';
 // Build output_config so the `effort` knob is omitted for models that reject it
 // (Haiku 4.5 → 400). Lets ATTRIBUTE_MODEL be set to a cheaper model without breaking.
 const { outputConfig, thinkingConfig } = require('./cluster');
@@ -250,7 +254,12 @@ async function extractAttributes(photoPaths, opts = {}) {
       max_tokens: 4000,
       ...thinkingConfig(model), // adaptive on Opus/Sonnet; omitted on Haiku (400s)
       output_config: outputConfig(model, ATTRIBUTE_SCHEMA, 'medium'),
-      system: SYSTEM_PROMPT,
+      // cache_control: the system prompt is byte-identical across every item in
+      // a batch, so items after the first read it at ~0.1× input price (review
+      // cost item #4). Caveat: prefixes under the model's minimum cacheable
+      // length silently don't cache — verify via usage.cache_read_input_tokens,
+      // never assume the savings.
+      system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
       messages: [{ role: 'user', content }],
     });
 
@@ -259,7 +268,12 @@ async function extractAttributes(photoPaths, opts = {}) {
     }
     const textBlock = resp.content.find((b) => b.type === 'text');
     if (!textBlock) throw new Error('No text block in model response.');
-    return JSON.parse(textBlock.text);
+    const attrs = JSON.parse(textBlock.text);
+    // Non-enumerable so scoring/JSON output never see them; the eval harness
+    // reads these to report real $/item per model (like cluster.js __usage).
+    Object.defineProperty(attrs, '__usage', { value: resp.usage, enumerable: false });
+    Object.defineProperty(attrs, '__model', { value: resp.model, enumerable: false });
+    return attrs;
   } finally {
     for (const t of temps) { try { fs.unlinkSync(t); } catch {} }
   }

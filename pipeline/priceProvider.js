@@ -142,6 +142,30 @@ async function getCompsTiered(provider, attributes = {}, opts = {}) {
   };
 }
 
+// One bounded retry with backoff for the scrape fetch (security review
+// 2026-07-17, flaw #2): a transient 5xx/DNS/timeout blip should not silently
+// leave an item with no comps and no price. Retries network errors and 5xx
+// only — a 4xx (bad key, bad request) is deterministic and returned as-is.
+// `fetchImpl` is injectable so the retry logic is unit-testable offline.
+async function fetchWithRetry(url, opts = {}, { retries = 1, backoffMs = 800, fetchImpl = fetch } = {}) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const res = await fetchImpl(url, opts);
+      if (!res.ok && res.status >= 500 && attempt < retries) {
+        await new Promise((r) => setTimeout(r, backoffMs * (attempt + 1)));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      if (attempt < retries) {
+        await new Promise((r) => setTimeout(r, backoffMs * (attempt + 1)));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 class GrailedScrapeProvider extends PriceCompProvider {
   constructor(config = {}) {
     super();
@@ -179,13 +203,17 @@ class GrailedScrapeProvider extends PriceCompProvider {
       ...(narrow ? {} : { removeWordsIfNoResults: 'allOptional' }),
     }).toString();
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
-    let json;
-    try {
-      const res = await fetch(`https://${this.host}/1/indexes/*/queries`, {
+    // Per-attempt timeout: each retry gets its own AbortController so a
+    // timed-out first attempt doesn't poison the retry's signal.
+    const timedFetch = (u, o) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+      return fetch(u, { ...o, signal: controller.signal }).finally(() => clearTimeout(timer));
+    };
+    const res = await fetchWithRetry(
+      `https://${this.host}/1/indexes/*/queries`,
+      {
         method: 'POST',
-        signal: controller.signal,
         headers: {
           'X-Algolia-Application-Id': this.appId,
           'X-Algolia-API-Key': this.apiKey,
@@ -194,14 +222,13 @@ class GrailedScrapeProvider extends PriceCompProvider {
         body: JSON.stringify({
           requests: [{ indexName: this.index, params }],
         }),
-      });
-      if (!res.ok) {
-        throw new Error(`Grailed/Algolia search HTTP ${res.status} ${res.statusText}`);
-      }
-      json = await res.json();
-    } finally {
-      clearTimeout(timer);
+      },
+      { fetchImpl: timedFetch }
+    );
+    if (!res.ok) {
+      throw new Error(`Grailed/Algolia search HTTP ${res.status} ${res.statusText}`);
     }
+    const json = await res.json();
 
     const hits = (json.results && json.results[0] && json.results[0].hits) || [];
     // Verified against a live Listing_sold_production response: sold_price (USD),
@@ -290,5 +317,6 @@ module.exports = {
   buildQueryText,
   buildNarrowQueryText,
   getCompsTiered,
+  fetchWithRetry,
   NARROW_MIN_SOLD,
 };

@@ -135,6 +135,8 @@ const DEFAULTS = {
 // Opus 4.8 $5/$25, Haiku 4.5 $1/$5 (metacto/cloudzero, 2026-07). Image tokens ≈ (w*h)/750.
 const PRICES = {
   'claude-opus-4-8': { in: 5.0, out: 25.0 },
+  // List price ($2/$10 intro through 2026-08-31 — we cost at list to be conservative).
+  'claude-sonnet-5': { in: 3.0, out: 15.0 },
   'claude-sonnet-4-6': { in: 3.0, out: 15.0 },
   'claude-haiku-4-5-20251001': { in: 1.0, out: 5.0 },
   'claude-haiku-4-5': { in: 1.0, out: 5.0 },
@@ -146,7 +148,10 @@ function usdFromUsage(usage, model) {
   const p = priceFor(model);
   const inTok = (usage && (usage.input_tokens || 0)) || 0;
   const outTok = (usage && (usage.output_tokens || 0)) || 0;
-  return (inTok / 1e6) * p.in + (outTok / 1e6) * p.out;
+  // Prompt-cache accounting: writes bill ~1.25× input, reads ~0.1× input.
+  const cacheWrite = (usage && (usage.cache_creation_input_tokens || 0)) || 0;
+  const cacheRead = (usage && (usage.cache_read_input_tokens || 0)) || 0;
+  return ((inTok + 1.25 * cacheWrite + 0.1 * cacheRead) / 1e6) * p.in + (outTok / 1e6) * p.out;
 }
 
 // ----------------------------------------------------------------------------

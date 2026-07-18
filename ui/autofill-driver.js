@@ -34,6 +34,19 @@ const SELECTORS_PATH = path.join(__dirname, '..', 'grailed-selectors.json');
 const CHALLENGE = /perimeterx|px-cloud|px-cdn|pxchk|captcha|recaptcha|hcaptcha|challenges\.cloudflare|human(security)?/i;
 const SETTLE_MS = 1500; // post-action observation window before declaring clean
 
+// Only a Grailed-origin 403 is a real block signal. The sell page loads
+// third-party scripts/beacons/prefetches, and a benign 403 from an ad or
+// analytics endpoint (or one injected by the user's own extensions) during the
+// settle window must not trip the account circuit breaker (security review
+// 2026-07-17, flaw #1). Challenge vendors stay origin-agnostic — they load
+// cross-origin by design, and CHALLENGE already scopes them to actual
+// challenge hosts.
+const FIRST_PARTY = /(^|\.)grailed\.com$/i;
+const hostOf = (u) => { try { return new URL(u).hostname; } catch { return ''; } };
+function isFirstParty403(url, status) {
+  return status === 403 && FIRST_PARTY.test(hostOf(url));
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function loadSelectors() {
@@ -345,7 +358,7 @@ async function connect({ freshTab = false } = {}) {
     await client.Network.enable(); // observation only — the §8.1 detection watch
     client.Network.responseReceived((p) => {
       const { url, status } = p.response;
-      if (status === 403) signals.forbidden403.push(url);
+      if (isFirstParty403(url, status)) signals.forbidden403.push(url);
       if (CHALLENGE.test(url)) signals.challengeHosts.push(url);
       if (/\/api\/users\/me/.test(url) && status === 401) signals.loggedOut.push(url);
     });
@@ -968,7 +981,7 @@ async function fillListing(fields, onProgress) {
 
 // getJSON/portUp/sellTarget are shared with ui/chrome-dock.js (window
 // choreography uses the same :9222 endpoint but a browser-level connection).
-module.exports = { connect, fillListing, AutofillAbort, getJSON, portUp, sellTarget, openFreshSellTab, PORT };
+module.exports = { connect, fillListing, AutofillAbort, getJSON, portUp, sellTarget, openFreshSellTab, PORT, isFirstParty403 };
 
 // ---------------------------------------------------------------- CLI test modes
 // Live per-primitive verification without the app. Prereq: `npm run 0b:launch`,

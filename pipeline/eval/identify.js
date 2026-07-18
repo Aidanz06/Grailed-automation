@@ -67,12 +67,26 @@ async function main() {
   if (!cases.length) { console.error(`No fixtures in ${FIX_DIR}`); process.exit(2); }
 
   const results = [];
+  // Live-mode cost accounting (review 2026-07-17: model-default changes must be
+  // measured, not assumed). extractAttributes attaches __usage/__model
+  // non-enumerably; sum them so the run reports real $/item.
+  const cost = { model: null, calls: 0, usd: 0, in: 0, out: 0, cacheRead: 0, cacheWrite: 0 };
   for (const c of cases) {
     // For LIVE stability, run each case RUNS times and score every run.
     for (let i = 0; i < RUNS; i++) {
       let actual;
       try { actual = await actualFor(c); }
       catch (e) { console.error(`[${c.name}] run ${i + 1}: ${e.message}`); process.exit(2); }
+      if (actual.__usage) {
+        const { usdFromUsage } = require('../groupingStrategy');
+        cost.model = actual.__model || cost.model;
+        cost.calls += 1;
+        cost.usd += usdFromUsage(actual.__usage, actual.__model);
+        cost.in += actual.__usage.input_tokens || 0;
+        cost.out += actual.__usage.output_tokens || 0;
+        cost.cacheRead += actual.__usage.cache_read_input_tokens || 0;
+        cost.cacheWrite += actual.__usage.cache_creation_input_tokens || 0;
+      }
       const r = scoreCase(c.expected, actual);
       results.push({ case: c.name, run: i + 1, ...r, actual });
       if (!JSON_OUT) {
@@ -88,7 +102,7 @@ async function main() {
   const g = gate(agg);
 
   if (JSON_OUT) {
-    console.log(JSON.stringify({ mode: DRY ? 'dry-run' : 'live', runs: RUNS, agg: { per: agg.per, overall: agg.overall, nwtViolations: agg.nwtViolations }, gate: g }, null, 2));
+    console.log(JSON.stringify({ mode: DRY ? 'dry-run' : 'live', runs: RUNS, agg: { per: agg.per, overall: agg.overall, nwtViolations: agg.nwtViolations }, gate: g, ...(cost.calls ? { cost } : {}) }, null, 2));
   } else {
     console.log('\n──────── summary' + (DRY ? ' (dry-run — sample_response.json, not live)' : ' (live)') + ' ────────');
     for (const f of Object.keys(agg.per)) {
@@ -97,6 +111,12 @@ async function main() {
     }
     console.log(`  overall       ${agg.overall == null ? 'n/a' : (agg.overall * 100).toFixed(0) + '%'}`);
     console.log(`  NWT→Used      ${agg.nwtViolations} violation(s)`);
+    if (cost.calls) {
+      console.log(
+        `  cost (${cost.model})  $${cost.usd.toFixed(4)} total, $${(cost.usd / cost.calls).toFixed(4)}/item ` +
+        `(${cost.calls} calls, in=${cost.in} out=${cost.out} cacheRead=${cost.cacheRead} cacheWrite=${cost.cacheWrite})`
+      );
+    }
     console.log(`\n  GATE: ${g.pass ? 'PASS' : 'FAIL — ' + g.fails.join('; ')}`);
     if (DRY) console.log('  (dry-run uses the canned sample_response.json — some cases fail ON PURPOSE to prove the harness catches the tester bugs. Add real photos + run live for true numbers.)');
   }
