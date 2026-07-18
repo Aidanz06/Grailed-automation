@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, ArrowRight, FolderOpen } from 'lucide-react';
 import { api, type BatchProgress, type BatchResult } from '@/lib/api';
 import { cn, errorMessage } from '@/lib/utils';
+import { importProgress } from '@/lib/importProgress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AnimatedCheck, LiveDot, PendingDot, PhotoShuffler, ProgressBar } from '@/components/motion';
@@ -129,40 +130,11 @@ export function ImportScreen({ toast, onImported, onOpenItem, onOpenBoard, autoP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoPick]);
 
-  // Weighted overall bar: photo prep 0–15%, AI grouping 15–55%, per-group
-  // pipeline 55–100%. Every stage except the single batched vision call has a
-  // real denominator; for that one the bar creeps 15→50 on a slow CSS
-  // transition (~ the call's typical duration) instead of freezing.
-  const frac = progress && progress.total > 0 ? progress.done / progress.total : 0;
-  let pct = 0;
-  let creep = false;
-  switch (progress?.stage) {
-    case 'grouping':
-      pct = 2;
-      break;
-    case 'preparing':
-      pct = 2 + 13 * frac;
-      break;
-    case 'analyzing':
-      pct = 50; // creep target — slow transition below makes this honest-ish
-      creep = true;
-      break;
-    case 'describing':
-      pct = 15 + 40 * frac;
-      break;
-    case 'grouped':
-      pct = 55;
-      break;
-    case 'processing':
-      pct = 55 + 45 * frac;
-      break;
-    case 'done':
-      pct = 100;
-      break;
-    case 'error':
-      pct = 100;
-      break;
-  }
+  // Weighted overall bar — the numbers live in lib/importProgress (QW-5),
+  // shared with the thin BatchProgressBar. This screen renders `creep` (the
+  // single denominator-less vision call) as a slow CSS transition toward the
+  // target (~ the call's typical duration) instead of freezing.
+  const { pct, creep } = progress ? importProgress(progress) : { pct: 0, creep: false };
 
   // Step checklist derived from the latest event. describing (per-photo
   // fallback path) belongs to the AI-grouping step, with real counts.

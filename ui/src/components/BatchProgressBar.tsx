@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, type BatchProgress } from '@/lib/api';
+import { importProgress } from '@/lib/importProgress';
 
 /*
  * Global batch progress bar (integration plan P1.4 — background processing).
@@ -11,21 +12,13 @@ import { api, type BatchProgress } from '@/lib/api';
  * itself we pass `hidden` because that screen renders its own detailed bar.
  */
 
-// Weighted overall percent, mirroring ImportScreen: photo prep 0–15%, grouping
-// 15–55%, per-item pipeline 55–100%. `analyzing` is the single opaque batched
-// vision call, so it has no denominator → indeterminate.
+// Weighted overall percent — shared with ImportScreen via lib/importProgress
+// (QW-5). This bar keeps rendering the denominator-less `analyzing` stage
+// (creep=true) as an indeterminate sweep rather than a fake number (U7).
 function overallPercent(p: BatchProgress): number | null {
-  const frac = p.total > 0 ? Math.min(1, p.done / p.total) : 0;
-  switch (p.stage) {
-    case 'grouping': return 5;
-    case 'preparing': return 15 * frac;
-    case 'describing': return 15 + 40 * frac;
-    case 'analyzing': return null; // indeterminate
-    case 'grouped': return 55;
-    case 'processing': return 55 + 45 * frac;
-    case 'done': return 100;
-    default: return null;
-  }
+  if (p.stage === 'error') return null; // error renders its own full bar
+  const { pct, creep } = importProgress(p);
+  return creep ? null : pct;
 }
 
 interface Props {
