@@ -3,6 +3,7 @@ import { ArrowUpRight, ChevronDown, ChevronRight, Pencil, RefreshCw } from 'luci
 import type { Item } from '@/types';
 import { api, type AutofillOptions, type ChromeStatus, type FillChanges } from '@/lib/api';
 import { suggestGrailedCategory } from '@/lib/grailedCategory';
+import { sizeOptionsFor } from '@/lib/sizes';
 import { activeTemplate, finalizeDescription } from '@/lib/description';
 import { agoLabel, cn, errorMessage, isCollabBrand, primaryBrand } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -264,6 +265,15 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.id, fillOptions]);
   const confirmed = !!(attrs.grailed_department && attrs.grailed_category);
+  // Size dropdown (owner request 2026-07-17): once the category is set, offer
+  // its size list (lib/sizes.ts); a stored off-list value (e.g. an AI guess
+  // like "Large") is injected so it stays visible. sizeCustom = the free-text
+  // escape, reset per item.
+  const [sizeCustom, setSizeCustom] = useState(false);
+  useEffect(() => setSizeCustom(false), [item.id]);
+  const sizeOpts = sizeOptionsFor(confirmed ? attrs.grailed_category : null);
+  const sizeChoices =
+    attrs.size && sizeOpts.length > 0 && !sizeOpts.includes(attrs.size) ? [attrs.size, ...sizeOpts] : sizeOpts;
   const [pendingDept, setPendingDept] = useState(attrs.grailed_department || suggestion?.department || 'Menswear');
   const [pendingCat, setPendingCat] = useState(attrs.grailed_category || suggestion?.category || '');
   useEffect(() => {
@@ -797,21 +807,75 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
           </div>
           <div className="order-2 flex min-w-0 flex-col gap-1">
             <span className={BAND_LABEL}>Size</span>
-            <Input
-              ref={sizeRef}
-              value={attrs.size}
-              placeholder="e.g. L"
-              onChange={(e) =>
-                update((d) => {
-                  // Typing a size is the seller's own judgment — clear the
-                  // AI's "guessed, unclear" flag (it only ever described the
-                  // AI's value; the editor has no other way to clear it).
-                  d.attributes.size = e.target.value;
-                  d.attributes.size_unclear = false;
-                  d.dirty = true;
-                })
-              }
-            />
+            {/* Once a Grailed category is set, size becomes a dropdown of that
+                category's sizes (lib/sizes.ts) — mirroring how Grailed's own
+                size field repopulates from the category. "Custom size" flips
+                back to free text for anything off-list (the fill sends the
+                string either way). An off-list stored value (AI guess like
+                "Large") is injected as an option so it stays visible. */}
+            {sizeChoices.length > 0 && !sizeCustom ? (
+              <>
+                <Select
+                  value={attrs.size && sizeChoices.includes(attrs.size) ? attrs.size : undefined}
+                  onValueChange={(v) =>
+                    update((d) => {
+                      // Picking a size is the seller's own judgment — clear the
+                      // AI's "guessed, unclear" flag (it only ever described the
+                      // AI's value; the editor has no other way to clear it).
+                      d.attributes.size = v;
+                      d.attributes.size_unclear = false;
+                      d.dirty = true;
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="select size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sizeChoices.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <button
+                  type="button"
+                  className="self-start text-xs text-muted-foreground transition-colors hover:text-foreground"
+                  title="Type a size that isn't in the list — it fills as-is"
+                  onClick={() => setSizeCustom(true)}
+                >
+                  custom size…
+                </button>
+              </>
+            ) : (
+              <>
+                <Input
+                  ref={sizeRef}
+                  value={attrs.size}
+                  placeholder="e.g. L"
+                  onChange={(e) =>
+                    update((d) => {
+                      // Typing a size is the seller's own judgment — clear the
+                      // AI's "guessed, unclear" flag (it only ever described the
+                      // AI's value; the editor has no other way to clear it).
+                      d.attributes.size = e.target.value;
+                      d.attributes.size_unclear = false;
+                      d.dirty = true;
+                    })
+                  }
+                />
+                {sizeChoices.length > 0 && (
+                  <button
+                    type="button"
+                    className="self-start text-xs text-muted-foreground transition-colors hover:text-foreground"
+                    onClick={() => setSizeCustom(false)}
+                  >
+                    choose from {attrs.grailed_category} sizes
+                  </button>
+                )}
+              </>
+            )}
             {/* Track the SOURCE's uncertainty, not whether the field is blank
                 (UX review §4.4): an AI-guessed-but-uncertain size needs the
                 caveat most of all. */}
