@@ -486,7 +486,6 @@ export default function App() {
               next draft" (that click is the per-item manual trigger). */}
           <FillTracker
             items={items}
-            albums={albums}
             selected={selected}
             onFillNext={(id) => {
               setAutoFillId(id);
