@@ -24,5 +24,6 @@ PHASE-0B-FINDINGS.md
 POC-FINDINGS.md
 docs/*
 !docs/SETUP-GUIDE.md
+!docs/ui-improvements/
 CHANGELOG.md
 ROADMAP.md

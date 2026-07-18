@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup — Micro-text contrast pass (before / after)</title>
+<style>
+  :root{
+    --background:220 20% 6.5%; --foreground:218 25% 92%;
+    --card:219 18% 9.5%; --muted-foreground:219 12% 62%;
+    --primary:38 62% 68%; --border:218 30% 88% / 0.09;
+    --secondary:219 16% 13%; --success:165 60% 55%; --warning:41 86% 60%; --accent:219 17% 16%;
+  }
+  body{margin:0;background:hsl(var(--background));color:hsl(var(--foreground));
+    font:14px/1.5 "Space Grotesk",-apple-system,"Segoe UI",Roboto,sans-serif;padding:32px}
+  h1{font-size:18px;margin:0 0 4px} p.note{color:hsl(var(--muted-foreground));font-size:13px;max-width:74ch}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
+  .pane{border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--card));padding:16px}
+  .pane h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:hsl(var(--muted-foreground));margin:0 0 12px}
+  .mono{font-family:"JetBrains Mono",monospace}
+
+  /* --- Sidebar row, translated from Sidebar.tsx:140-210 --- */
+  .srow{display:flex;gap:12px;align-items:center;border-radius:6px;padding:10px;background:hsl(var(--accent)/.7);width:290px}
+  .thumb{width:64px;height:64px;border-radius:6px;border:1px solid hsl(var(--border));background:#333;position:relative;flex-shrink:0}
+  .cnt{position:absolute;bottom:2px;right:2px;background:rgb(0 0 0/.6);border-radius:3px;padding:0 4px;color:#fff}
+  .ttl{font-size:14px;font-weight:500;line-height:1.3}
+  .meta{display:flex;gap:8px;align-items:center;margin-top:4px}
+  .chipStatus{border-radius:6px;padding:0 8px;text-transform:uppercase;letter-spacing:.05em;background:hsl(var(--primary)/.15);color:hsl(var(--primary))}
+  /* board card price line, TriageBoard.tsx:259-280 */
+  .bcard{width:180px;border:1px solid hsl(var(--border));border-radius:8px;background:hsl(var(--card));overflow:hidden;margin-top:16px}
+  .bimg{aspect-ratio:4/5;background:#28303c;position:relative}
+  .bbody{padding:10px}
+  .bttl{font-size:13px;font-weight:500;line-height:1.3;min-height:2.5rem}
+  .brow{display:flex;justify-content:space-between;align-items:center;margin-top:6px}
+
+  /* BEFORE sizes/opacities exactly as shipped */
+  .b .cnt{font-size:9px}
+  .b .chipStatus{font-size:10px}
+  .b .blocker{font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:500;color:hsl(var(--warning))}
+  .b .score{font-size:11px;color:hsl(var(--muted-foreground))}
+  .b .price{font-size:11px;color:hsl(var(--muted-foreground))}
+  .b .aiLabel{font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:hsl(var(--muted-foreground)/.7)}
+  .b .hiddenNote{color:hsl(var(--muted-foreground)/.6);font-size:12px}
+
+  /* AFTER: min 11px, no opacity-modified muted text */
+  .a .cnt{font-size:11px}
+  .a .chipStatus{font-size:11px}
+  .a .blocker{font-size:11px;text-transform:uppercase;letter-spacing:.05em;font-weight:500;color:hsl(var(--warning))}
+  .a .score{font-size:12px;color:hsl(var(--muted-foreground))}
+  .a .price{font-size:12px;color:hsl(var(--muted-foreground))}
+  .a .price b{color:hsl(var(--foreground));font-weight:500}
+  .a .aiLabel{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:hsl(var(--muted-foreground))}
+  .a .hiddenNote{color:hsl(var(--muted-foreground));font-size:12px}
+  code{font:12px "JetBrains Mono",monospace;background:hsl(var(--secondary));padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+<h1>Micro-text contrast &amp; size pass</h1>
+<p class="note">The UI uses 86 arbitrary pixel sizes (43× <code>text-[11px]</code>, 13× <code>text-[10px]</code>,
+4× <code>text-[9px]</code>) and dims several of them further with opacity modifiers
+(<code>text-muted-foreground/60</code>, <code>/70</code>). Muted (62% lightness) at 60-70% opacity over the 6.5% background at
+9-10px is below WCAG AA. Proposed floor: nothing under 11px, no opacity modifiers below <code>/100</code> on muted text; where
+extra de-emphasis is wanted, use size or weight, not transparency. Layout, hierarchy, and copy are unchanged.</p>
+
+<div class="grid">
+  <div class="pane b">
+    <h2>Before — as shipped (9-10px, /60-/70 muted)</h2>
+    <div class="srow">
+      <div class="thumb"><span class="cnt mono">7</span></div>
+      <div>
+        <div class="ttl">Carhartt Detroit Jacket Brown Duck…</div>
+        <div class="meta"><span class="chipStatus">draft</span><span class="blocker">confirm category</span></div>
+      </div>
+    </div>
+    <div class="bcard">
+      <div class="bimg"><span class="cnt mono" style="bottom:4px;right:4px">7</span></div>
+      <div class="bbody">
+        <div class="bttl">Carhartt Detroit Jacket Brown Duck Canvas</div>
+        <div class="brow"><span class="blocker">confirm category</span><span class="score mono">72</span></div>
+        <div class="price mono">$1200 · 14 comps · high</div>
+      </div>
+    </div>
+    <div style="margin-top:14px" class="aiLabel">AI-drafted — glance, correct if wrong</div>
+    <div class="hiddenNote" style="margin-top:6px">(3 items hidden above)</div>
+  </div>
+
+  <div class="pane a">
+    <h2>After — proposed (≥11px, full-opacity muted)</h2>
+    <div class="srow">
+      <div class="thumb"><span class="cnt mono">7</span></div>
+      <div>
+        <div class="ttl">Carhartt Detroit Jacket Brown Duck…</div>
+        <div class="meta"><span class="chipStatus">draft</span><span class="blocker">confirm category</span></div>
+      </div>
+    </div>
+    <div class="bcard">
+      <div class="bimg"><span class="cnt mono" style="bottom:4px;right:4px">7</span></div>
+      <div class="bbody">
+        <div class="bttl">Carhartt Detroit Jacket Brown Duck Canvas</div>
+        <div class="brow"><span class="blocker">confirm category</span><span class="score mono">72</span></div>
+        <div class="price mono"><b>$1,200</b> · 14 comps · high</div>
+      </div>
+    </div>
+    <div style="margin-top:14px" class="aiLabel">AI-drafted — glance, correct if wrong</div>
+    <div class="hiddenNote" style="margin-top:6px">(3 items hidden above)</div>
+  </div>
+</div>
+</body>
+</html>

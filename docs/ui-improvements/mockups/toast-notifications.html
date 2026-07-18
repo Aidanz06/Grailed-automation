@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup — Toast notifications (before / after)</title>
+<style>
+  /* Tokens copied from ui/src/index.css .dark (the default theme) */
+  :root{
+    --background:220 20% 6.5%; --foreground:218 25% 92%;
+    --card:219 18% 9.5%; --muted-foreground:219 12% 62%;
+    --primary:38 62% 68%; --border:218 30% 88% / 0.09;
+    --secondary:219 16% 13%; --success:165 60% 55%; --warning:41 86% 60%;
+    --destructive:0 90% 70%; --radius:0.625rem;
+  }
+  body{margin:0;background:hsl(var(--background));color:hsl(var(--foreground));
+    font:14px/1.5 "Space Grotesk",-apple-system,"Segoe UI",Roboto,sans-serif;padding:32px;}
+  h1{font-size:18px;margin:0 0 4px} p.note{color:hsl(var(--muted-foreground));font-size:13px;max-width:70ch}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
+  .pane{border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--card));padding:16px;position:relative;min-height:340px;overflow:hidden}
+  .pane h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:hsl(var(--muted-foreground));margin:0 0 12px}
+  .badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:99px;margin-left:8px;vertical-align:2px}
+  .badge.before{background:hsl(var(--warning)/.15);color:hsl(var(--warning))}
+  .badge.after{background:hsl(var(--success)/.15);color:hsl(var(--success))}
+  .appmock{position:relative;height:250px;border:1px dashed hsl(var(--border));border-radius:8px;background:hsl(var(--background));}
+  .appmock .hint{position:absolute;top:8px;left:12px;font-size:11px;color:hsl(var(--muted-foreground))}
+  /* BEFORE — exact translation of App.tsx:603-607:
+     fixed bottom-5 left-1/2 max-w-[70%] -translate-x-1/2 rounded-md border bg-card px-4 py-2.5 text-sm shadow-lg */
+  .toast-before{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);max-width:70%;
+    border:1px solid hsl(var(--border));background:hsl(var(--card));border-radius:6px;
+    padding:10px 16px;font-size:14px;box-shadow:0 10px 15px -3px rgb(0 0 0/.3)}
+  .ghost{opacity:.28;bottom:64px;text-decoration:line-through}
+  .annot{position:absolute;font-size:11px;color:hsl(var(--warning));}
+  /* AFTER — stacked, dismissible, aria-live */
+  .stack{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;max-width:75%;width:420px}
+  .toast-after{display:flex;align-items:flex-start;gap:10px;border:1px solid hsl(var(--border));
+    background:hsl(var(--card));border-radius:6px;padding:10px 12px 10px 16px;font-size:14px;
+    box-shadow:0 10px 15px -3px rgb(0 0 0/.3)}
+  .toast-after .x{margin-left:auto;background:none;border:0;color:hsl(var(--muted-foreground));cursor:pointer;font-size:14px;line-height:1;padding:2px}
+  .toast-after .x:hover{color:hsl(var(--foreground))}
+  .toast-after.success{border-left:3px solid hsl(var(--success))}
+  .toast-after.error{border-left:3px solid hsl(var(--destructive))}
+  code{font:12px "JetBrains Mono",monospace;background:hsl(var(--secondary));padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+<h1>Toast notifications</h1>
+<p class="note">Current behavior (<code>App.tsx:62, 603-607</code>): one <code>toastMsg</code> string — a new toast silently
+replaces the previous one mid-read, there is no dismiss control, and no <code>role="status"</code> so screen readers hear nothing.
+Proposed: a small stack (max 3), per-toast dismiss and timeout, <code>aria-live="polite"</code>, and an optional severity accent.</p>
+
+<div class="grid">
+  <div class="pane">
+    <h2>Before — current <span class="badge before">as shipped</span></h2>
+    <div class="appmock">
+      <span class="hint">…app content…</span>
+      <div class="toast-before ghost">Filled title, description, price, photos. Review in Chrome — double-check the cascade…</div>
+      <span class="annot" style="bottom:104px;left:50%;transform:translateX(-50%)">⚠ overwritten after 1s — never finished reading</span>
+      <div class="toast-before">Album update failed: database is locked</div>
+    </div>
+    <p class="note" style="font-size:12px;margin-top:10px">The fill summary (top, struck through) was replaced by an unrelated
+    failure. Auto-dismiss timing is length-based (<code>App.tsx:172</code>) but there's no way to keep or close a toast.</p>
+  </div>
+
+  <div class="pane">
+    <h2>After — proposed <span class="badge after">stacked + dismissible</span></h2>
+    <div class="appmock" aria-live="polite">
+      <span class="hint">…app content…</span>
+      <div class="stack">
+        <div class="toast-after success">
+          <span>Filled title, description, price, photos. Review in Chrome — double-check the cascade fields there.</span>
+          <button class="x" aria-label="dismiss">✕</button>
+        </div>
+        <div class="toast-after error">
+          <span>Album update failed: database is locked</span>
+          <button class="x" aria-label="dismiss">✕</button>
+        </div>
+      </div>
+    </div>
+    <p class="note" style="font-size:12px;margin-top:10px">Both messages survive; each has its own timer and ✕. The container is a
+    single polite live region. Visual language (card, border, shadow, radius) is unchanged from the current toast.</p>
+  </div>
+</div>
+</body>
+</html>

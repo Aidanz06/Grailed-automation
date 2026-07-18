@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup — Visual polish: price formatting + light-theme thumb fallback</title>
+<style>
+  /* Dark tokens (default) */
+  .dark{
+    --background:220 20% 6.5%; --foreground:218 25% 92%;
+    --card:219 18% 9.5%; --muted:219 16% 13%; --muted-foreground:219 12% 62%;
+    --primary:38 62% 68%; --border:218 30% 88% / 0.09; --secondary:219 16% 13%; --success:165 60% 55%;
+  }
+  /* Light tokens copied from :root in ui/src/index.css */
+  .light{
+    --background:40 30% 97%; --foreground:30 12% 12%;
+    --card:0 0% 100%; --muted:40 22% 93%; --muted-foreground:35 8% 44%;
+    --primary:36 52% 38%; --border:35 20% 20% / 0.14; --secondary:40 22% 93%; --success:168 65% 28%;
+  }
+  body{margin:0;font:14px/1.5 "Space Grotesk",-apple-system,"Segoe UI",Roboto,sans-serif;background:#0d1117;color:#dde3ee;padding:32px}
+  h1{font-size:18px;margin:0 0 4px}.note{color:#8b94a7;font-size:13px;max-width:74ch}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
+  .pane{border-radius:12px;padding:16px;background:hsl(var(--background));color:hsl(var(--foreground));border:1px solid hsl(var(--border))}
+  .pane h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:hsl(var(--muted-foreground));margin:0 0 12px}
+  .mono{font-family:"JetBrains Mono",monospace}
+  .lrow{display:flex;gap:12px;align-items:center;border:1px solid hsl(var(--border));background:hsl(var(--card));border-radius:8px;padding:12px;width:330px;margin-bottom:10px}
+  .thumb{width:32px;height:40px;border-radius:4px;flex-shrink:0}
+  .hard{background:#333}                     /* as shipped: hardcoded */
+  .token{background:hsl(var(--muted))}       /* proposed: theme token */
+  .tt{font-size:14px;font-weight:500}
+  .ts{font-size:12px;color:hsl(var(--muted-foreground))}
+  .pr{margin-left:auto;text-align:right;font-size:12px}
+  .pr .v{font-weight:500;font-variant-numeric:tabular-nums}
+  .disp{font-family:Georgia,serif;font-size:26px;color:hsl(var(--primary))}
+  code{font:12px "JetBrains Mono",monospace;background:rgba(128,128,128,.18);padding:1px 5px;border-radius:4px}
+  .cap{font-size:12px;color:hsl(var(--muted-foreground));margin-top:6px}
+</style>
+</head>
+<body>
+<h1>Visual polish: price formatting + thumbnail fallback color</h1>
+<p class="note">Two small, purely visual fixes. <b>1)</b> <code>money()</code> is defined four times as <code>'$' + n</code> —
+no thousands separator, so "$1200" appears on board cards, list rows, and the big serif price. <b>2)</b> The photo-tint fallback
+is a hardcoded <code>'#333'</code> in 7 files — in the <em>light</em> theme it renders as a heavy near-black chip that ignores
+the warm-paper palette. Proposed: one shared <code>money()</code> using <code>toLocaleString</code>, and the fallback becomes
+<code>bg-muted</code> (theme-aware).</p>
+
+<div class="grid">
+  <div class="pane light">
+    <h2>Before — light theme, as shipped</h2>
+    <div class="lrow"><div class="thumb hard"></div><div><div class="tt">Levi's 501 Raw Denim</div><div class="ts">created Jul 12, 2026</div></div>
+      <div class="pr mono"><div class="v">$1080–$1420</div><div class="ts">Edit →</div></div></div>
+    <div class="lrow"><div class="thumb hard"></div><div><div class="tt">Carhartt Detroit Jacket</div><div class="ts">listed Jul 14, 2026</div></div>
+      <div class="pr mono"><div class="v" style="color:hsl(var(--success))">$1200</div><div class="ts">View →</div></div></div>
+    <div class="disp mono" style="font-family:Georgia,serif">$1200</div>
+    <div class="cap">#333 chips fight the warm-paper theme; "$1200" reads slower than "$1,200".</div>
+  </div>
+
+  <div class="pane light">
+    <h2>After — light theme, proposed</h2>
+    <div class="lrow"><div class="thumb token"></div><div><div class="tt">Levi's 501 Raw Denim</div><div class="ts">created Jul 12, 2026</div></div>
+      <div class="pr mono"><div class="v">$1,080–$1,420</div><div class="ts">Edit →</div></div></div>
+    <div class="lrow"><div class="thumb token"></div><div><div class="tt">Carhartt Detroit Jacket</div><div class="ts">listed Jul 14, 2026</div></div>
+      <div class="pr mono"><div class="v" style="color:hsl(var(--success))">$1,200</div><div class="ts">View →</div></div></div>
+    <div class="disp" >$1,200</div>
+    <div class="cap">Fallback uses <code>bg-muted</code> so it follows both themes; one shared <code>money()</code> in
+    <code>lib/utils.ts</code>.</div>
+  </div>
+
+  <div class="pane dark">
+    <h2>Before — dark theme (fallback barely noticeable — why it went unnoticed)</h2>
+    <div class="lrow"><div class="thumb hard"></div><div><div class="tt">Levi's 501 Raw Denim</div><div class="ts">created Jul 12, 2026</div></div>
+      <div class="pr mono"><div class="v">$1080–$1420</div><div class="ts">Edit →</div></div></div>
+  </div>
+
+  <div class="pane dark">
+    <h2>After — dark theme (visually identical by design)</h2>
+    <div class="lrow"><div class="thumb token"></div><div><div class="tt">Levi's 501 Raw Denim</div><div class="ts">created Jul 12, 2026</div></div>
+      <div class="pr mono"><div class="v">$1,080–$1,420</div><div class="ts">Edit →</div></div></div>
+  </div>
+</div>
+</body>
+</html>

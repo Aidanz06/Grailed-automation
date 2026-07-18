@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup — Workspace at 900px (docked-Chrome width)</title>
+<style>
+  :root{
+    --background:220 20% 6.5%; --foreground:218 25% 92%;
+    --card:219 18% 9.5%; --muted-foreground:219 12% 62%;
+    --primary:38 62% 68%; --border:218 30% 88% / 0.09;
+    --secondary:219 16% 13%; --accent:219 17% 16%; --warning:41 86% 60%; --success:165 60% 55%;
+  }
+  body{margin:0;background:hsl(var(--background));color:hsl(var(--foreground));
+    font:14px/1.5 "Space Grotesk",-apple-system,"Segoe UI",Roboto,sans-serif;padding:32px}
+  h1{font-size:18px;margin:0 0 4px} p.note{color:hsl(var(--muted-foreground));font-size:13px;max-width:76ch}
+  .stack{display:flex;flex-direction:column;gap:28px;margin-top:24px}
+  .pane h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:hsl(var(--muted-foreground));margin:0 0 10px}
+  .win{width:900px;border:1px solid hsl(var(--border));border-radius:10px;overflow:hidden;background:hsl(var(--background))}
+  .hdr{display:flex;align-items:center;gap:8px;background:hsl(var(--card));border-bottom:1px solid hsl(var(--border));padding:8px 12px;font-size:12px}
+  /* Sidebar toggle — a ghost icon button in the workspace header (matches the
+     existing ghost Button style: hover bg-accent, h-8). PanelLeft-style glyph. */
+  .pbtn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;
+    color:hsl(var(--muted-foreground));cursor:pointer;font-size:13px;border:0;background:transparent}
+  .pbtn:hover{background:hsl(var(--accent));color:hsl(var(--foreground))}
+  .pbtn.active{color:hsl(var(--primary))}
+  .wordmark{font-family:Georgia,serif;font-size:15px}.wordmark i{color:hsl(var(--primary))}
+  .body{display:grid;height:250px}
+  .sb{background:hsl(var(--card));border-right:1px solid hsl(var(--border));overflow:hidden}
+  .ed{padding:14px;min-width:0}
+  .row{display:flex;gap:10px;align-items:center;padding:8px;border-radius:6px}
+  .row.sel{background:hsl(var(--accent)/.7)}
+  .th{width:64px;height:64px;border-radius:6px;background:#2c3440;flex-shrink:0}
+  /* Photo rail tiles: large 4:5 photos (board-card ratio) so each draft is
+     recognizable at a glance — the photo IS the navigation. */
+  .th.rail{width:96px;height:120px;border-radius:6px;position:relative}
+  .th.rail .st{position:absolute;bottom:4px;left:4px;right:4px;border-radius:4px;padding:1px 4px;
+    font-size:10px;text-transform:uppercase;letter-spacing:.04em;font-weight:600;text-align:center;
+    background:rgb(0 0 0/.55)}
+  .th.rail .st.w{color:hsl(var(--warning))}
+  .th.rail .st.g{color:hsl(var(--success))}
+  .t{font-size:13px;font-weight:500;line-height:1.25}
+  .m{font-size:11px;color:hsl(var(--warning));text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
+  .field{margin-bottom:10px}
+  .fl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:hsl(var(--muted-foreground));margin-bottom:3px}
+  .inp{height:30px;border:1px solid hsl(218 30% 88%/.16);border-radius:6px;background:transparent}
+  .rail{border:1px solid hsl(var(--border));border-radius:10px;background:hsl(var(--card));padding:10px;font-size:11px;color:hsl(var(--muted-foreground))}
+  .b1 .body{grid-template-columns:320px 1fr}
+  .b2 .body{grid-template-columns:116px 1fr}
+  .squeezed{outline:2px dashed hsl(var(--warning)/.5);outline-offset:-2px}
+  code{font:12px "JetBrains Mono",monospace;background:hsl(var(--secondary));padding:1px 5px;border-radius:4px}
+  .cap{font-size:12px;color:hsl(var(--muted-foreground));margin-top:8px;max-width:76ch}
+</style>
+</head>
+<body>
+<h1>Workspace at the docked-Chrome width (900px)</h1>
+<p class="note">The sidebar is a fixed 320px column (<code>App.tsx:496</code>). "Dock Chrome" shrinks the app window toward its
+900px minimum (<code>ui/main.js:612, 642</code>) — exactly when the seller is filling and needs the editor most, the editor pane
+drops to ~580px and the right rail is already stacked below the form (rail breakpoint is <code>lg</code>/1024px). Proposed: the
+sidebar collapses to a ~116px <b>photo rail</b> below ~1100px — large 4:5 photo tiles (same aspect as the board cards) so each
+draft stays instantly recognizable and one click away; the photo itself is the navigation. Titles hide, but the readiness state
+survives as a compact chip on every tile. The editor gains ~200px, and the full sidebar returns at normal widths.
+A <b>toggle button (◧)</b> sits in the workspace header next to "← Home" — the seam between sidebar and editor — so you can
+compact/expand manually at any width; a manual choice overrides the automatic breakpoint and persists
+(<code>tailor.sidebarMode</code>: auto · expanded · compact).</p>
+
+<div class="stack">
+  <div class="pane">
+    <h2>Before — 320px sidebar + ~580px editor when docked</h2>
+    <div class="win b1">
+      <div class="hdr"><span>←&nbsp;Home</span><button class="pbtn" title="Compact the sidebar to a photo rail" aria-label="compact sidebar">◧</button><span class="wordmark">Tailor <i>Studio</i></span><span style="margin-left:auto">Chrome docked · ☀</span></div>
+      <div class="body">
+        <div class="sb">
+          <div class="row sel"><div class="th"></div><div><div class="t">Carhartt Detroit Jacket Brown Duck…</div><div class="m">confirm category</div></div></div>
+          <div class="row"><div class="th"></div><div><div class="t">Nike ACG Fleece Half-Zip Grey</div><div class="m">add size</div></div></div>
+          <div class="row"><div class="th"></div><div><div class="t">Levi's 501 Raw Denim 32×32</div><div class="m" style="color:hsl(var(--success))">ready</div></div></div>
+        </div>
+        <div class="ed squeezed">
+          <div class="field"><div class="fl">Title</div><div class="inp"></div></div>
+          <div class="field"><div class="fl">Description</div><div class="inp" style="height:60px"></div></div>
+          <div class="rail">Listing checklist · Price panel · Fill actions — already stacked <em>below</em> the form at this width; long scroll to reach Fill</div>
+        </div>
+      </div>
+    </div>
+    <div class="cap">Editor gets 900 − 320 = ~580px. The tier-1 three-column band (<code>md:grid-cols-3</code>) is cramped and
+    the fill CTA is below the fold.</div>
+  </div>
+
+  <div class="pane">
+    <h2>After — ~116px photo rail below ~1100px (proposed)</h2>
+    <div class="win b2">
+      <div class="hdr"><span>←&nbsp;Home</span><button class="pbtn active" title="Expand the sidebar (photos + titles)" aria-label="expand sidebar">◨</button><span class="wordmark">Tailor <i>Studio</i></span><span style="margin-left:auto">Chrome docked · ☀</span></div>
+      <div class="body">
+        <div class="sb" style="padding:10px;display:flex;flex-direction:column;gap:10px;align-items:center;overflow-y:auto">
+          <div class="th rail" style="outline:2px solid hsl(var(--primary));background:#3a3128"><span class="st w">category</span></div>
+          <div class="th rail" style="background:#2c3440"><span class="st w">size</span></div>
+          <div class="th rail" style="background:#26323a"><span class="st g">ready</span></div>
+        </div>
+        <div class="ed">
+          <div class="field"><div class="fl">Title</div><div class="inp"></div></div>
+          <div class="field"><div class="fl">Description</div><div class="inp" style="height:60px"></div></div>
+          <div class="rail" style="border-color:hsl(var(--success)/.4)">~780px for the form — the tier-1 band keeps three columns; each draft is still identifiable by its large photo at a glance</div>
+        </div>
+      </div>
+    </div>
+    <div class="cap">Large 4:5 tiles (~96×120px — bigger than the current 64px sidebar thumbs) with the selected draft ringed in
+    brass (existing selection accent) and the top blocker / “ready” as a chip on the photo. Hovering a tile shows the full title
+    via tooltip; clicking navigates as usual. J/K navigation is unchanged.</div>
+  </div>
+</div>
+</body>
+</html>

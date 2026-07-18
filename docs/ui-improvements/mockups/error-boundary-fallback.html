@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mockup — Error boundary fallback (before / after)</title>
+<style>
+  :root{
+    --background:220 20% 6.5%; --foreground:218 25% 92%;
+    --card:219 18% 9.5%; --muted-foreground:219 12% 62%;
+    --primary:38 62% 68%; --primary-foreground:38 65% 10%;
+    --border:218 30% 88% / 0.09; --secondary:219 16% 13%;
+    --destructive:0 90% 70%; --radius:0.625rem;
+  }
+  body{margin:0;background:hsl(var(--background));color:hsl(var(--foreground));
+    font:14px/1.5 "Space Grotesk",-apple-system,"Segoe UI",Roboto,sans-serif;padding:32px}
+  h1{font-size:18px;margin:0 0 4px} p.note{color:hsl(var(--muted-foreground));font-size:13px;max-width:72ch}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
+  .pane{border:1px solid hsl(var(--border));border-radius:12px;background:hsl(var(--card));padding:16px}
+  .pane h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:hsl(var(--muted-foreground));margin:0 0 12px}
+  .screen{height:300px;border-radius:8px;position:relative;overflow:hidden;border:1px solid hsl(var(--border))}
+  /* BEFORE: React unmounts the tree — a packaged Electron app shows a blank page, no console. */
+  .white{background:#fff}
+  .white .caption{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:#999;font-size:13px;font-style:italic}
+  /* AFTER: in-app fallback, header preserved */
+  .screen.after{background:hsl(var(--background));display:flex;flex-direction:column}
+  .hdr{display:flex;align-items:center;gap:8px;border-bottom:1px solid hsl(var(--border));background:hsl(var(--card));padding:8px 12px;font-size:13px}
+  .wordmark{font-family:Georgia,"Instrument Serif",serif;font-size:16px;letter-spacing:-.01em}
+  .wordmark i{color:hsl(var(--primary))}
+  .fb{margin:auto;max-width:420px;text-align:left;border:1px solid hsl(var(--border));border-left:3px solid hsl(var(--destructive));
+    background:hsl(var(--card));border-radius:8px;padding:16px 18px}
+  .fb h3{margin:0 0 6px;font-size:14px}
+  .fb p{margin:0 0 10px;font-size:12px;color:hsl(var(--muted-foreground))}
+  .fb pre{font:11px "JetBrains Mono",monospace;background:hsl(var(--secondary));border-radius:6px;padding:8px 10px;
+    white-space:pre-wrap;color:hsl(var(--destructive));margin:0 0 12px;max-height:64px;overflow:auto}
+  .row{display:flex;gap:8px}
+  .btn{border-radius:6px;font-size:12px;font-weight:500;padding:7px 12px;cursor:pointer;border:1px solid transparent}
+  .btn.primary{background:hsl(var(--primary));color:hsl(var(--primary-foreground))}
+  .btn.outline{background:transparent;border-color:hsl(218 30% 88% / .16);color:hsl(var(--foreground))}
+  code{font:12px "JetBrains Mono",monospace;background:hsl(var(--secondary));padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+<h1>Error boundary fallback</h1>
+<p class="note">There is no React error boundary anywhere in <code>ui/src</code>. Any uncaught render error unmounts the whole
+tree — and the packaged app has <em>no visible console</em> (the codebase itself documents this at <code>lib/utils.ts:40-44</code>),
+so the seller sees a dead white window with no recourse. Proposed: an App-root boundary (plus one around the Editor pane) that
+keeps the chrome alive, shows the real error message per the app's own "every failure must carry the real message" rule, and
+offers Copy + Reload. Copy follows the existing left-accent callout convention.</p>
+
+<div class="grid">
+  <div class="pane">
+    <h2>Before — render error in the packaged app</h2>
+    <div class="screen white"><div class="caption">(blank white window — nothing to click, no error text, restart required)</div></div>
+  </div>
+  <div class="pane">
+    <h2>After — proposed fallback (header survives)</h2>
+    <div class="screen after">
+      <div class="hdr"><span>←&nbsp;Home</span><span class="wordmark">Tailor <i>Studio</i></span></div>
+      <div class="fb">
+        <h3>This screen hit an error</h3>
+        <p>Your drafts are safe — everything is saved in the app's database. Nothing was sent to Grailed.</p>
+        <pre>TypeError: Cannot read properties of null (reading 'title')
+    at DraftEditor (DraftEditor.tsx:86)</pre>
+        <div class="row">
+          <button class="btn primary">Reload this screen</button>
+          <button class="btn outline">Copy error</button>
+          <button class="btn outline">Back to Home</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
