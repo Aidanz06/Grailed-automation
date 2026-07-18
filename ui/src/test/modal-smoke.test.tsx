@@ -13,6 +13,18 @@ beforeEach(() => {
   localStorage.setItem(ONBOARDED_KEY, '1');
 });
 
+describe('StyleEditor (shared Modal)', () => {
+  it('opens from Defaults as a dialog and closes on Escape while clean', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'open defaults' }));
+    fireEvent.click(await screen.findByRole('button', { name: /edit styles/i }));
+    const dialog = await screen.findByRole('dialog', { name: 'Description styles' });
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Description styles' })).toBeNull());
+  });
+});
+
 describe('Onboarding (shared Modal)', () => {
   it('shows on first run as a dialog; Escape ignored; X dismisses', async () => {
     localStorage.removeItem(ONBOARDED_KEY); // simulate first run

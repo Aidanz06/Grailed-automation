@@ -16,6 +16,7 @@ import { ChipTemplateEditor } from '@/components/ChipTemplateEditor';
 import { errorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Modal } from '@/components/Modal';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 /*
@@ -138,11 +139,23 @@ export function StyleEditor({ stylesRaw, onSaved, onClose, toast }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-[8vh]" onMouseDown={onClose}>
-      <div
-        className="rise-in flex max-h-[84vh] w-[860px] max-w-[94vw] flex-col rounded-lg border bg-card p-4 shadow-xl"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
+    // Backdrop/Escape close ONLY while clean (QW-8 condition: dirty template
+    // edits must never be lost to a stray click). Escape first cancels an
+    // active rename — its historical meaning here — before it may close.
+    <Modal
+      title="Description styles"
+      onClose={onClose}
+      closeOnBackdrop={!dirty}
+      closeOnEscape={!dirty}
+      onEscapeCapture={() => {
+        if (renaming !== null) {
+          setRenaming(null);
+          return true;
+        }
+        return false;
+      }}
+      className="rise-in left-1/2 top-[8vh] flex max-h-[84vh] w-[860px] max-w-[94vw] -translate-x-1/2 flex-col rounded-lg border bg-card p-4 shadow-xl"
+    >
         <div className="mb-3 flex items-center gap-2">
           <Pencil className="h-4 w-4 text-primary" />
           <span className="text-sm font-semibold">Description styles</span>
@@ -259,7 +272,6 @@ export function StyleEditor({ stylesRaw, onSaved, onClose, toast }: Props) {
             {saving ? 'Saving…' : `Save “${selected}”`}
           </Button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
