@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
-import { ArrowRight, CircleHelp, ClipboardCheck, Eye, EyeOff, Images, LayoutGrid, Plus, Rows3, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowRight, CircleHelp, ClipboardCheck, Eye, EyeOff, Images, LayoutGrid, Plus, Rows3 } from 'lucide-react';
 import type { Item } from '@/types';
 import type { Album } from '@/lib/api';
 import { CoverThumb } from '@/components/CoverThumb';
+import { TwoStepDelete } from '@/components/TwoStepDelete';
 import { DefaultsMenu } from '@/components/DefaultsMenu';
 import { isTriageDraft, readiness } from '@/lib/readiness';
 import { Button } from '@/components/ui/button';
@@ -21,37 +22,6 @@ type HomeView = 'board' | 'lists';
 
 function EmptyRow({ text }: { text: string }) {
   return <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">{text}</div>;
-}
-
-/** Permanent delete, two-step: first click arms (turns red "Sure?"), second
- * deletes; disarms itself after 3.5s. Sits BESIDE the row button — the whole
- * row is itself a button, so this can't nest inside it. */
-function RowDelete({ title, onDelete }: { title: string; onDelete: () => void }) {
-  const [armed, setArmed] = useState(false);
-  useEffect(() => {
-    if (!armed) return;
-    const t = setTimeout(() => setArmed(false), 3500);
-    return () => clearTimeout(t);
-  }, [armed]);
-  return (
-    <button
-      aria-label={armed ? `confirm delete ${title}` : `delete ${title}`}
-      title={armed ? 'Click again to permanently delete (app only — Grailed is untouched)' : 'Delete this listing from the app'}
-      className={cn(
-        'flex w-9 shrink-0 items-center justify-center rounded-lg border text-muted-foreground transition-colors',
-        armed
-          ? 'border-destructive bg-destructive/15 text-destructive'
-          : 'bg-card hover:border-destructive hover:text-destructive'
-      )}
-      onClick={() => {
-        if (!armed) return setArmed(true);
-        setArmed(false);
-        onDelete();
-      }}
-    >
-      {armed ? <span className="px-1 text-[10px] font-semibold uppercase">Sure?</span> : <Trash2 className="h-4 w-4" />}
-    </button>
-  );
 }
 
 /** The classic Home lists (the pre-board layout, kept reachable behind the
@@ -88,7 +58,7 @@ function HomeLists({ items, onOpenItem, onDeleteItem }: { items: Item[]; onOpenI
                   </div>
                   <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">Review <ArrowRight className="h-3 w-3" /></span>
                 </button>
-                <RowDelete title={it.content?.title ?? 'ungrouped photos'} onDelete={() => onDeleteItem(it.id)} />
+                <TwoStepDelete variant="row" title={it.content?.title ?? 'ungrouped photos'} onDelete={() => onDeleteItem(it.id)} />
               </li>
             ))}
           </ul>
@@ -122,7 +92,7 @@ function HomeLists({ items, onOpenItem, onDeleteItem }: { items: Item[]; onOpenI
                     <div className="flex items-center justify-end gap-1 text-muted-foreground">Edit <ArrowRight className="h-3 w-3" /></div>
                   </div>
                 </button>
-                <RowDelete title={it.content?.title ?? 'draft'} onDelete={() => onDeleteItem(it.id)} />
+                <TwoStepDelete variant="row" title={it.content?.title ?? 'draft'} onDelete={() => onDeleteItem(it.id)} />
               </li>
             ))}
           </ul>
@@ -154,7 +124,7 @@ function HomeLists({ items, onOpenItem, onDeleteItem }: { items: Item[]; onOpenI
                     <div className="flex items-center justify-end gap-1 text-muted-foreground">View <ArrowRight className="h-3 w-3" /></div>
                   </div>
                 </button>
-                <RowDelete title={it.content?.title ?? 'listing'} onDelete={() => onDeleteItem(it.id)} />
+                <TwoStepDelete variant="row" title={it.content?.title ?? 'listing'} onDelete={() => onDeleteItem(it.id)} />
               </li>
             ))}
           </ul>

@@ -6,6 +6,7 @@ import { suggestGrailedCategory } from '@/lib/grailedCategory';
 import { activeTemplate, finalizeDescription } from '@/lib/description';
 import { agoLabel, cn, errorMessage, isCollabBrand, money, primaryBrand } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { SaveChip } from '@/components/SaveChip';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -609,18 +610,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
             AI-drafted — glance, correct if wrong
           </span>
           <span className="flex-1" />
-          {saveState !== 'idle' && (
-            <span
-              className={cn(
-                'rounded-md border px-2 py-0.5 text-xs transition-colors duration-300',
-                saveState === 'saving'
-                  ? 'border-success/50 bg-transparent text-muted-foreground'
-                  : 'border-success bg-success/20 text-success'
-              )}
-            >
-              {saveState === 'saving' ? 'Saving…' : `Saved ${lastSavedAt ? agoLabel(lastSavedAt, now) : ''}`.trim()}
-            </span>
-          )}
+          <SaveChip state={saveState} savedLabel={`Saved ${lastSavedAt ? agoLabel(lastSavedAt, now) : ''}`.trim()} />
           <Button variant="outline" size="sm" disabled={item.regenerating} onClick={regenerate}>
             <RefreshCw className={item.regenerating ? 'animate-spin' : ''} />
             {item.regenerating ? 'regenerating…' : 'Regenerate'}

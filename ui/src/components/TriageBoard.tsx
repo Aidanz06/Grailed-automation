@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
-import { CheckCircle2, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { CheckCircle2 } from 'lucide-react';
 import type { Item } from '@/types';
 import type { Album } from '@/lib/api';
 import { GRAILED_PHOTO_LIMIT, triageSort } from '@/lib/readiness';
 import { quality, qualityTitle, type Quality, type QualityState } from '@/lib/quality';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CoverThumb } from '@/components/CoverThumb';
+import { TwoStepDelete } from '@/components/TwoStepDelete';
 import { cn, money } from '@/lib/utils';
 
 /*
@@ -38,39 +39,6 @@ const FILTERS: Array<{ key: BoardFilter; label: string }> = [
   { key: 'ready', label: 'Ready' },
   { key: 'listed', label: 'Listed' },
 ];
-
-/** Two-step permanent delete (same contract as the old Home rows): first
- * click arms, second deletes, disarms after 3.5s. App-DB only — Grailed and
- * the photo files are untouched. Overlaid on the card photo; a sibling of the
- * card button (a button can't nest in a button). */
-function CardDelete({ title, onDelete }: { title: string; onDelete: () => void }) {
-  const [armed, setArmed] = useState(false);
-  useEffect(() => {
-    if (!armed) return;
-    const t = setTimeout(() => setArmed(false), 3500);
-    return () => clearTimeout(t);
-  }, [armed]);
-  return (
-    <button
-      aria-label={armed ? `confirm delete ${title}` : `delete ${title}`}
-      title={armed ? 'Click again to permanently delete (app only — Grailed is untouched)' : 'Delete this listing from the app'}
-      className={cn(
-        'absolute right-1.5 top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-md border transition-all',
-        armed
-          ? 'border-destructive bg-destructive/90 text-white opacity-100'
-          : 'border-border bg-card/90 text-muted-foreground opacity-0 backdrop-blur-sm hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100'
-      )}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (!armed) return setArmed(true);
-        setArmed(false);
-        onDelete();
-      }}
-    >
-      {armed ? <span className="text-[9px] font-semibold uppercase">Sure?</span> : <Trash2 className="h-3.5 w-3.5" />}
-    </button>
-  );
-}
 
 /** The state/next-step line on a card — Ready, listed, or the top blocker. */
 function StateLine({ item, q }: { item: Item; q: Quality }) {
@@ -197,7 +165,7 @@ export function TriageBoard({ items, albums, initialAlbumId, onOpenItem, onDelet
             const title = it.content?.title;
             return (
               <li key={it.id} className="group relative">
-                <CardDelete title={title ?? 'ungrouped photos'} onDelete={() => onDeleteItem(it.id)} />
+                <TwoStepDelete variant="card" title={title ?? 'ungrouped photos'} onDelete={() => onDeleteItem(it.id)} />
                 <button
                   onClick={() => onOpenItem(it.id)}
                   className={cn(

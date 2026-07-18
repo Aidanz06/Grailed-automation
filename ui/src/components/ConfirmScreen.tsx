@@ -6,6 +6,7 @@ import { readiness } from '@/lib/readiness';
 import { matchShortcut } from '@/lib/shortcuts';
 import { cn, errorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { SaveChip } from '@/components/SaveChip';
 import { CoverThumb } from '@/components/CoverThumb';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -142,16 +143,7 @@ export function ConfirmScreen({ drafts, toast, onOpenItem, onDone }: Props) {
               : `${remaining} of ${queue.length} still need${remaining === 1 ? 's' : ''} attention`}
         </span>
         <span className="flex-1" />
-        {saveState !== 'idle' && (
-          <span
-            className={cn(
-              'rounded-md border px-2 py-0.5 text-xs transition-colors duration-300',
-              saveState === 'saving' ? 'border-success/50 text-muted-foreground' : 'border-success bg-success/20 text-success'
-            )}
-          >
-            {saveState === 'saving' ? 'Saving…' : 'Saved'}
-          </span>
-        )}
+        <SaveChip state={saveState} />
         <ThemeToggle />
       </header>
 
