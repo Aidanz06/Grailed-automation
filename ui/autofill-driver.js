@@ -236,6 +236,23 @@ const menuItemsExpr = () => `(() => {
   return { count: items.length, texts: items.map((el) => (el.textContent || '').trim()).slice(0, 40) };
 })()`;
 
+// Real-click fallback for the category trigger: it usually sits above the
+// fold (negative viewport y), so scroll it on-screen first, then report its
+// center for a genuine CDP Input mouse click — the same fallback
+// selectDropdown has always had, which the nested picker lacked (found live
+// 2026-07-18: a re-open right after a closed menu is swallowed by Radix's
+// teardown, and the synthetic-only path had no second chance).
+const categoryTriggerRectExpr = () => `(() => {
+  const btns = Array.from(document.querySelectorAll('button,[role="button"],[role="combobox"]'));
+  const ownText = (b) => (b.textContent || '').trim();
+  const trig = btns.find((b) => ownText(b).toLowerCase() === 'department / category')
+    || btns.find((b) => / \\/ /.test(ownText(b)) && b.getAttribute('aria-haspopup') === 'menu');
+  if (!trig) return { ok: false, reason: 'category trigger not found' };
+  trig.scrollIntoView({ block: 'center' });
+  const r = trig.getBoundingClientRect();
+  return { ok: true, x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) };
+})()`;
+
 // Autocomplete (country of origin) — technique proven live 2026-07-03 (see
 // grailed-selectors.json): free text does NOT persist and synthetic pointer
 // events on the suggestion do nothing. Clear + focus, then REAL typing
@@ -570,6 +587,34 @@ async function connect({ freshTab = false } = {}) {
     await sleep(500);
 
     let items = await evaluate(menuItemsExpr(), `selectNestedCategory(open)`);
+    if (items.count === 0) {
+      // Radix swallows an open that lands while the previous menu is still
+      // tearing down (found live 2026-07-18: any failed/closed category
+      // interaction followed by an immediate re-open). Reset, wait out the
+      // teardown, re-open synthetically; if still shut, scroll the trigger
+      // on-screen and real-click it (selectDropdown's proven fallback).
+      await pressEscape();
+      await sleep(600);
+      const again = await evaluate(openCategoryExpr(wantLabel), `selectNestedCategory(reopen)`);
+      if (again.ok && again.alreadySet) return { ok: true, alreadySet: true, triggerLabel: again.trigger.text };
+      if (again.ok) {
+        await sleep(500);
+        items = await evaluate(menuItemsExpr(), `selectNestedCategory(reopen)`);
+      }
+      if (items.count === 0) {
+        const rect = await evaluate(categoryTriggerRectExpr(), `selectNestedCategory(realclick)`);
+        if (rect.ok) {
+          await sleep(300); // let scrollIntoView settle before coords are used
+          const at = await evaluate(categoryTriggerRectExpr(), `selectNestedCategory(realclick)`);
+          const { x, y } = at.ok ? at : rect;
+          await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x, y });
+          await client.Input.dispatchMouseEvent({ type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
+          await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+          await sleep(500);
+          items = await evaluate(menuItemsExpr(), `selectNestedCategory(realclick)`);
+        }
+      }
+    }
     if (items.count === 0) return { ok: false, reason: 'category menu did not open' };
 
     // At the department level? (items include Menswear/Womenswear.) If so, click
