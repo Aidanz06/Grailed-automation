@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { BatchProgressBar } from '@/components/BatchProgressBar';
 import { ToastStack, appendToast, type Toast } from '@/components/ToastStack';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export type Selection = number | 'import';
 export type View = 'home' | 'workspace' | 'confirm';
@@ -361,6 +362,9 @@ export default function App() {
   }, [view, selected, items, paletteOpen]);
 
   return (
+    // Root boundary (M-5): a render crash anywhere shows a recoverable
+    // fallback instead of a dead white window (packaged app has no console).
+    <ErrorBoundary>
     <div className="flex h-full flex-col">
       {circuitOpen && (
         <div className="border-b border-destructive/50 bg-destructive/15 px-4 py-2 text-center text-[13px] font-medium text-destructive">
@@ -498,6 +502,9 @@ export default function App() {
           />
           <div className="grid min-h-0 flex-1 grid-cols-[320px_1fr]">
             <Sidebar items={items} selected={selected} onSelect={setSelected} updateItem={updateItem} toast={setToastMsg} />
+            {/* Editor-pane boundary (M-5): the most state-dense surface. Keyed
+                to the selection so J/K-ing to another draft self-recovers. */}
+            <ErrorBoundary resetKey={String(selected)} onBackHome={() => { setBoardAlbum(null); setView('home'); }}>
             <Editor
               selection={selected}
               item={selectedItem}
@@ -558,6 +565,7 @@ export default function App() {
                 });
               }}
             />
+            </ErrorBoundary>
           </div>
         </div>
       )}
@@ -605,5 +613,6 @@ export default function App() {
 
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
     </div>
+    </ErrorBoundary>
   );
 }
