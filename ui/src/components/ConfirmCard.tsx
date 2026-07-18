@@ -11,6 +11,7 @@ import { CoverThumb } from '@/components/CoverThumb';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CategorySelect } from '@/components/CategorySelect';
 import { AnimatedCheck } from '@/components/motion';
 import { ConditionChips } from '@/components/ConditionChips';
 
@@ -67,7 +68,6 @@ export function ConfirmCard({ item, fillOptions, pendingCatKey, onPendingCat, re
   // confirmed value — it only changes when a NEW pick is confirmed.
   const [catEditing, setCatEditing] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const catPairs = Object.entries(fillOptions.categoryTree).flatMap(([dept, cats]) => cats.map((cat) => ({ dept, cat })));
   const pendingKey = pendingCatKey || (suggestion ? `${suggestion.department}||${suggestion.category}` : '');
   const soldMedian = item.range?.soldMedian ?? null;
   const floor = attrs.smart_pricing_enabled ? attrs.smart_pricing_floor ?? null : null;
@@ -207,18 +207,12 @@ export function ConfirmCard({ item, fillOptions, pendingCatKey, onPendingCat, re
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Select value={pendingKey || undefined} onValueChange={onPendingCat}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="choose category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {catPairs.map(({ dept, cat }) => (
-                    <SelectItem key={`${dept}||${cat}`} value={`${dept}||${cat}`}>
-                      {dept} › {cat}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CategorySelect
+                categoryTree={fillOptions.categoryTree}
+                value={pendingKey || undefined}
+                onValueChange={onPendingCat}
+                triggerClassName="flex-1"
+              />
               <Button
                 size="sm"
                 disabled={!pendingKey}

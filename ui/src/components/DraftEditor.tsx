@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CategorySelect } from '@/components/CategorySelect';
 import { PhotoRow } from '@/components/PhotoRow';
 import { TagEditor } from '@/components/TagEditor';
 import { DetailPanel } from '@/components/DetailPanel';
@@ -271,13 +272,6 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
     setPendingCat(attrs.grailed_category || suggestion?.category || '');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.id, confirmed]);
-  // Flattened Department › Category pairs for the single combined picker
-  // (audit §2.3): one control instead of two selects, seeded from the
-  // suggestion. The staged gate is unchanged — confirmCategory still sets the
-  // cascade fields only on an explicit Confirm.
-  const catPairs = Object.entries(fillOptions.categoryTree).flatMap(([dept, cats]) =>
-    cats.map((cat) => ({ dept, cat }))
-  );
   const confirmCategory = () => {
     if (!pendingDept || !pendingCat) return;
     update((d) => {
@@ -867,25 +861,17 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
               <div className="mb-2 flex flex-wrap items-end gap-3">
                 <div className="flex min-w-[260px] flex-col gap-1">
                   <span className={FIELD_LABEL_CLS}>Department › Category</span>
-                  <Select
+                  {/* Grouped picker only — the staged gate below (Confirm for
+                      autofill) is what actually writes the cascade fields. */}
+                  <CategorySelect
+                    categoryTree={fillOptions.categoryTree}
                     value={pendingDept && pendingCat ? `${pendingDept}||${pendingCat}` : undefined}
                     onValueChange={(v) => {
                       const [d, c] = v.split('||');
                       setPendingDept(d);
                       setPendingCat(c);
                     }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="choose category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {catPairs.map(({ dept, cat }) => (
-                        <SelectItem key={`${dept}||${cat}`} value={`${dept}||${cat}`}>
-                          {dept} › {cat}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  />
                 </div>
                 <Button size="sm" disabled={!pendingDept || !pendingCat} onClick={confirmCategory}>
                   Confirm for autofill
