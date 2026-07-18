@@ -257,13 +257,16 @@ const acFocusExpr = (sel, want, checkAlready) => `(() => {
   return { ok: true, focused: document.activeElement === el };
 })()`;
 
-const acRectExpr = (sel, want) => `(() => {
+const acRectExpr = (sel, want, fallbackWant) => `(() => {
   const el = document.querySelector(${JSON.stringify(sel)});
   const container = el.closest('div.section') || el.parentElement;
   const items = Array.from(container.querySelectorAll('li'));
-  // NBSP + doubled whitespace appear in suggestion labels — normalize both
-  // sides or an exact brand ("Louis Vuitton") can miss its own suggestion.
-  const norm = (s) => String(s || '').replace(/\\u00a0/g, ' ').replace(/\\s+/g, ' ').trim().toLowerCase();
+  // NBSP + doubled whitespace appear in suggestion labels, and Grailed's
+  // designer entries are unaccented ("Comme des Garcons") while the pipeline
+  // emits accented brands ("Comme des Garçons") — fold diacritics on BOTH
+  // sides or the right suggestion on screen never matches (found live
+  // 2026-07-18 via the designer probe).
+  const norm = (s) => String(s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/\\u00a0/g, ' ').replace(/\\s+/g, ' ').trim().toLowerCase();
   const w = norm(${JSON.stringify(want)});
   // §K collab matching: "Supreme x Nike" must find "Supreme X Nike" /
   // "Nike x Supreme" / "Supreme/Nike" — compare token SETS with the collab
@@ -274,15 +277,29 @@ const acRectExpr = (sel, want) => `(() => {
   // texts = the settle signature (bug G): the caller clicks only once the
   // suggestion list reports the SAME items on two consecutive polls.
   const texts = items.map((li) => norm(li.textContent)).slice(0, 15);
-  const item = items.find((li) => norm(li.textContent) === w)
+  // Match priority: the full want (exact → substring → token set), then —
+  // collab attempts only — the primary-brand fragment. Grailed has NO "A x B"
+  // designer entries (probed live 2026-07-18: every variant returns only the
+  // "Designer not listed" row), so when the full collab can't match, selecting
+  // the primary brand IS the correct Grailed behavior — items list under the
+  // primary designer; the collab belongs in the title/description.
+  const fb = ${JSON.stringify(fallbackWant ? fallbackWant : null)};
+  const fbw = fb ? norm(fb) : null;
+  let usedFallback = false;
+  let item = items.find((li) => norm(li.textContent) === w)
     || items.find((li) => norm(li.textContent).includes(w))
     || (wt.length > 1
       ? items.find((li) => { const lt = toks(li.textContent); return wt.every((t) => lt.includes(t)); })
       : null);
+  if (!item && fbw) {
+    item = items.find((li) => norm(li.textContent) === fbw)
+      || items.find((li) => norm(li.textContent).includes(fbw));
+    if (item) usedFallback = true;
+  }
   if (!item) return { ok: false, reason: 'no matching suggestion', want: ${JSON.stringify(want)}, texts, available: items.map((li) => (li.textContent || '').trim()).slice(0, 10) };
   item.scrollIntoView({ block: 'center' });
   const r = item.getBoundingClientRect();
-  return { ok: true, x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2), text: (item.textContent || '').trim(), texts };
+  return { ok: true, usedFallback, x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2), text: (item.textContent || '').trim(), texts };
 })()`;
 
 // Native checkbox set-to-state (Smart Pricing toggle, plan §I). Idempotent:
@@ -313,6 +330,18 @@ const acClearExpr = (sel) => `(() => {
   el.blur();
   return { cleared: true };
 })()`;
+
+// §K collabs: split "A x B" / "A × B" / "A/B" / "A & B" into parts. The FIRST
+// part is the primary brand — the twin of ui/main.js primaryBrand() and
+// pipeline/priceProvider.js buildNarrowQueryText(), and the entry Grailed
+// actually lists collab items under (no "A x B" designer entries exist —
+// probed live 2026-07-18). Exported for offline unit tests.
+function collabParts(value) {
+  return String(value || '')
+    .split(/\s+x\s+|\s*[×/&+]\s*/i)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
 
 class AutofillAbort extends Error {
   constructor(message, signals) {
@@ -618,23 +647,26 @@ async function connect({ freshTab = false } = {}) {
   // half-entered. Timings live in grailed-selectors.json autocompletes._timing.
   async function fillAutocomplete(sel, value) {
     const want = String(value).replace(/\s+/g, ' ').trim();
-    // Case/whitespace-insensitive: the input may canonicalize the suggestion
-    // ("LOUIS VUITTON" chip vs clicked "Louis Vuitton") — that's still a fill.
-    const norm = (s) => String(s || '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+    // Case/whitespace/diacritic-insensitive: the input may canonicalize the
+    // suggestion ("LOUIS VUITTON" chip vs clicked "Louis Vuitton"), and
+    // Grailed's entries are unaccented while pipeline brands may carry accents
+    // ("Comme des Garçons" → "Comme des Garcons") — that's still a fill.
+    const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
     const t = (selectors.autocompletes && selectors.autocompletes._timing) || {};
     const pollMs = t.pollMs ?? 500;
     const pollTries = t.pollTries ?? 8; // ≈4s suggestion budget per attempt (the proven flow's budget, unchanged)
     const attempts = 1 + (t.retries ?? 2);
     const backoffMs = t.retryBackoffMs ?? 700;
 
-    // §K collab fallback: Grailed's designer lookup often returns NOTHING for
-    // a full "A x B" collab typed verbatim (label order/format differs — e.g.
-    // the entry is "Nike x Stussy"), so the right suggestion never renders and
-    // token matching has nothing to match. Retries type only the LONGEST
-    // collab part ("Stussy x Nike" → "Stussy") to surface the list, while
-    // acRectExpr keeps matching against the FULL want (token-set match).
-    const collabParts = want.split(/\s+x\s+|\s*[×/&+]\s*/i).map((s) => s.trim()).filter(Boolean);
-    const collabFragment = collabParts.length > 1 ? [...collabParts].sort((a, b) => b.length - a.length)[0] : null;
+    // §K collab fallback, corrected 2026-07-18: Grailed's designer lookup has
+    // NO "A x B" entries at all (probed live — every variant returns only the
+    // "Designer not listed" row), so demanding both collab tokens match was a
+    // guaranteed failure. Retries type the PRIMARY brand (first collab part —
+    // Grailed lists collab items under the primary designer) and acRectExpr
+    // accepts it as a fallback match when the full want isn't on offer; the
+    // result carries a note so the checklist says what was actually selected.
+    const parts = collabParts(want);
+    const collabFragment = parts.length > 1 ? parts[0] : null;
 
     let lastFail = { ok: false, reason: 'no matching suggestion' };
     for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -671,9 +703,12 @@ async function connect({ freshTab = false } = {}) {
       let rect = { ok: false, reason: 'no matching suggestion' };
       let lastRead = rect; // last poll regardless of match — carries what WAS shown
       let lastSig = null;
+      // Fragment attempts may accept the primary brand alone — the full want
+      // still matches first when Grailed does offer it.
+      const fallbackWant = typed === collabFragment ? collabFragment : null;
       for (let i = 0; i < pollTries; i++) {
         await sleep(pollMs);
-        const r = await evaluate(acRectExpr(sel, want), `fillAutocomplete(${sel})`);
+        const r = await evaluate(acRectExpr(sel, want, fallbackWant), `fillAutocomplete(${sel})`);
         lastRead = r;
         const sig = JSON.stringify(r.texts || []);
         if (r.ok && sig === lastSig) {
@@ -701,8 +736,23 @@ async function connect({ freshTab = false } = {}) {
         `fillAutocomplete(${sel})`
       );
       await assertClean(`fillAutocomplete(${sel})`);
-      const ok = norm(got) === norm(rect.text) || (!!got && norm(got).includes(norm(want)));
-      if (ok) return { ok: true, value: got, clicked: rect.text, attempt };
+      const ok =
+        norm(got) === norm(rect.text) ||
+        (!!got && norm(got).includes(norm(rect.usedFallback ? collabFragment : want)));
+      if (ok) {
+        return {
+          ok: true,
+          value: got,
+          clicked: rect.text,
+          attempt,
+          ...(rect.usedFallback
+            ? {
+                usedFallback: true,
+                note: `“${want}” isn't a Grailed designer entry — selected the primary brand “${rect.text}”; put the collab in the title/description`,
+              }
+            : {}),
+        };
+      }
       // The click didn't commit (the reported bug) — record why, retry clean.
       lastFail = {
         ok: false,
@@ -869,7 +919,9 @@ async function fillListing(fields, onProgress) {
         if (timer) clearTimeout(timer);
       }
       results[field] = r;
-      notify({ kind: 'field', field, status: r.skipped ? 'skipped' : r.ok ? 'ok' : 'failed', reason: r.reason });
+      // r.note = an ok-with-caveat (e.g. collab designer → primary brand) —
+      // surface it on the checklist so the substitution is visible pre-review.
+      notify({ kind: 'field', field, status: r.skipped ? 'skipped' : r.ok ? 'ok' : 'failed', reason: r.reason || r.note });
       return r;
     };
     // §K: photos FIRST (see plan above) — runs right after the fresh-form
@@ -981,7 +1033,7 @@ async function fillListing(fields, onProgress) {
 
 // getJSON/portUp/sellTarget are shared with ui/chrome-dock.js (window
 // choreography uses the same :9222 endpoint but a browser-level connection).
-module.exports = { connect, fillListing, AutofillAbort, getJSON, portUp, sellTarget, openFreshSellTab, PORT, isFirstParty403 };
+module.exports = { connect, fillListing, AutofillAbort, getJSON, portUp, sellTarget, openFreshSellTab, PORT, isFirstParty403, collabParts };
 
 // ---------------------------------------------------------------- CLI test modes
 // Live per-primitive verification without the app. Prereq: `npm run 0b:launch`,

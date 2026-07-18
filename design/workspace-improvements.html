@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tailor Studio — Workspace (3-column) small improvements</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Geist:wght@400;500;600&family=Hanken+Grotesk:wght@400;500;600&family=Manrope:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { background:#E8E8E8; }
+  body { padding:40px 0 80px; font-family:-apple-system,Inter,sans-serif; }
+  .intro { max-width:1240px; margin:0 auto 16px; padding:0 8px; }
+  .intro h1 { font-size:20px; font-weight:600; margin-bottom:6px; color:#222; }
+  .intro p { font-size:14px; color:#555; line-height:1.5; }
+  .controls { max-width:1240px; margin:0 auto 14px; padding:0 8px; display:flex; gap:18px; flex-wrap:wrap; align-items:center; }
+  .controls .grp { display:flex; gap:6px; align-items:center; }
+  .controls .lbl { font-size:12px; color:#777; font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
+  .controls button { font:500 13px inherit; padding:7px 14px; border-radius:8px; border:1px solid #bbb; background:#fff; cursor:pointer; }
+  .controls button.on { background:#222; color:#fff; border-color:#222; }
+
+  /* ===== base = CURRENT app (exact .dark tokens) ===== */
+  .root {
+    --bg:hsl(220 20% 6.5%); --card:hsl(219 18% 9.5%); --raised:hsl(219 16% 13%);
+    --fg:hsl(218 25% 92%); --muted:hsl(219 12% 62%);
+    --line:hsl(218 30% 88% / 0.09); --input:hsl(218 30% 88% / 0.16);
+    --primary:hsl(38 62% 68%); --primary-fg:hsl(38 65% 10%); --primary-dim:hsl(38 62% 68% / 0.15);
+    --success:hsl(165 60% 55%); --success-dim:hsl(165 60% 55% / 0.15);
+    --warning:hsl(41 86% 60%); --warning-dim:hsl(41 86% 60% / 0.15);
+    --accentbg:hsl(219 17% 16%);
+    --font-ui:'Space Grotesk',sans-serif; --shadow:none; --shadow-up:none;
+    --fs-badge:10px; --fs-block:10px; --fs-label:10px; --fs-side-title:14px; --tt:uppercase; --ls:.06em;
+    --ease:cubic-bezier(.2,.7,.3,1);
+  }
+  /* ===== small improvements ON (presentation only) ===== */
+  .root[data-imp="on"] {
+    --card:hsl(219 18% 10.5%); --raised:hsl(219 16% 14.5%);
+    --muted:hsl(219 13% 72%);
+    --line:hsl(218 30% 88% / 0.14); --input:hsl(218 30% 88% / 0.22);
+    --success:hsl(165 60% 58%); --warning:hsl(41 86% 62%);
+    --shadow:0 1px 2px rgba(0,0,0,.3); --shadow-up:0 10px 28px rgba(0,0,0,.45);
+    --fs-badge:11.5px; --fs-block:11.5px; --fs-label:11px; --fs-side-title:14px; --tt:none; --ls:0;
+  }
+  .root[data-mode="light"] {
+    --bg:hsl(40 30% 97%); --card:hsl(0 0% 100%); --raised:hsl(40 22% 93%);
+    --fg:hsl(30 12% 12%); --muted:hsl(35 8% 44%);
+    --line:hsl(35 20% 20% / 0.14); --input:hsl(35 20% 20% / 0.2);
+    --primary:hsl(36 52% 38%); --primary-fg:hsl(40 40% 98%); --primary-dim:hsl(36 52% 38% / 0.1);
+    --success:hsl(168 65% 28%); --success-dim:hsl(168 65% 28% / 0.12);
+    --warning:hsl(32 90% 38%); --warning-dim:hsl(32 90% 38% / 0.12);
+    --accentbg:hsl(40 25% 90%);
+  }
+  .root[data-mode="light"][data-imp="on"] { --muted:hsl(35 8% 38%); --line:hsl(35 20% 20% / 0.16); --input:hsl(35 20% 20% / 0.24); --shadow:0 1px 2px rgba(60,45,20,.06); --shadow-up:0 10px 28px rgba(60,45,20,.13); }
+  .root[data-font="geist"] { --font-ui:'Geist',sans-serif; }
+  .root[data-font="hanken"] { --font-ui:'Hanken Grotesk',sans-serif; }
+  .root[data-font="manrope"] { --font-ui:'Manrope',sans-serif; }
+
+  .frame { max-width:1240px; margin:0 auto; border-radius:10px; overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,.18); }
+  .root { background:var(--bg); color:var(--fg); font-family:var(--font-ui); font-size:14px; }
+  .titlebar { height:34px; display:flex; align-items:center; padding:0 14px; gap:7px; border-bottom:1px solid var(--line); background:var(--card); }
+  .dot { width:11px; height:11px; border-radius:50%; opacity:.85; }
+  .root[data-imp="on"] :focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+  svg.ic { width:15px; height:15px; stroke:currentColor; stroke-width:1.8; fill:none; stroke-linecap:round; stroke-linejoin:round; display:inline-block; vertical-align:-3px; }
+
+  header.ws { display:flex; align-items:center; gap:8px; border-bottom:1px solid var(--line); background:var(--card); padding:10px 12px; }
+  .wordmark { font-family:'Instrument Serif',serif; font-size:18px; letter-spacing:-.01em; margin:0 4px; }
+  .wordmark i { font-style:italic; color:var(--primary); }
+  .root[data-imp="on"] .wordmark { font-family:var(--font-ui); font-weight:600; font-size:15.5px; }
+  .root[data-imp="on"] .wordmark i { font-style:normal; }
+  .ghost { font:500 12.5px var(--font-ui); color:var(--muted); background:none; border:none; border-radius:6px; padding:6px 10px; cursor:pointer; transition:all .13s var(--ease); }
+  .ghost:hover { background:var(--accentbg); color:var(--fg); }
+  .root[data-imp="on"] .ghost { border:1px solid transparent; }
+  .root[data-imp="on"] .ghost:hover { border-color:var(--input); transform:translateY(-1px); }
+  .root[data-imp="on"] .ghost:active { transform:scale(.96); }
+  .spacer { flex:1; }
+  .chip-ok { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--success); background:var(--success-dim); border-radius:999px; padding:4px 11px; }
+  .chip-ok::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
+  .dock { font:500 12.5px var(--font-ui); color:var(--fg); background:var(--raised); border:1px solid var(--input); border-radius:8px; padding:6px 11px; cursor:pointer; transition:all .13s var(--ease); }
+  .root[data-imp="on"] .dock { box-shadow:var(--shadow); }
+  .root[data-imp="on"] .dock:hover { transform:translateY(-1px); }
+
+  .tracker { display:flex; align-items:center; gap:14px; padding:7px 16px; border-bottom:1px solid var(--line); background:var(--card); font-size:12px; color:var(--muted); }
+  .tracker b { color:var(--fg); font-weight:500; }
+  .tracker .bar { flex:1; max-width:220px; height:5px; border-radius:3px; background:var(--raised); overflow:hidden; }
+  .tracker .bar span { display:block; height:100%; width:33%; border-radius:3px; background-image:linear-gradient(90deg,hsl(165 60% 55%),var(--primary)); }
+  .root[data-imp="on"] .tracker .bar span { box-shadow:0 0 10px hsl(38 62% 68% / .45); }
+  .tracker .next { font:500 12px var(--font-ui); color:var(--primary); background:var(--primary-dim); border:none; border-radius:6px; padding:5px 11px; cursor:pointer; transition:all .13s var(--ease); }
+  .root[data-imp="on"] .tracker .next:hover { transform:translateY(-1px); }
+
+  .cols { display:grid; grid-template-columns:320px minmax(0,1fr); min-height:640px; }
+
+  /* ===== sidebar ===== */
+  aside.side { border-right:1px solid var(--line); background:var(--card); display:flex; flex-direction:column; }
+  .side-head { display:flex; justify-content:space-between; padding:10px 16px; border-bottom:1px solid var(--line); font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+  .side-filters { display:flex; gap:4px; padding:6px; border-bottom:1px solid var(--line); }
+  .side-filters button { font:400 11px var(--font-ui); color:var(--muted); background:none; border:none; border-radius:6px; padding:4px 8px; cursor:pointer; transition:all .13s var(--ease); }
+  .side-filters button:hover { background:var(--accentbg); }
+  .side-filters button.on { background:var(--primary-dim); color:var(--primary); font-weight:500; }
+  .root[data-imp="on"] .side-filters button { font-size:12px; border-radius:999px; padding:4px 11px; }
+  .root[data-imp="on"] .side-filters button.on { background:var(--primary); color:var(--primary-fg); }
+  .rows { padding:6px; list-style:none; overflow:auto; flex:1; }
+  .newbatch { display:flex; align-items:center; justify-content:center; gap:6px; width:100%; font:400 13px var(--font-ui); color:var(--muted); background:none; border:1px dashed var(--input); border-radius:6px; padding:10px; cursor:pointer; margin-bottom:6px; transition:all .13s var(--ease); }
+  .newbatch:hover { border-color:var(--primary); color:var(--fg); }
+  .row { position:relative; display:flex; gap:10px; align-items:center; width:100%; background:none; border:1px solid transparent; border-radius:6px; padding:9px 9px 9px 12px; cursor:pointer; text-align:left; color:var(--fg); font-family:var(--font-ui); transition:background .13s var(--ease); }
+  .row:hover { background:var(--accentbg); }
+  .row.sel { background:var(--accentbg); }
+  .row .accent { position:absolute; left:0; top:8px; bottom:8px; width:3px; border-radius:2px; background:var(--primary); opacity:0; transform:translateX(-4px); transition:all .3s var(--ease); }
+  .row.sel .accent { opacity:1; transform:none; }
+  .root[data-imp="on"] .row.sel { border-color:var(--line); box-shadow:var(--shadow); }
+  .thumb { position:relative; width:56px; height:56px; flex:none; border-radius:6px; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:24px; }
+  .thumb .np { position:absolute; bottom:2px; right:2px; font-family:'JetBrains Mono'; font-size:9px; color:#fff; background:rgba(0,0,0,.6); border-radius:3px; padding:0 3px; }
+  .root[data-imp="on"] .thumb .np { font-size:10px; padding:1px 4px; }
+  .rmain { min-width:0; flex:1; }
+  .rtitle { font-size:var(--fs-side-title); font-weight:500; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .rtitle.none { font-weight:400; font-style:italic; color:var(--muted); }
+  .rmeta { display:flex; align-items:center; gap:6px; margin-top:4px; min-width:0; }
+  .badge { font-size:var(--fs-badge); font-weight:500; text-transform:var(--tt); letter-spacing:var(--ls); border-radius:999px; padding:1px 8px; white-space:nowrap; }
+  .badge.draft { color:var(--primary); background:var(--primary-dim); }
+  .badge.review { color:var(--warning); background:var(--warning-dim); }
+  .badge.listed { color:var(--success); background:var(--success-dim); }
+  .block { font-size:var(--fs-block); font-weight:500; text-transform:var(--tt); letter-spacing:var(--ls); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .block.ok { color:var(--success); } .block.warn { color:var(--warning); }
+  .edited { margin-left:auto; flex:none; font-size:11px; color:var(--primary); }
+
+  /* ===== editor ===== */
+  .editor { overflow:auto; padding:20px 24px; }
+  .ed-grid { display:grid; gap:24px; grid-template-columns:minmax(0,1fr) 300px; align-items:start; }
+  .label { font-size:var(--fs-label); font-weight:600; text-transform:uppercase; letter-spacing:.14em; color:var(--primary); margin-bottom:7px; }
+  .root[data-imp="on"] .label { letter-spacing:.08em; }
+  .photos { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; margin-bottom:22px; }
+  .pthumb { position:relative; aspect-ratio:1; border-radius:6px; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:22px; transition:all .13s var(--ease); }
+  .root[data-imp="on"] .pthumb:hover { transform:scale(1.04); box-shadow:var(--shadow-up); }
+  .pthumb.cover { outline:2px solid var(--primary); outline-offset:1px; }
+  .pthumb .tag { position:absolute; top:3px; left:3px; font-size:8.5px; font-weight:600; background:var(--primary); color:var(--primary-fg); border-radius:3px; padding:0 4px; }
+  .root[data-imp="on"] .pthumb .tag { font-size:9.5px; padding:1px 5px; }
+  .field { margin-bottom:20px; }
+  .inp { width:100%; font-family:var(--font-ui); font-size:14px; color:var(--fg); background:var(--bg); border:1px solid var(--input); border-radius:6px; padding:9px 12px; transition:border-color .13s var(--ease); }
+  .inp:hover { border-color:var(--muted); }
+  .inp.area { min-height:96px; line-height:1.55; resize:vertical; }
+  .inp.low { border-color:var(--warning); background:var(--warning-dim); }
+  .whynote { font-size:11.5px; color:var(--warning); margin-top:5px; }
+  .dgrid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px 14px; }
+  .dgrid .sub { font-size:11.5px; color:var(--muted); margin-bottom:4px; display:block; }
+  .verify { border:1px dashed var(--warning); border-radius:8px; padding:10px 14px; margin-top:20px; }
+  .verify .vt { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--warning); margin-bottom:4px; font-weight:600; }
+  .verify p { font-size:12.5px; color:var(--muted); }
+
+  /* ===== rail ===== */
+  .rail { position:sticky; top:16px; display:flex; flex-direction:column; gap:14px; }
+  .rail-card { border:1px solid var(--line); border-radius:12px; background:var(--card); padding:16px; }
+  .root[data-imp="on"] .rail-card { box-shadow:var(--shadow); }
+  .rail-h { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:10px; }
+  .cl { list-style:none; }
+  .cl li { display:flex; gap:8px; align-items:baseline; font-size:13px; padding:3.5px 0; color:var(--fg); }
+  .cl .t { color:var(--success); font-weight:600; }
+  .cl .x { color:var(--warning); font-weight:600; }
+  .cl .m { color:var(--muted); }
+  .bigprice { font-family:'Instrument Serif',serif; font-size:36px; line-height:1; margin:2px 0 4px; }
+  .root[data-imp="on"] .bigprice { font-family:var(--font-ui); font-weight:600; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+  .conf { display:inline-block; font-size:11px; font-weight:600; color:var(--warning); background:var(--warning-dim); border-radius:999px; padding:2px 9px; margin-bottom:10px; }
+  .root[data-imp="on"] .conf { font-size:11.5px; }
+  .range { position:relative; height:7px; border-radius:4px; background:var(--raised); margin:6px 0 4px; }
+  .range .fill { position:absolute; top:0; bottom:0; left:18%; right:26%; border-radius:4px; background:linear-gradient(90deg, hsl(38 62% 68% / .35), hsl(38 62% 68% / .9), hsl(38 62% 68% / .35)); }
+  .range .mark { position:absolute; top:-3px; left:44%; width:3px; height:13px; background:var(--fg); border-radius:2px; }
+  .rlabels { display:flex; justify-content:space-between; font-family:'JetBrains Mono'; font-size:10.5px; color:var(--muted); margin-bottom:8px; }
+  .root[data-imp="on"] .rlabels { font-size:11.5px; }
+  .comp { display:flex; justify-content:space-between; gap:8px; font-size:12px; color:var(--muted); padding:5px 0; border-top:1px solid var(--line); }
+  .comp .cp { font-family:'JetBrains Mono'; color:var(--fg); }
+  .fillbtn { width:100%; display:flex; align-items:center; justify-content:center; gap:7px; font:500 13.5px var(--font-ui); color:var(--primary-fg); background:var(--primary); border:1px solid var(--primary); border-radius:8px; padding:10px; cursor:pointer; transition:all .13s var(--ease); }
+  .root[data-imp="on"] .fillbtn { box-shadow:var(--shadow); }
+  .root[data-imp="on"] .fillbtn:hover { transform:translateY(-1px); filter:brightness(1.06); }
+  .root[data-imp="on"] .fillbtn:active { transform:scale(.97); }
+  .subbtn { width:100%; font:500 12.5px var(--font-ui); color:var(--fg); background:none; border:1px solid var(--input); border-radius:8px; padding:8px; cursor:pointer; margin-top:8px; transition:all .13s var(--ease); }
+  .subbtn:hover { background:var(--accentbg); }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Workspace — the 3-column working view, current vs small improvements</h1>
+  <p>This is the screen you actually grind in: <b>queue | editor | checklist + price rail</b>, with the fill tracker strip
+  under the header. "Improvements off" replicates today exactly. "On" applies only small presentation fixes — no feature
+  changes: brighter muted text, 10px uppercase chips → 11.5px sentence-case pills, stronger input borders, low-confidence
+  fields keep their flag but gain a readable "why" note size, selected sidebar row gets a card edge, buttons get
+  hover/press, sans price numeral. Fonts switchable as before.</p>
+</div>
+<div class="controls">
+  <div class="grp"><span class="lbl">Improvements</span>
+    <button class="on" data-set="imp" data-val="off">Off — current</button>
+    <button data-set="imp" data-val="on">On</button>
+  </div>
+  <div class="grp"><span class="lbl">Font</span>
+    <button class="on" data-set="font" data-val="grotesk">Space Grotesk</button>
+    <button data-set="font" data-val="geist">Geist</button>
+    <button data-set="font" data-val="hanken">Hanken</button>
+    <button data-set="font" data-val="manrope">Manrope</button>
+  </div>
+  <div class="grp"><span class="lbl">Mode</span>
+    <button class="on" data-set="mode" data-val="dark">Dark</button>
+    <button data-set="mode" data-val="light">Light</button>
+  </div>
+</div>
+
+<div class="frame">
+<div class="root" id="root" data-imp="off" data-font="grotesk" data-mode="dark">
+  <div class="titlebar"><span class="dot" style="background:#E96E5F"></span><span class="dot" style="background:#F5BF4F"></span><span class="dot" style="background:#61C554"></span></div>
+
+  <header class="ws">
+    <button class="ghost">← Home</button>
+    <span class="wordmark">Tailor <i>Studio</i></span>
+    <span class="spacer"></span>
+    <button class="ghost">Confirm drafts (2)</button>
+    <button class="ghost">?</button>
+    <span class="chip-ok">Chrome connected</span>
+    <button class="dock">Chrome docked</button>
+    <button class="ghost">☾</button>
+  </header>
+
+  <div class="tracker">
+    <span><b>July 12 closet</b> · 3 of 9 filled</span>
+    <div class="bar"><span></span></div>
+    <span>next: Stone Island overshirt</span>
+    <button class="next">Fill next draft →</button>
+  </div>
+
+  <div class="cols">
+    <aside class="side">
+      <div class="side-head"><span>Items</span><span>12</span></div>
+      <div class="side-filters">
+        <button class="on">All</button><button>Needs attention</button><button>Ready</button>
+      </div>
+      <ul class="rows">
+        <li><button class="newbatch">+ New batch — import photos</button></li>
+        <li><button class="row sel"><span class="accent"></span>
+          <span class="thumb" style="background:#565A66">🧢<span class="np">6</span></span>
+          <span class="rmain">
+            <span class="rtitle">Vintage 90s Nike windbreaker jacket navy white spell-out L</span>
+            <span class="rmeta"><span class="badge review">needs review</span><span class="block warn">Verify size</span></span>
+          </span>
+        </button></li>
+        <li><button class="row">
+          <span class="thumb" style="background:#8B8A70">🧥<span class="np">6</span></span>
+          <span class="rmain">
+            <span class="rtitle">Stone Island wool overshirt olive size M</span>
+            <span class="rmeta"><span class="badge draft">draft</span><span class="block ok">✓ Ready</span><span class="edited">• edited</span></span>
+          </span>
+        </button></li>
+        <li><button class="row">
+          <span class="thumb" style="background:#6E5F52">👖<span class="np">8</span></span>
+          <span class="rmain">
+            <span class="rtitle">Levi's 501 raw selvedge denim 32×32</span>
+            <span class="rmeta"><span class="badge draft">draft</span><span class="block ok">✓ Ready</span></span>
+          </span>
+        </button></li>
+        <li><button class="row">
+          <span class="thumb" style="background:#3E4A44">👕<span class="np">5</span></span>
+          <span class="rmain">
+            <span class="rtitle">Patagonia synchilla snap-t fleece green S</span>
+            <span class="rmeta"><span class="badge draft">draft</span><span class="block warn">Set condition</span></span>
+          </span>
+        </button></li>
+        <li><button class="row">
+          <span class="thumb" style="background:#4A4E5A">🏷️<span class="np">2</span></span>
+          <span class="rmain">
+            <span class="rtitle none">(needs review — no listing yet)</span>
+            <span class="rmeta"><span class="badge review">needs review</span></span>
+          </span>
+        </button></li>
+        <li><button class="row" style="opacity:.75">
+          <span class="thumb" style="background:#C9BFA8">🧣<span class="np">5</span></span>
+          <span class="rmain">
+            <span class="rtitle">Carhartt duck chore coat brown blanket-lined</span>
+            <span class="rmeta"><span class="badge listed">listed</span></span>
+          </span>
+        </button></li>
+      </ul>
+    </aside>
+
+    <div class="editor">
+      <div class="ed-grid">
+        <div>
+          <div class="label">Photos — 6 · first is the cover</div>
+          <div class="photos">
+            <span class="pthumb cover" style="background:#565A66"><span class="tag">COVER</span>🧢</span>
+            <span class="pthumb" style="background:#61656F">🧢</span>
+            <span class="pthumb" style="background:#4A4E5A">🏷️</span>
+            <span class="pthumb" style="background:#6B6F7A">🧵</span>
+            <span class="pthumb" style="background:#565A66">🧢</span>
+            <span class="pthumb" style="background:#787C87">📐</span>
+          </div>
+
+          <div class="field">
+            <div class="label">Title</div>
+            <input class="inp" value="Vintage 90s Nike windbreaker jacket navy white spell-out logo L">
+          </div>
+
+          <div class="field">
+            <div class="label">Description</div>
+            <textarea class="inp area">Vintage Nike windbreaker from the 1990s in navy and white with embroidered spell-out logo. Full zip, elastic cuffs, mesh lining. No flaws found — see photos. Fits true to size L.
+
+Measurements (flat): pit to pit 24", length 27", sleeve 25".</textarea>
+          </div>
+
+          <div class="field">
+            <div class="label">Details</div>
+            <div class="dgrid">
+              <div><span class="sub">Brand</span><input class="inp" value="Nike"></div>
+              <div><span class="sub">Category</span><input class="inp" value="Outerwear · Light jackets"></div>
+              <div><span class="sub">Size</span><input class="inp low" value="L"><div class="whynote">Tag unclear in photo 3 — verify</div></div>
+              <div><span class="sub">Condition</span><input class="inp" value="Used — good"></div>
+              <div><span class="sub">Color</span><input class="inp" value="Navy / white"></div>
+              <div><span class="sub">Era</span><input class="inp" value="1990s"></div>
+            </div>
+          </div>
+
+          <div class="verify">
+            <div class="vt">Verify before posting</div>
+            <p>Size flagged low-confidence (tag unclear). Confirm from the tag photo, then this note clears itself.</p>
+          </div>
+        </div>
+
+        <div class="rail">
+          <div class="rail-card">
+            <div class="rail-h">Ready to list?</div>
+            <ul class="cl">
+              <li><span class="t">✓</span> 6 photos, cover chosen</li>
+              <li><span class="t">✓</span> Title under 80 characters</li>
+              <li><span class="t">✓</span> Description written</li>
+              <li><span class="x">!</span> Size — verify flagged tag</li>
+              <li><span class="m">○</span> <span class="m">Tags (optional)</span></li>
+            </ul>
+          </div>
+          <div class="rail-card">
+            <div class="rail-h">Price</div>
+            <div class="bigprice">$62</div>
+            <span class="conf">Medium · 9 comps</span>
+            <div class="range"><div class="fill"></div><div class="mark"></div></div>
+            <div class="rlabels"><span>$38</span><span>$95</span></div>
+            <div class="comp"><span>Nike 90s spell-out L</span><span class="cp">$71</span></div>
+            <div class="comp"><span>Vintage Nike navy XL</span><span class="cp">$58</span></div>
+          </div>
+          <div class="rail-card">
+            <button class="fillbtn">▶ Fill in Chrome</button>
+            <button class="subbtn">Mark listed · fill next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+  const root = document.getElementById('root');
+  document.querySelector('.controls').addEventListener('click', e => {
+    const b = e.target.closest('button[data-set]');
+    if (!b) return;
+    root.dataset[b.dataset.set] = b.dataset.val;
+    b.parentElement.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  });
+</script>
+</body>
+</html>

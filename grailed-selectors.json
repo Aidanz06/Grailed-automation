@@ -47,7 +47,8 @@
       "selector": "#designer-autocomplete",
       "kind": "autocomplete",
       "note": "disabled until a category is chosen",
-      "technique": "PROVEN (2026-07-03, via fillListing live run): identical to countryOfOrigin — clear + focus, REAL typing via Input.insertText, REAL mouse click on the suggestion li. 'Carhartt' typed → suggestion clicked → value persisted past blur."
+      "technique": "PROVEN (2026-07-03, via fillListing live run): identical to countryOfOrigin — clear + focus, REAL typing via Input.insertText, REAL mouse click on the suggestion li. 'Carhartt' typed → suggestion clicked → value persisted past blur.",
+      "collabs": "PROBED 2026-07-18: Grailed has NO 'A x B' designer entries — every collab variant ('Stussy x Nike', 'Nike x Stussy', 'stussy nike') returns only the 'Designer not listed' row. A collab designer value therefore falls back to the PRIMARY brand (first collab part — the entry Grailed lists collab items under); the fill result carries a note. Suggestion matching is diacritic-folded ('Comme des Garçons' → Grailed's unaccented 'Comme des Garcons' entry, verified live)."
     },
     "countryOfOrigin": {
       "selector": "#country-of-origin",

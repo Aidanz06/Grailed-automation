@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tailor Studio — Main triage board, final mock</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Geist:wght@400;500;600&family=Manrope:wght@400;500;600;700&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { background:#E8E8E8; }
+  body { padding:40px 0 80px; font-family:-apple-system,Inter,sans-serif; }
+  .intro { max-width:1240px; margin:0 auto 16px; padding:0 8px; }
+  .intro h1 { font-size:20px; font-weight:600; margin-bottom:6px; color:#222; }
+  .intro p { font-size:14px; color:#555; line-height:1.5; }
+  .controls { max-width:1240px; margin:0 auto 14px; padding:0 8px; display:flex; gap:18px; flex-wrap:wrap; align-items:center; }
+  .controls .grp { display:flex; gap:6px; align-items:center; }
+  .controls .lbl { font-size:12px; color:#777; font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
+  .controls button { font:500 13px inherit; padding:7px 14px; border-radius:8px; border:1px solid #bbb; background:#fff; cursor:pointer; }
+  .controls button.on { background:#222; color:#fff; border-color:#222; }
+
+  .root {
+    --bg:hsl(220 18% 7.5%); --card:hsl(219 18% 11%); --raised:hsl(219 16% 14.5%);
+    --fg:hsl(218 25% 93%); --muted:hsl(219 13% 72%); --faint:hsl(219 12% 52%);
+    --line:hsl(218 30% 88% / 0.14); --input:hsl(218 30% 88% / 0.22);
+    --primary:hsl(38 62% 68%); --primary-fg:hsl(38 65% 10%); --primary-dim:hsl(38 62% 68% / 0.14);
+    --success:hsl(165 60% 58%); --success-dim:hsl(165 60% 58% / 0.12);
+    --warning:hsl(41 86% 62%); --warning-dim:hsl(41 86% 62% / 0.12);
+    --shadow:0 1px 2px rgba(0,0,0,.3); --shadow-up:0 10px 28px rgba(0,0,0,.45);
+    --ease:cubic-bezier(.2,.7,.3,1);
+    --font-ui:'Space Grotesk',sans-serif;
+  }
+  .root[data-font="geist"] { --font-ui:'Geist',sans-serif; }
+  .root[data-font="manrope"] { --font-ui:'Manrope',sans-serif; }
+  .root[data-font="hanken"] { --font-ui:'Hanken Grotesk',sans-serif; }
+  .root[data-mode="light"] {
+    --bg:hsl(40 30% 97%); --card:hsl(0 0% 100%); --raised:hsl(40 22% 93%);
+    --fg:hsl(30 12% 12%); --muted:hsl(35 8% 38%); --faint:hsl(35 8% 55%);
+    --line:hsl(35 20% 20% / 0.16); --input:hsl(35 20% 20% / 0.24);
+    --primary:hsl(36 52% 38%); --primary-fg:hsl(40 40% 98%); --primary-dim:hsl(36 52% 38% / 0.1);
+    --success:hsl(168 65% 28%); --success-dim:hsl(168 65% 28% / 0.1);
+    --warning:hsl(32 90% 38%); --warning-dim:hsl(32 90% 38% / 0.1);
+    --shadow:0 1px 2px rgba(60,45,20,.06); --shadow-up:0 10px 28px rgba(60,45,20,.13);
+  }
+  .root[data-extras="off"] .extra { display:none !important; }
+
+  .frame { max-width:1240px; margin:0 auto; border-radius:10px; overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,.18); }
+  .root { background:var(--bg); color:var(--fg); font-family:var(--font-ui); transition:background .25s var(--ease); }
+  .titlebar { height:34px; display:flex; align-items:center; padding:0 14px; gap:7px; border-bottom:1px solid var(--line); background:var(--card); }
+  .dot { width:11px; height:11px; border-radius:50%; opacity:.85; }
+  :focus-visible { outline:2px solid var(--primary); outline-offset:2px; border-radius:8px; }
+  svg.ic { width:17px; height:17px; stroke:currentColor; stroke-width:1.8; fill:none; stroke-linecap:round; stroke-linejoin:round; display:block; }
+
+  [data-tip] { position:relative; }
+  [data-tip]::after {
+    content:attr(data-tip); position:absolute; top:calc(100% + 7px); right:0; z-index:20;
+    font:400 11.5px var(--font-ui); white-space:nowrap; text-transform:none; letter-spacing:0;
+    background:var(--raised); color:var(--fg); border:1px solid var(--line); border-radius:6px;
+    padding:5px 9px; box-shadow:var(--shadow-up); opacity:0; transform:translateY(-3px); pointer-events:none;
+    transition:all .13s var(--ease); transition-delay:0s;
+  }
+  [data-tip]:hover::after { opacity:1; transform:none; transition-delay:.35s; }
+
+  header.app-header { display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--line); background:var(--card); padding:12px 24px; }
+  .wordmark { font-weight:600; font-size:17px; letter-spacing:-.02em; }
+  .wordmark em { font-style:normal; color:var(--primary); }
+  .spacer { flex:1; }
+  .icon-btn { position:relative; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border:1px solid var(--input); background:var(--card); color:var(--muted); cursor:pointer; border-radius:8px; box-shadow:var(--shadow); transition:all .13s var(--ease); }
+  .icon-btn:hover { transform:translateY(-1px); color:var(--fg); border-color:var(--muted); }
+  .icon-btn:active { transform:scale(.94); }
+  .badge { position:absolute; top:-5px; right:-5px; font:600 10px var(--font-ui); background:var(--warning); color:var(--bg); border-radius:999px; min-width:16px; height:16px; display:flex; align-items:center; justify-content:center; padding:0 4px; }
+  .seg { display:flex; border:1px solid var(--input); border-radius:8px; padding:2px; background:var(--card); }
+  .seg button { display:flex; align-items:center; justify-content:center; width:30px; height:28px; border:none; background:none; color:var(--muted); border-radius:6px; cursor:pointer; }
+  .seg button.on { background:var(--raised); color:var(--fg); }
+  .btn-primary { display:flex; align-items:center; gap:6px; font:500 13px var(--font-ui); color:var(--primary-fg); background:var(--primary); border:1px solid var(--primary); border-radius:8px; padding:8px 14px; cursor:pointer; box-shadow:var(--shadow); transition:all .13s var(--ease); }
+  .btn-primary:hover { transform:translateY(-1px); filter:brightness(1.06); }
+  .btn-primary:active { transform:scale(.97); }
+  .btn-primary svg.ic { width:15px; height:15px; stroke-width:2.2; }
+
+  .content { max-width:896px; margin:0 auto; padding:32px 24px 48px; }
+
+  .summary { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 16px; box-shadow:var(--shadow); }
+  .stat .n { font-weight:600; font-size:22px; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
+  .stat .l { font-size:12px; color:var(--muted); margin-top:1px; }
+  .stat.act { border-color:var(--warning); } .stat.act .n { color:var(--warning); }
+  .stat.money .n { color:var(--primary); }
+
+  .board-bar { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-bottom:14px; }
+  .board-title { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+  .board-count { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .board-count b { color:var(--success); font-weight:400; }
+  .kbd-hints { display:flex; font-size:12px; color:var(--faint); gap:10px; }
+  kbd { font:500 10.5px var(--font-ui); color:var(--muted); border:1px solid var(--input); border-bottom-width:2px; border-radius:4px; padding:1px 5px; }
+  .filters { display:flex; gap:6px; margin-left:auto; }
+  .filters button { font:400 12.5px var(--font-ui); color:var(--fg); background:var(--card); border:1px solid var(--input); border-radius:999px; padding:5px 13px; cursor:pointer; box-shadow:var(--shadow); transition:all .13s var(--ease); font-variant-numeric:tabular-nums; }
+  .filters button i { font-style:normal; color:var(--faint); margin-left:3px; }
+  .filters button:hover { border-color:var(--muted); transform:translateY(-1px); }
+  .filters button.on { background:var(--primary); color:var(--primary-fg); border-color:var(--primary); font-weight:500; }
+  .filters button.on i { color:var(--primary-fg); opacity:.7; }
+  .album-sel { font:400 12px var(--font-ui); color:var(--fg); background:var(--card); border:1px solid var(--input); border-radius:8px; padding:5px 8px; box-shadow:var(--shadow); }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(184px,1fr)); gap:16px; list-style:none; }
+  .card { position:relative; overflow:hidden; border-radius:10px; border:1px solid var(--line); background:var(--card); cursor:pointer; box-shadow:var(--shadow); transition:transform .18s var(--ease), box-shadow .18s var(--ease), border-color .18s var(--ease); animation:rise .45s var(--ease) both; }
+  .card:nth-child(-n+9) { animation-delay:calc(.03s * var(--i,0)); }
+  @keyframes rise { from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none} }
+  .card:hover { transform:translateY(-3px); box-shadow:var(--shadow-up); border-color:var(--primary); }
+  .card .ph { position:relative; aspect-ratio:4/5; width:100%; overflow:hidden; }
+  .card .ph .g { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:34px; transition:transform .5s var(--ease); }
+  .card:hover .ph .g { transform:scale(1.045); }
+  .card .n-photos { position:absolute; bottom:5px; right:5px; z-index:2; font-family:'JetBrains Mono'; font-size:10.5px; color:#fff; background:rgba(0,0,0,.6); border-radius:4px; padding:2px 6px; }
+  .card .n-photos.over { color:var(--warning); font-weight:600; }
+  .card .body { padding:13px; }
+  .card .title { font-size:14px; font-weight:500; line-height:1.35; min-height:2.55rem; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .card .title.none { font-weight:400; font-style:italic; color:var(--muted); }
+  .card .row2 { margin-top:7px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .state { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:500; border-radius:999px; padding:2px 9px 2px 7px; max-width:100%; }
+  .state span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .state::before { content:''; flex:none; width:6px; height:6px; border-radius:50%; background:currentColor; }
+  .state.ok { color:var(--success); background:var(--success-dim); }
+  .state.warn { color:var(--warning); background:var(--warning-dim); }
+  .score { font-family:'JetBrains Mono'; font-size:11px; color:var(--faint); font-variant-numeric:tabular-nums; }
+  .priceline { margin-top:7px; display:flex; align-items:baseline; gap:6px; font-family:'JetBrains Mono'; font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; }
+  .priceline .p { font-size:14px; font-weight:500; color:var(--primary); }
+  .priceline .p.sold { color:var(--success); }
+  .priceline .p.na { color:var(--muted); }
+  .qa { position:absolute; top:8px; right:8px; z-index:3; display:flex; gap:6px; opacity:0; transform:translateY(-4px); transition:all .18s var(--ease); }
+  .card:hover .qa { opacity:1; transform:none; }
+  .qa .icon-btn { width:30px; height:30px; }
+  .qa .icon-btn:hover { color:var(--primary); border-color:var(--primary); }
+  .listed { opacity:.8; }
+  .listed:hover { opacity:1; }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Main triage board — final mock</h1>
+  <p><b>Extras off</b> = pure restyle: identical features to today, only tokens/type/buttons change (this is the default,
+  matching the "no feature changes" rule). <b>Extras on</b> previews the optional additions (summary strip, filter counts,
+  quick actions, keyboard hints) — separate decisions, off by default in the plan. Use the font switcher to judge
+  "refined": Geist and Hanken are quieter and more even; Manrope is rounder; Space Grotesk is today's quirkier voice.</p>
+</div>
+<div class="controls">
+  <div class="grp"><span class="lbl">Font</span>
+    <button class="on" data-set="font" data-val="grotesk">Space Grotesk (current)</button>
+    <button data-set="font" data-val="geist">Geist</button>
+    <button data-set="font" data-val="hanken">Hanken Grotesk</button>
+    <button data-set="font" data-val="manrope">Manrope</button>
+  </div>
+  <div class="grp"><span class="lbl">Mode</span>
+    <button class="on" data-set="mode" data-val="dark">Dark</button>
+    <button data-set="mode" data-val="light">Light</button>
+  </div>
+  <div class="grp"><span class="lbl">Extras</span>
+    <button class="on" data-set="extras" data-val="off">Off — pure restyle</button>
+    <button data-set="extras" data-val="on">On — preview additions</button>
+  </div>
+</div>
+
+<div class="frame">
+<div class="root" id="root" data-font="grotesk" data-mode="dark" data-extras="off">
+  <div class="titlebar"><span class="dot" style="background:#E96E5F"></span><span class="dot" style="background:#F5BF4F"></span><span class="dot" style="background:#61C554"></span></div>
+
+  <header class="app-header">
+    <span class="wordmark">Tailor <em>Studio</em></span>
+    <span class="spacer"></span>
+    <button class="icon-btn" data-tip="Guide — how Tailor works">
+      <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.7 2.2c-.8.5-1.2 1-1.2 1.8"/><line x1="12" y1="16.5" x2="12" y2="16.6"/></svg>
+    </button>
+    <button class="icon-btn" data-tip="Listing defaults and style editor">
+      <svg class="ic" viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2.2"/><line x1="4" y1="15" x2="20" y2="15"/><circle cx="15" cy="15" r="2.2"/></svg>
+    </button>
+    <div class="seg">
+      <button class="on" data-tip="Board view"><svg class="ic" style="width:15px;height:15px" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg></button>
+      <button data-tip="List view"><svg class="ic" style="width:15px;height:15px" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg></button>
+    </div>
+    <button class="icon-btn" data-tip="Confirm drafts — 2 waiting">
+      <svg class="ic" viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4.5V3.5A1.5 1.5 0 0 1 10.5 2h3A1.5 1.5 0 0 1 15 3.5v1"/><path d="M9.5 13.5l2 2 3.5-4"/></svg>
+      <span class="badge">2</span>
+    </button>
+    <button class="btn-primary">
+      <svg class="ic" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New batch
+    </button>
+  </header>
+
+  <div class="content">
+    <div class="summary extra">
+      <div class="stat act"><div class="n">3</div><div class="l">Need your review</div></div>
+      <div class="stat"><div class="n">4</div><div class="l">Ready to fill</div></div>
+      <div class="stat"><div class="n">3</div><div class="l">Listed this week</div></div>
+      <div class="stat money"><div class="n">$472</div><div class="l">Est. value ready</div></div>
+    </div>
+
+    <div class="board-bar">
+      <span class="board-title">Batch board</span>
+      <span class="board-count">4 of 6 ready<b> · 3 listed</b></span>
+      <span class="kbd-hints extra"><span><kbd>J</kbd><kbd>K</kbd> move</span><span><kbd>↵</kbd> open</span><span><kbd>F</kbd> fill</span></span>
+      <div class="filters">
+        <button class="on">All<i class="extra"> 9</i></button>
+        <button>Needs attention<i class="extra"> 3</i></button>
+        <button>Ready<i class="extra"> 4</i></button>
+        <button>Listed<i class="extra"> 3</i></button>
+      </div>
+      <select class="album-sel"><option>All batches</option><option>July 12 closet</option><option>June estate lot</option></select>
+    </div>
+
+    <ul class="grid">
+      <li class="card" style="--i:0" tabindex="0">
+        <div class="qa extra"><button class="icon-btn" data-tip="Open draft"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></button></div>
+        <div class="ph"><span class="g" style="background:#565A66">🧢</span><span class="n-photos">6</span></div>
+        <div class="body">
+          <div class="title">Vintage 90s Nike windbreaker jacket navy white spell-out L</div>
+          <div class="row2"><span class="state warn"><span>Review</span></span><span class="score">64</span></div>
+          <div class="priceline"><span class="p">$62</span><span>· 4 comps · low</span></div>
+        </div>
+      </li>
+      <li class="card" style="--i:1" tabindex="0">
+        <div class="ph"><span class="g" style="background:#4A4E5A">🏷️</span><span class="n-photos">2</span></div>
+        <div class="body">
+          <div class="title none">(needs review — no listing yet)</div>
+          <div class="row2"><span class="state warn"><span>Single photo — confirm</span></span><span class="score">31</span></div>
+          <div class="priceline"><span class="p na">—</span></div>
+        </div>
+      </li>
+      <li class="card" style="--i:2" tabindex="0">
+        <div class="ph"><span class="g" style="background:#5E5648">🧤</span><span class="n-photos over" title="Grailed allows 25 photos">27</span></div>
+        <div class="body">
+          <div class="title">Barbour waxed field jacket olive with hood</div>
+          <div class="row2"><span class="state warn"><span>Too many photos</span></span><span class="score">58</span></div>
+          <div class="priceline"><span class="p">$140</span><span>· 7 comps · med</span></div>
+        </div>
+      </li>
+      <li class="card" style="--i:3" tabindex="0">
+        <div class="qa extra">
+          <button class="icon-btn" data-tip="Open draft"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></button>
+          <button class="icon-btn" data-tip="Fill in Chrome"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M5 4l14 8-14 8z"/></svg></button>
+        </div>
+        <div class="ph"><span class="g" style="background:#8B8A70">🧥</span><span class="n-photos">6</span></div>
+        <div class="body">
+          <div class="title">Stone Island wool overshirt olive size M</div>
+          <div class="row2"><span class="state ok"><span>Ready</span></span><span class="score">92</span></div>
+          <div class="priceline"><span class="p">$185</span><span>· 12 comps · high</span></div>
+        </div>
+      </li>
+      <li class="card" style="--i:4" tabindex="0">
+        <div class="qa extra">
+          <button class="icon-btn" data-tip="Open draft"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></button>
+          <button class="icon-btn" data-tip="Fill in Chrome"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M5 4l14 8-14 8z"/></svg></button>
+        </div>
+        <div class="ph"><span class="g" style="background:#6E5F52">👖</span><span class="n-photos">8</span></div>
+        <div class="body">
+          <div class="title">Levi's 501 raw selvedge denim 32×32</div>
+          <div class="row2"><span class="state ok"><span>Ready</span></span><span class="score">88</span></div>
+          <div class="priceline"><span class="p">$88</span><span>· 21 comps · high</span></div>
+        </div>
+      </li>
+      <li class="card" style="--i:5" tabindex="0">
+        <div class="qa extra">
+          <button class="icon-btn" data-tip="Open draft"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></button>
+          <button class="icon-btn" data-tip="Fill in Chrome"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M5 4l14 8-14 8z"/></svg></button>
+        </div>
+        <div class="ph"><span class="g" style="background:#3E4A44">👕</span><span class="n-photos">5</span></div>
+        <div class="body">
+          <div class="title">Patagonia synchilla snap-t fleece green S</div>
+          <div class="row2"><span class="state ok"><span>Ready</span></span><span class="score">90</span></div>
+          <div class="priceline"><span class="p">$74</span><span>· 16 comps · high</span></div>
+        </div>
+      </li>
+      <li class="card" style="--i:6" tabindex="0">
+        <div class="qa extra">
+          <button class="icon-btn" data-tip="Open draft"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></button>
+          <button class="icon-btn" data-tip="Fill in Chrome"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M5 4l14 8-14 8z"/></svg></button>
+        </div>
+        <div class="ph"><span class="g" style="background:#706A78">🧦</span><span class="n-photos">4</span></div>
+        <div class="body">
+          <div class="title">Acne Studios wool beanie charcoal OS</div>
+          <div class="row2"><span class="state ok"><span>Ready</span></span><span class="score">85</span></div>
+          <div class="priceline"><span class="p">$45</span><span>· 6 comps · med</span></div>
+        </div>
+      </li>
+      <li class="card listed" style="--i:7" tabindex="0">
+        <div class="ph"><span class="g" style="background:#C9BFA8">🧣</span><span class="n-photos">5</span></div>
+        <div class="body">
+          <div class="title">Carhartt duck chore coat brown blanket-lined</div>
+          <div class="row2"><span class="state ok"><span>Listed</span></span><span class="score">95</span></div>
+          <div class="priceline"><span class="p sold">$120</span><span>· 9 comps · high</span></div>
+        </div>
+      </li>
+      <li class="card listed" style="--i:8" tabindex="0">
+        <div class="ph"><span class="g" style="background:#7A4E42">👟</span><span class="n-photos">9</span></div>
+        <div class="body">
+          <div class="title">New Balance 990v3 made in USA grey 10.5</div>
+          <div class="row2"><span class="state ok"><span>Listed</span></span><span class="score">97</span></div>
+          <div class="priceline"><span class="p sold">$155</span><span>· 31 comps · high</span></div>
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<script>
+  const root = document.getElementById('root');
+  document.querySelector('.controls').addEventListener('click', e => {
+    const b = e.target.closest('button[data-set]');
+    if (!b) return;
+    root.dataset[b.dataset.set] = b.dataset.val;
+    b.parentElement.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  });
+</script>
+</body>
+</html>

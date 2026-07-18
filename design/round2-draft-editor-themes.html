@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tailor Studio — Round 2: draft editor + theme switcher</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Archivo:wght@400;500;600&family=Inter:wght@400;500;600&display=swap">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: #E8E8E8; }
+  body { font-family: Inter, sans-serif; padding: 40px 0 80px; }
+  .intro { max-width: 1240px; margin: 0 auto 20px; padding: 0 8px; }
+  .intro h1 { font-size: 20px; font-weight: 600; margin-bottom: 6px; color: #222; }
+  .intro p { font-size: 14px; color: #555; line-height: 1.5; }
+
+  /* ---------- theme tokens ---------- */
+  .app-root {
+    --bg:#F7F5F0; --card:#FFFFFF; --ink:#1A1815; --sub:#6E6A60; --line:#E3DFD5;
+    --rule:#1A1815; --acc:#8A1E1E; --accbg:rgba(138,30,30,0.07); --ok:#3E6B4F; --okbg:rgba(62,107,79,0.1);
+    --r:3px; --font-body:Archivo,sans-serif; --font-display:Fraunces,serif; --soft:#EDE9E0;
+  }
+  .app-root[data-theme="editorial"] {
+    --bg:#F6F4EE; --card:#FFFFFF; --ink:#17150F; --sub:#6B6558; --line:#E2DDD1;
+    --rule:#17150F; --acc:#8A1E1E; --accbg:rgba(138,30,30,0.07); --r:2px;
+    --font-body:Inter,sans-serif; --font-display:Fraunces,serif; --soft:#EDE9E0;
+  }
+  .app-root[data-theme="swiss"] {
+    --bg:#FFFFFF; --card:#FFFFFF; --ink:#111111; --sub:#55554F; --line:#D9D9D6;
+    --rule:#111111; --acc:#E03A2F; --accbg:rgba(224,58,47,0.07); --r:0px;
+    --font-body:Archivo,sans-serif; --font-display:Archivo,sans-serif; --soft:#F0F0EE;
+  }
+  .app-root[data-mode="dark"] {
+    --bg:#1B1916; --card:#242119; --ink:#ECE8DF; --sub:#9C9585; --line:#38342C;
+    --rule:#ECE8DF; --acc:#D07070; --accbg:rgba(208,112,112,0.12); --ok:#8FB89E; --okbg:rgba(143,184,158,0.12); --soft:#2C2921;
+  }
+  .app-root[data-theme="editorial"][data-mode="dark"] {
+    --bg:#191713; --card:#221F1A; --ink:#EDE9E0; --sub:#9A937F; --line:#332F27;
+    --rule:#EDE9E0; --acc:#D07070; --accbg:rgba(208,112,112,0.12); --soft:#2B2820;
+  }
+  .app-root[data-theme="swiss"][data-mode="dark"] {
+    --bg:#141414; --card:#141414; --ink:#F2F2F2; --sub:#9A9A94; --line:#3A3A3A;
+    --rule:#F2F2F2; --acc:#FF5A4E; --accbg:rgba(255,90,78,0.12); --soft:#222222;
+  }
+
+  /* ---------- frame ---------- */
+  .frame { max-width: 1240px; margin: 0 auto; border-radius: 10px; overflow: hidden; box-shadow: 0 8px 40px rgba(0,0,0,0.18); }
+  .app-root { background: var(--bg); font-family: var(--font-body); color: var(--ink); }
+  .titlebar { height: 34px; display: flex; align-items: center; padding: 0 14px; gap: 7px; border-bottom: 1px solid var(--line); }
+  .dot { width: 11px; height: 11px; border-radius: 50%; opacity: .85; }
+
+  /* ---------- buttons: outlined + visible press ---------- */
+  .btn {
+    font-family: var(--font-body); font-size: 13.5px; font-weight: 500; color: var(--ink);
+    background: transparent; border: 1.5px solid var(--ink); border-radius: var(--r);
+    padding: 8px 16px; cursor: pointer; transition: background .12s, transform .05s, box-shadow .12s;
+  }
+  .btn:hover { background: var(--soft); }
+  .btn:active { transform: translateY(1px); background: var(--line); }
+  .btn.primary { background: var(--ink); color: var(--bg); }
+  .btn.primary:hover { opacity: .88; background: var(--ink); }
+  .btn.accent { border-color: var(--acc); color: var(--acc); }
+  .btn.accent:hover { background: var(--accbg); }
+  .btn.sm { font-size: 12.5px; padding: 5px 12px; }
+  .btn.ghost { border-color: var(--line); color: var(--sub); }
+  .btn.ghost:hover { border-color: var(--ink); color: var(--ink); }
+
+  /* ---------- theme picker demo bar ---------- */
+  .picker-bar { display:flex; justify-content: space-between; align-items:center; padding: 10px 36px; border-bottom: 1px solid var(--line); background: var(--soft); }
+  .picker-bar .hint { font-size: 12.5px; color: var(--sub); }
+  .seg { display:flex; border:1.5px solid var(--ink); border-radius: var(--r); overflow:hidden; }
+  .seg button { font-family: var(--font-body); font-size:12.5px; font-weight:500; padding:6px 14px; border:none; background:transparent; color:var(--ink); cursor:pointer; border-right:1.5px solid var(--ink); display:flex; align-items:center; gap:7px; }
+  .seg button:last-child { border-right:none; }
+  .seg button.on { background: var(--ink); color: var(--bg); }
+  .swatch { width:10px; height:10px; border-radius:50%; border:1px solid rgba(0,0,0,.2); }
+
+  /* ---------- header ---------- */
+  .app { padding: 0 36px 36px; }
+  .header { display:flex; justify-content:space-between; align-items:center; padding: 20px 0 14px; border-bottom: 2px solid var(--rule); margin-bottom: 24px; }
+  .crumbs { display:flex; align-items:baseline; gap: 10px; }
+  .wordmark { font-family: var(--font-display); font-size: 21px; }
+  .app-root[data-theme="swiss"] .wordmark { font-weight:600; letter-spacing:.05em; font-size:16px; }
+  .crumbs .sep { color: var(--sub); }
+  .crumbs .item-name { font-size: 15px; font-weight: 500; }
+  .crumbs .pos { font-size: 12.5px; color: var(--sub); }
+  .header-actions { display:flex; gap:10px; align-items:center; }
+  .chrome-chip { font-size:12.5px; color: var(--ok); background: var(--okbg); padding: 5px 12px; border-radius: 999px; display:flex; align-items:center; gap:6px; }
+  .chrome-chip::before { content:''; width:7px; height:7px; border-radius:50%; background: var(--ok); }
+
+  /* ---------- layout ---------- */
+  .cols { display:grid; grid-template-columns: minmax(0,1fr) 340px; gap: 28px; align-items:start; }
+  .section-h { font-size: 13px; font-weight: 600; letter-spacing:.02em; padding-bottom: 8px; border-bottom: 1px solid var(--rule); margin-bottom: 14px; display:flex; justify-content:space-between; align-items:baseline; }
+  .app-root[data-theme="swiss"] .section-h, .app-root[data-theme="swiss"] .label { text-transform: uppercase; letter-spacing:.06em; }
+  .app-root[data-theme="editorial"] .section-h { font-family: var(--font-display); font-size:16px; font-weight:400; letter-spacing:0; }
+  .section-h .count { font-size: 12px; font-weight:400; color: var(--sub); }
+  .block { margin-bottom: 28px; }
+
+  .photo-row { display:grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .thumb { aspect-ratio: 4/5; border-radius: var(--r); display:flex; align-items:center; justify-content:center; font-size:26px; border: 1px solid var(--line); }
+  .thumb.cover { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .thumb .tag { font-size: 10.5px; font-weight:600; background: var(--ink); color: var(--bg); padding: 2px 6px; border-radius: 2px; align-self:flex-start; margin: 6px 0 0 6px; position:absolute; }
+  .thumb-wrap { position:relative; }
+
+  .attr-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 14px 16px; }
+  .field { display:flex; flex-direction:column; gap:5px; }
+  .label { font-size: 12px; font-weight:500; color: var(--sub); }
+  .input { font-family: var(--font-body); font-size: 14px; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 9px 12px; }
+  .input:hover { border-color: var(--sub); }
+  .input.low { border-color: var(--acc); background: var(--accbg); }
+  .conf-note { font-size: 11.5px; color: var(--acc); }
+  textarea.input { resize: vertical; min-height: 110px; line-height: 1.55; }
+  .title-input { font-size: 15.5px; font-weight: 500; }
+
+  /* ---------- right rail ---------- */
+  .rail-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 18px 20px; margin-bottom: 18px; }
+  .app-root[data-theme="swiss"] .rail-card { border-color: var(--rule); }
+  .check-list { list-style:none; }
+  .check-list li { display:flex; gap:10px; align-items:baseline; font-size: 13.5px; padding: 5px 0; }
+  .check-list .tick { color: var(--ok); font-weight:600; }
+  .check-list .todo { color: var(--acc); font-weight:600; }
+  .check-list .muted { color: var(--sub); }
+
+  .price-big { font-family: var(--font-display); font-size: 42px; line-height:1; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+  .app-root[data-theme="swiss"] .price-big { font-weight: 600; }
+  .conf-pill { display:inline-block; font-size: 11.5px; font-weight:600; color: var(--ok); background: var(--okbg); border-radius: 999px; padding: 3px 10px; margin-bottom: 12px; }
+  .range { position:relative; height: 8px; background: var(--soft); border-radius: 4px; margin: 10px 0 6px; }
+  .range .fill { position:absolute; left: 22%; right: 30%; top:0; bottom:0; background: var(--ink); opacity:.25; border-radius:4px; }
+  .range .mark { position:absolute; left: 46%; top:-3px; width: 3px; height: 14px; background: var(--acc); }
+  .range-labels { display:flex; justify-content:space-between; font-size: 11.5px; color: var(--sub); font-variant-numeric: tabular-nums; margin-bottom: 12px; }
+  .comp { display:flex; justify-content:space-between; font-size: 12.5px; padding: 7px 0; border-top: 1px solid var(--line); }
+  .comp .n { color: var(--sub); max-width: 200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .comp .p { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .rail-actions { display:flex; flex-direction:column; gap: 10px; }
+  .rail-actions .btn { width: 100%; padding: 11px 16px; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Round 2 — draft editor, three switchable themes</h1>
+  <p>The bar below the traffic lights is the theme-picker feature you proposed, working live: 3 curated themes × light/dark.
+  Buttons are outlined with visible hover and press — try clicking them. Hybrid = swiss structure on editorial paper.</p>
+</div>
+
+<div class="frame">
+<div class="app-root" id="root" data-theme="hybrid" data-mode="light">
+  <div class="titlebar"><span class="dot" style="background:#E96E5F"></span><span class="dot" style="background:#F5BF4F"></span><span class="dot" style="background:#61C554"></span></div>
+
+  <div class="picker-bar">
+    <span class="hint">Appearance — pick a theme (in the real app this lives in settings)</span>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <div class="seg" id="themeSeg">
+        <button data-t="hybrid" class="on"><span class="swatch" style="background:#F7F5F0"></span>Hybrid</button>
+        <button data-t="editorial"><span class="swatch" style="background:#F6F4EE"></span>Editorial</button>
+        <button data-t="swiss"><span class="swatch" style="background:#FFFFFF"></span>Swiss</button>
+      </div>
+      <button class="btn sm" id="modeBtn">Dark</button>
+    </div>
+  </div>
+
+  <div class="app">
+    <div class="header">
+      <div class="crumbs">
+        <span class="wordmark">Tailor <i>Studio</i></span>
+        <span class="sep">/</span>
+        <span class="item-name">Nike vintage windbreaker</span>
+        <span class="pos">draft 7 of 24</span>
+      </div>
+      <div class="header-actions">
+        <span class="chrome-chip">Chrome connected</span>
+        <button class="btn ghost sm">Save draft</button>
+        <button class="btn primary">Fill in Chrome →</button>
+      </div>
+    </div>
+
+    <div class="cols">
+      <div>
+        <div class="block">
+          <div class="section-h"><span>Photos</span><span class="count">6 selected · drag to reorder</span></div>
+          <div class="photo-row">
+            <div class="thumb-wrap"><span class="tag">COVER</span><div class="thumb cover" style="background:#565A66">🧢</div></div>
+            <div class="thumb" style="background:#61656F">🧢</div>
+            <div class="thumb" style="background:#4A4E5A">🏷️</div>
+            <div class="thumb" style="background:#6B6F7A">🧵</div>
+            <div class="thumb" style="background:#565A66">🧢</div>
+            <div class="thumb" style="background:#787C87">📐</div>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="section-h"><span>Attributes</span><span class="count">2 low confidence — review highlighted</span></div>
+          <div class="attr-grid">
+            <div class="field"><span class="label">Brand</span><span class="input">Nike</span></div>
+            <div class="field"><span class="label">Category</span><span class="input">Outerwear · Light jackets</span></div>
+            <div class="field"><span class="label">Size</span><span class="input low">L</span><span class="conf-note">Tag unclear — verify</span></div>
+            <div class="field"><span class="label">Condition</span><span class="input">Used — good</span></div>
+            <div class="field"><span class="label">Color</span><span class="input">Navy / white</span></div>
+            <div class="field"><span class="label">Era</span><span class="input low">1990s</span><span class="conf-note">Guessed from logo — verify</span></div>
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="section-h"><span>Listing</span><span class="count"><button class="btn sm ghost" style="margin:-4px 0">Regenerate ↻</button></span></div>
+          <div class="field" style="margin-bottom:14px;">
+            <span class="label">Title</span>
+            <span class="input title-input">Vintage 90s Nike windbreaker jacket navy white spell-out logo L</span>
+          </div>
+          <div class="field">
+            <span class="label">Description</span>
+            <textarea class="input" readonly>Vintage Nike windbreaker from the 1990s in navy and white with embroidered spell-out logo. Full zip, elastic cuffs, mesh lining. No flaws found — see photos for condition detail. Fits true to size L.
+
+Measurements (flat): pit to pit 24", length 27", sleeve 25".</textarea>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="rail-card">
+          <div class="section-h" style="margin-bottom:8px;"><span>Ready to list?</span></div>
+          <ul class="check-list">
+            <li><span class="tick">✓</span> 6 photos, cover chosen</li>
+            <li><span class="tick">✓</span> Title under 80 characters</li>
+            <li><span class="tick">✓</span> Description generated</li>
+            <li><span class="todo">!</span> <span>Size flagged low confidence</span></li>
+            <li><span class="todo">!</span> <span class="muted">Era unverified</span></li>
+          </ul>
+        </div>
+
+        <div class="rail-card">
+          <div class="section-h" style="margin-bottom:2px;"><span>Price</span></div>
+          <div class="price-big">$62</div>
+          <span class="conf-pill">Medium confidence · 9 comps</span>
+          <div class="range"><div class="fill"></div><div class="mark"></div></div>
+          <div class="range-labels"><span>$38</span><span>sold range</span><span>$95</span></div>
+          <div class="comp"><span class="n">Nike 90s windbreaker spell-out L</span><span class="p">$71</span></div>
+          <div class="comp"><span class="n">Vintage Nike jacket navy XL</span><span class="p">$58</span></div>
+          <div class="comp"><span class="n">Nike windbreaker color-block M</span><span class="p">$49</span></div>
+          <button class="btn ghost sm" style="width:100%; margin-top:12px;">See all 9 comps</button>
+        </div>
+
+        <div class="rail-actions">
+          <button class="btn accent">Send back to review</button>
+          <button class="btn">Mark listed · fill next →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+  const root = document.getElementById('root');
+  document.getElementById('themeSeg').addEventListener('click', e => {
+    const b = e.target.closest('button[data-t]');
+    if (!b) return;
+    root.dataset.theme = b.dataset.t;
+    document.querySelectorAll('#themeSeg button').forEach(x => x.classList.toggle('on', x === b));
+  });
+  const modeBtn = document.getElementById('modeBtn');
+  modeBtn.addEventListener('click', () => {
+    const dark = root.dataset.mode === 'dark';
+    root.dataset.mode = dark ? 'light' : 'dark';
+    modeBtn.textContent = dark ? 'Dark' : 'Light';
+  });
+</script>
+</body>
+</html>

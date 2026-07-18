@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tailor Studio — Round 4: current app vs redesign (same screen, same DOM)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;1,9..144,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { background:#E8E8E8; }
+  body { font-family:Inter,sans-serif; padding:40px 0 80px; }
+  .intro { max-width:1240px; margin:0 auto 16px; padding:0 8px; }
+  .intro h1 { font-size:20px; font-weight:600; margin-bottom:6px; color:#222; }
+  .intro p { font-size:14px; color:#555; line-height:1.5; }
+  .switcher { max-width:1240px; margin:0 auto 14px; padding:0 8px; display:flex; gap:8px; }
+  .switcher button { font:500 13px Inter,sans-serif; padding:8px 16px; border-radius:8px; border:1px solid #bbb; background:#fff; cursor:pointer; }
+  .switcher button.on { background:#222; color:#fff; border-color:#222; }
+
+  /* ================= TOKENS ================= */
+  /* Current app — exact values from ui/src/index.css (.dark) */
+  .root[data-skin="current"] {
+    --bg:hsl(220 20% 6.5%); --card:hsl(219 18% 9.5%); --fg:hsl(218 25% 92%);
+    --muted:hsl(219 12% 62%); --line:hsl(218 30% 88% / 0.09); --input:hsl(218 30% 88% / 0.16);
+    --primary:hsl(38 62% 68%); --primary-fg:hsl(38 65% 10%); --primary-dim:hsl(38 62% 68% / 0.15);
+    --success:hsl(165 60% 55%); --warning:hsl(41 86% 60%); --secondary:hsl(219 16% 13%);
+    --font-ui:'Space Grotesk',sans-serif; --font-disp:'Instrument Serif',serif; --font-mono:'JetBrains Mono',monospace;
+    --r-card:0.5rem; --shadow:none; --shadow-up:none;
+  }
+  /* Redesign — refined hybrid (keeps Instrument Serif wordmark = existing DNA) */
+  .root[data-skin="new"] {
+    --bg:#F7F5F1; --card:#FFFFFF; --fg:#201D18; --muted:#6F6A5F;
+    --line:rgba(32,29,24,.1); --input:rgba(32,29,24,.18);
+    --primary:#7E2A2A; --primary-fg:#F7F5F1; --primary-dim:rgba(126,42,42,.08);
+    --success:#3E6B4F; --warning:#9A6B22; --secondary:#EFECE4;
+    --font-ui:Inter,sans-serif; --font-disp:'Instrument Serif',serif; --font-mono:'JetBrains Mono',monospace;
+    --r-card:12px; --shadow:0 1px 2px rgba(30,25,15,.05); --shadow-up:0 8px 24px rgba(30,25,15,.1);
+  }
+  .root[data-skin="new"][data-mode="dark"] {
+    --bg:#1C1A16; --card:#26231D; --fg:#EDE9E0; --muted:#9C9585;
+    --line:rgba(237,233,224,.1); --input:rgba(237,233,224,.18);
+    --primary:#D08080; --primary-fg:#1C1A16; --primary-dim:rgba(208,128,128,.12);
+    --success:#8FB89E; --warning:#D0A860; --secondary:#2E2A23;
+    --shadow:0 1px 2px rgba(0,0,0,.25); --shadow-up:0 8px 24px rgba(0,0,0,.35);
+  }
+
+  /* ================= SHELL ================= */
+  .frame { max-width:1240px; margin:0 auto; border-radius:10px; overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,.18); }
+  .root { background:var(--bg); color:var(--fg); font-family:var(--font-ui); transition:background .25s ease; }
+  .titlebar { height:34px; display:flex; align-items:center; padding:0 14px; gap:7px; border-bottom:1px solid var(--line); background:var(--card); }
+  .dot { width:11px; height:11px; border-radius:50%; opacity:.85; }
+
+  header.app-header { display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--line); background:var(--card); padding:12px 24px; }
+  .wordmark { font-family:var(--font-disp); font-size:20px; letter-spacing:-.01em; }
+  .wordmark i { font-style:italic; color:var(--primary); }
+  .spacer { flex:1; }
+  .icon-btn { background:none; border:none; color:var(--muted); font-size:15px; cursor:pointer; padding:6px 8px; border-radius:6px; }
+  .icon-btn:hover { background:var(--secondary); color:var(--fg); }
+  .seg { display:flex; border:1px solid var(--input); border-radius:8px; padding:2px; }
+  .seg button { font:500 12px var(--font-ui); border:none; background:none; color:var(--muted); padding:4px 10px; border-radius:6px; cursor:pointer; }
+  .seg button.on { background:var(--secondary); color:var(--fg); }
+  .btn-outline { font:500 13px var(--font-ui); color:var(--fg); background:transparent; border:1px solid var(--input); border-radius:8px; padding:8px 14px; cursor:pointer; transition:all .15s ease; }
+  .btn-outline:hover { background:var(--secondary); }
+  .btn-primary { font:500 13px var(--font-ui); color:var(--primary-fg); background:var(--primary); border:1px solid var(--primary); border-radius:8px; padding:8px 14px; cursor:pointer; transition:all .15s ease; }
+  .btn-primary:hover { opacity:.9; }
+  .root[data-skin="new"] .btn-primary, .root[data-skin="new"] .btn-outline { box-shadow:var(--shadow); }
+  .root[data-skin="new"] .btn-outline:hover, .root[data-skin="new"] .btn-primary:hover { transform:translateY(-1px); box-shadow:0 3px 10px rgba(30,25,15,.09); }
+  .root[data-skin="new"] .btn-outline:active, .root[data-skin="new"] .btn-primary:active { transform:translateY(0) scale(.98); }
+
+  .content { max-width:896px; margin:0 auto; padding:32px 24px 48px; }
+
+  /* summary strip — redesign only */
+  .summary { display:none; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+  .root[data-skin="new"] .summary { display:grid; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 16px; box-shadow:var(--shadow); }
+  .stat .n { font-family:var(--font-disp); font-size:24px; }
+  .stat .l { font-size:12px; color:var(--muted); margin-top:1px; }
+  .stat.act { border-color:var(--warning); }
+  .stat.act .n { color:var(--warning); }
+
+  /* board bar — mirrors TriageBoard.tsx header row */
+  .board-bar { display:flex; flex-wrap:wrap; align-items:center; gap:12px 12px; margin-bottom:12px; }
+  .board-title { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+  .board-count { font-family:var(--font-mono); font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .board-count b { color:var(--success); font-weight:400; }
+  .filters { display:flex; gap:4px; margin-left:auto; }
+  .filters button { font:400 11px var(--font-ui); color:var(--muted); background:none; border:none; border-radius:6px; padding:4px 8px; cursor:pointer; transition:all .15s ease; }
+  .filters button:hover { background:var(--secondary); }
+  .filters button.on { background:var(--primary-dim); color:var(--primary); font-weight:500; }
+  .album-sel { font:400 12px var(--font-ui); color:var(--fg); background:var(--card); border:1px solid var(--input); border-radius:6px; padding:4px 8px; }
+  /* redesign: bigger, sentence-case bar */
+  .root[data-skin="new"] .board-title { text-transform:none; letter-spacing:0; font-size:14px; font-weight:600; color:var(--fg); }
+  .root[data-skin="new"] .board-count { font-family:var(--font-ui); font-size:13px; }
+  .root[data-skin="new"] .filters button { font-size:13px; padding:6px 13px; border-radius:999px; border:1px solid var(--line); background:var(--card); box-shadow:var(--shadow); }
+  .root[data-skin="new"] .filters button.on { background:var(--fg); color:var(--bg); border-color:var(--fg); }
+  .kbd-hints { display:none; font-size:12px; color:var(--muted); gap:10px; }
+  .root[data-skin="new"] .kbd-hints { display:flex; }
+  kbd { font:500 10.5px var(--font-ui); border:1px solid var(--input); border-bottom-width:2px; border-radius:4px; padding:1px 5px; }
+
+  /* ================= CARDS (same DOM both skins) ================= */
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:12px; list-style:none; }
+  .root[data-skin="new"] .grid { grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:16px; }
+  .card { position:relative; overflow:hidden; border-radius:var(--r-card); border:1px solid var(--line); background:var(--card); text-align:left; cursor:pointer; transition:all .18s cubic-bezier(.2,.7,.3,1); width:100%; font-family:var(--font-ui); color:var(--fg); }
+  .card:hover { border-color:var(--primary); }
+  .root[data-skin="new"] .card { box-shadow:var(--shadow); }
+  .root[data-skin="new"] .card:hover { transform:translateY(-3px); box-shadow:var(--shadow-up); border-color:var(--muted); }
+  .card .ph { position:relative; aspect-ratio:4/5; width:100%; display:flex; align-items:center; justify-content:center; font-size:34px; }
+  .card .n-photos { position:absolute; bottom:4px; right:4px; font-family:var(--font-mono); font-size:9px; color:#fff; background:rgba(0,0,0,.6); border-radius:4px; padding:1px 4px; }
+  .card .body { padding:10px; }
+  .root[data-skin="new"] .card .body { padding:13px 14px; }
+  .card .title { font-size:13px; font-weight:500; line-height:1.35; min-height:2.5rem; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .root[data-skin="new"] .card .title { font-size:14px; }
+  .card .row2 { margin-top:6px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .state { font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.06em; display:inline-flex; align-items:center; gap:4px; }
+  .state.ok { color:var(--success); } .state.warn { color:var(--warning); }
+  .root[data-skin="new"] .state { font-size:12px; text-transform:none; letter-spacing:0; }
+  .score { font-family:var(--font-mono); font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .root[data-skin="new"] .score { display:none; }
+  .priceline { margin-top:4px; font-family:var(--font-mono); font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .priceline .p { color:var(--fg); }
+  .root[data-skin="new"] .priceline { font-family:var(--font-ui); font-size:12px; margin-top:7px; }
+  .root[data-skin="new"] .priceline .p { font-family:var(--font-disp); font-size:17px; margin-right:2px; }
+  .qa { position:absolute; top:8px; right:8px; display:flex; gap:6px; opacity:0; transform:translateY(-4px); transition:all .18s ease; }
+  .root[data-skin="current"] .qa { display:none; }
+  .card:hover .qa { opacity:1; transform:none; }
+  .qa button { font:500 12px var(--font-ui); background:var(--card); color:var(--fg); border:1px solid var(--line); box-shadow:var(--shadow-up); border-radius:6px; padding:3px 10px; cursor:pointer; }
+  .qa button:hover { border-color:var(--fg); }
+  .check { width:12px; height:12px; }
+  .check path { stroke:currentColor; stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Round 4 — the real app vs. the redesign, same screen, same DOM</h1>
+  <p>“Current” is a faithful replica from your code: exact HSL tokens, Space Grotesk, Instrument Serif wordmark,
+  brass, 10px uppercase state lines, JetBrains Mono price lines, 160px cards, shadcn buttons. The redesign buttons
+  morph the identical layout — nothing moves, only tokens, type scale, and polish change. Wordmark serif stays (your DNA).</p>
+</div>
+<div class="switcher">
+  <button class="on" data-skin="current" data-mode="dark">Current app (dark)</button>
+  <button data-skin="new" data-mode="light">Redesign (light)</button>
+  <button data-skin="new" data-mode="dark">Redesign (dark)</button>
+</div>
+
+<div class="frame">
+<div class="root" id="root" data-skin="current" data-mode="dark">
+  <div class="titlebar"><span class="dot" style="background:#E96E5F"></span><span class="dot" style="background:#F5BF4F"></span><span class="dot" style="background:#61C554"></span></div>
+
+  <header class="app-header">
+    <span class="wordmark">Tailor <i>Studio</i></span>
+    <span class="spacer"></span>
+    <button class="icon-btn" title="Guide">?</button>
+    <div class="seg"><button class="on">Board</button><button>Lists</button></div>
+    <button class="btn-outline">Confirm drafts (2)</button>
+    <button class="btn-primary">+ New batch</button>
+  </header>
+
+  <div class="content">
+    <div class="summary">
+      <div class="stat act"><div class="n">3</div><div class="l">Need your review</div></div>
+      <div class="stat"><div class="n">9</div><div class="l">Ready to fill</div></div>
+      <div class="stat"><div class="n">12</div><div class="l">Listed this week</div></div>
+      <div class="stat"><div class="n">$1,240</div><div class="l">Est. value ready</div></div>
+    </div>
+
+    <div class="board-bar">
+      <span class="board-title">Batch board</span>
+      <span class="board-count">9 of 12 ready<b> · 12 listed</b></span>
+      <span class="kbd-hints"><span><kbd>J</kbd><kbd>K</kbd> move</span><span><kbd>↵</kbd> open</span><span><kbd>F</kbd> fill</span></span>
+      <div class="filters">
+        <button class="on">All</button><button>Needs attention</button><button>Ready</button><button>Listed</button>
+      </div>
+      <select class="album-sel"><option>All batches</option><option>July 12 closet</option></select>
+    </div>
+
+    <ul class="grid">
+      <li class="card">
+        <div class="qa"><button>Open</button></div>
+        <div class="ph" style="background:#565A66">🧢<span class="n-photos">6</span></div>
+        <div class="body">
+          <div class="title">Vintage 90s Nike windbreaker jacket navy white spell-out L</div>
+          <div class="row2"><span class="state warn">Review</span><span class="score">64</span></div>
+          <div class="priceline"><span class="p">$62</span> · 4 comps · low</div>
+        </div>
+      </li>
+      <li class="card">
+        <div class="qa"><button>Open</button><button>Fill</button></div>
+        <div class="ph" style="background:#8B8A70">🧥<span class="n-photos">6</span></div>
+        <div class="body">
+          <div class="title">Stone Island wool overshirt olive size M</div>
+          <div class="row2"><span class="state ok"><svg class="check" viewBox="0 0 14 14"><path d="M2.5 7.5 5.5 10.5 11.5 3.5"/></svg>Ready</span><span class="score">92</span></div>
+          <div class="priceline"><span class="p">$185</span> · 12 comps · high</div>
+        </div>
+      </li>
+      <li class="card">
+        <div class="qa"><button>Open</button><button>Fill</button></div>
+        <div class="ph" style="background:#6E5F52">👖<span class="n-photos">8</span></div>
+        <div class="body">
+          <div class="title">Levi's 501 raw selvedge denim 32×32</div>
+          <div class="row2"><span class="state ok"><svg class="check" viewBox="0 0 14 14"><path d="M2.5 7.5 5.5 10.5 11.5 3.5"/></svg>Ready</span><span class="score">88</span></div>
+          <div class="priceline"><span class="p">$88</span> · 21 comps · high</div>
+        </div>
+      </li>
+      <li class="card" style="opacity:.75">
+        <div class="qa"><button>Open</button></div>
+        <div class="ph" style="background:#C9BFA8">🧣<span class="n-photos">5</span></div>
+        <div class="body">
+          <div class="title">Carhartt duck chore coat brown blanket-lined</div>
+          <div class="row2"><span class="state ok"><svg class="check" viewBox="0 0 14 14"><path d="M2.5 7.5 5.5 10.5 11.5 3.5"/></svg>Listed</span><span class="score">95</span></div>
+          <div class="priceline"><span class="p" style="color:var(--success)">$120</span> · 9 comps · high</div>
+        </div>
+      </li>
+      <li class="card">
+        <div class="ph" style="background:#4A4E5A">🏷️<span class="n-photos">2</span></div>
+        <div class="body">
+          <div class="title" style="font-weight:400;font-style:italic;color:var(--muted)">(needs review — no listing yet)</div>
+          <div class="row2"><span class="state warn">Single photo — confirm</span><span class="score">31</span></div>
+          <div class="priceline"><span class="p">—</span></div>
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<script>
+  const root = document.getElementById('root');
+  document.querySelector('.switcher').addEventListener('click', e => {
+    const b = e.target.closest('button[data-skin]');
+    if (!b) return;
+    root.dataset.skin = b.dataset.skin;
+    root.dataset.mode = b.dataset.mode;
+    document.querySelectorAll('.switcher button').forEach(x => x.classList.toggle('on', x === b));
+  });
+</script>
+</body>
+</html>

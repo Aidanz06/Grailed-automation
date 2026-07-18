@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tailor Studio — Round 6: refined v2 (all-sans, icon buttons)</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html { background:#E8E8E8; }
+  body { font-family:'Space Grotesk',sans-serif; padding:40px 0 80px; }
+  .intro { max-width:1240px; margin:0 auto 16px; padding:0 8px; font-family:Inter,-apple-system,sans-serif; }
+  .intro h1 { font-size:20px; font-weight:600; margin-bottom:6px; color:#222; }
+  .intro p { font-size:14px; color:#555; line-height:1.5; }
+  .switcher { max-width:1240px; margin:0 auto 14px; padding:0 8px; display:flex; gap:8px; font-family:Inter,sans-serif; }
+  .switcher button { font:500 13px Inter,sans-serif; padding:8px 16px; border-radius:8px; border:1px solid #bbb; background:#fff; cursor:pointer; }
+  .switcher button.on { background:#222; color:#fff; border-color:#222; }
+
+  .root[data-skin="current"] {
+    --bg:hsl(220 20% 6.5%); --card:hsl(219 18% 9.5%); --fg:hsl(218 25% 92%);
+    --muted:hsl(219 12% 62%); --line:hsl(218 30% 88% / 0.09); --input:hsl(218 30% 88% / 0.16);
+    --primary:hsl(38 62% 68%); --primary-fg:hsl(38 65% 10%); --primary-dim:hsl(38 62% 68% / 0.15);
+    --success:hsl(165 60% 55%); --warning:hsl(41 86% 60%); --secondary:hsl(219 16% 13%);
+    --shadow:none; --shadow-up:none;
+    --fs-title:13px; --fs-state:10px; --fs-price:11px; --card-min:160px; --pad:10px;
+  }
+  .root[data-skin="v2"] {
+    --bg:hsl(220 18% 7.5%); --card:hsl(219 18% 11%); --fg:hsl(218 25% 93%);
+    --muted:hsl(219 13% 72%); --line:hsl(218 30% 88% / 0.14); --input:hsl(218 30% 88% / 0.22);
+    --primary:hsl(38 62% 68%); --primary-fg:hsl(38 65% 10%); --primary-dim:hsl(38 62% 68% / 0.15);
+    --success:hsl(165 60% 58%); --warning:hsl(41 86% 62%); --secondary:hsl(219 16% 14.5%);
+    --shadow:0 1px 2px rgba(0,0,0,.3); --shadow-up:0 10px 28px rgba(0,0,0,.45);
+    --fs-title:14px; --fs-state:11.5px; --fs-price:12.5px; --card-min:184px; --pad:13px;
+  }
+  .root[data-skin="v2"][data-mode="light"] {
+    --bg:hsl(40 30% 97%); --card:hsl(0 0% 100%); --fg:hsl(30 12% 12%);
+    --muted:hsl(35 8% 38%); --line:hsl(35 20% 20% / 0.16); --input:hsl(35 20% 20% / 0.24);
+    --primary:hsl(36 52% 38%); --primary-fg:hsl(40 40% 98%); --primary-dim:hsl(36 52% 38% / 0.1);
+    --success:hsl(168 65% 28%); --warning:hsl(32 90% 38%); --secondary:hsl(40 22% 93%);
+    --shadow:0 1px 2px rgba(60,45,20,.06); --shadow-up:0 10px 28px rgba(60,45,20,.13);
+  }
+
+  .frame { max-width:1240px; margin:0 auto; border-radius:10px; overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,.18); }
+  .root { background:var(--bg); color:var(--fg); transition:background .25s ease; }
+  .titlebar { height:34px; display:flex; align-items:center; padding:0 14px; gap:7px; border-bottom:1px solid var(--line); background:var(--card); }
+  .dot { width:11px; height:11px; border-radius:50%; opacity:.85; }
+
+  header.app-header { display:flex; align-items:center; gap:10px; border-bottom:1px solid var(--line); background:var(--card); padding:12px 24px; }
+  /* wordmark: serif in current, Space Grotesk 600 in v2 */
+  .wordmark { font-family:'Instrument Serif',serif; font-size:20px; letter-spacing:-.01em; }
+  .wordmark i { font-style:italic; color:var(--primary); }
+  .root[data-skin="v2"] .wordmark { font-family:'Space Grotesk'; font-weight:600; font-size:17px; letter-spacing:-.02em; }
+  .root[data-skin="v2"] .wordmark i { font-style:normal; }
+  .spacer { flex:1; }
+
+  svg.ic { width:17px; height:17px; stroke:currentColor; stroke-width:1.8; fill:none; stroke-linecap:round; stroke-linejoin:round; display:block; }
+  .icon-btn { position:relative; display:flex; align-items:center; justify-content:center; width:34px; height:34px; background:none; border:1px solid transparent; color:var(--muted); cursor:pointer; border-radius:8px; transition:all .16s cubic-bezier(.2,.7,.3,1); }
+  .icon-btn:hover { background:var(--secondary); color:var(--fg); }
+  .root[data-skin="v2"] .icon-btn { border-color:var(--input); background:var(--card); box-shadow:var(--shadow); }
+  .root[data-skin="v2"] .icon-btn:hover { transform:translateY(-1px); color:var(--fg); border-color:var(--muted); }
+  .root[data-skin="v2"] .icon-btn:active { transform:scale(.94); }
+  .badge { position:absolute; top:-5px; right:-5px; font:600 10px 'Space Grotesk'; background:var(--warning); color:var(--bg); border-radius:999px; min-width:16px; height:16px; display:flex; align-items:center; justify-content:center; padding:0 4px; }
+  .seg { display:flex; border:1px solid var(--input); border-radius:8px; padding:2px; }
+  .seg button { display:flex; align-items:center; justify-content:center; width:30px; height:28px; border:none; background:none; color:var(--muted); border-radius:6px; cursor:pointer; }
+  .seg button.on { background:var(--secondary); color:var(--fg); }
+  .btn-primary { display:flex; align-items:center; gap:6px; font:500 13px 'Space Grotesk'; color:var(--primary-fg); background:var(--primary); border:1px solid var(--primary); border-radius:8px; padding:8px 14px; cursor:pointer; transition:all .16s cubic-bezier(.2,.7,.3,1); }
+  .btn-primary:hover { opacity:.92; }
+  .root[data-skin="v2"] .btn-primary { box-shadow:var(--shadow); }
+  .root[data-skin="v2"] .btn-primary:hover { transform:translateY(-1px); opacity:1; filter:brightness(1.06); }
+  .root[data-skin="v2"] .btn-primary:active { transform:scale(.97); }
+  .btn-primary svg.ic { width:15px; height:15px; stroke-width:2.2; }
+
+  .content { max-width:896px; margin:0 auto; padding:32px 24px 48px; }
+
+  .summary { display:none; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:24px; }
+  .root[data-skin="v2"] .summary { display:grid; }
+  .stat { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 16px; box-shadow:var(--shadow); }
+  .stat .n { font:600 22px 'Space Grotesk'; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
+  .stat .l { font-size:12px; color:var(--muted); margin-top:1px; }
+  .stat.act { border-color:var(--warning); } .stat.act .n { color:var(--warning); }
+  .stat.money .n { color:var(--primary); }
+
+  .board-bar { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin-bottom:12px; }
+  .board-title { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+  .board-count { font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .board-count b { color:var(--success); font-weight:400; }
+  .kbd-hints { display:none; font-size:12px; color:var(--muted); gap:10px; }
+  .root[data-skin="v2"] .kbd-hints { display:flex; }
+  kbd { font:500 10.5px 'Space Grotesk'; border:1px solid var(--input); border-bottom-width:2px; border-radius:4px; padding:1px 5px; }
+  .filters { display:flex; gap:4px; margin-left:auto; }
+  .filters button { font:400 11px 'Space Grotesk'; color:var(--muted); background:none; border:none; border-radius:6px; padding:4px 8px; cursor:pointer; transition:all .15s ease; }
+  .filters button:hover { background:var(--secondary); }
+  .filters button.on { background:var(--primary-dim); color:var(--primary); font-weight:500; }
+  .root[data-skin="v2"] .filters { gap:6px; }
+  .root[data-skin="v2"] .filters button { font-size:12.5px; border:1px solid var(--input); border-radius:999px; padding:5px 13px; background:var(--card); box-shadow:var(--shadow); color:var(--fg); }
+  .root[data-skin="v2"] .filters button:hover { border-color:var(--muted); transform:translateY(-1px); }
+  .root[data-skin="v2"] .filters button.on { background:var(--primary); color:var(--primary-fg); border-color:var(--primary); font-weight:500; }
+  .album-sel { font:400 12px 'Space Grotesk'; color:var(--fg); background:var(--card); border:1px solid var(--input); border-radius:6px; padding:4px 8px; }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(var(--card-min),1fr)); gap:12px; list-style:none; }
+  .root[data-skin="v2"] .grid { gap:16px; }
+  .card { position:relative; overflow:hidden; border-radius:10px; border:1px solid var(--line); background:var(--card); cursor:pointer; transition:all .18s cubic-bezier(.2,.7,.3,1); color:var(--fg); }
+  .card:hover { border-color:var(--primary); }
+  .root[data-skin="v2"] .card { box-shadow:var(--shadow); }
+  .root[data-skin="v2"] .card:hover { transform:translateY(-3px); box-shadow:var(--shadow-up); }
+  .card .ph { position:relative; aspect-ratio:4/5; width:100%; display:flex; align-items:center; justify-content:center; font-size:34px; }
+  .card .n-photos { position:absolute; bottom:4px; right:4px; font-family:'JetBrains Mono'; font-size:9px; color:#fff; background:rgba(0,0,0,.6); border-radius:4px; padding:1px 4px; }
+  .root[data-skin="v2"] .card .n-photos { font-size:10.5px; padding:2px 6px; }
+  .card .body { padding:var(--pad); }
+  .card .title { font-size:var(--fs-title); font-weight:500; line-height:1.35; min-height:2.5rem; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .card .row2 { margin-top:6px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .state { font-size:var(--fs-state); font-weight:500; text-transform:uppercase; letter-spacing:.06em; display:inline-flex; align-items:center; gap:4px; }
+  .state.ok { color:var(--success); } .state.warn { color:var(--warning); }
+  .score { font-family:'JetBrains Mono'; font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .priceline { margin-top:4px; font-family:'JetBrains Mono'; font-size:var(--fs-price); color:var(--muted); font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .priceline .p { color:var(--fg); }
+  .root[data-skin="v2"] .priceline .p { font-size:13.5px; font-weight:500; color:var(--primary); }
+  .qa { position:absolute; top:8px; right:8px; display:flex; gap:6px; opacity:0; transform:translateY(-4px); transition:all .18s cubic-bezier(.2,.7,.3,1); }
+  .root[data-skin="current"] .qa { display:none; }
+  .card:hover .qa { opacity:1; transform:none; }
+  .qa .icon-btn { width:30px; height:30px; background:var(--card); border-color:var(--input); box-shadow:var(--shadow-up); }
+  .qa .icon-btn:hover { color:var(--primary); border-color:var(--primary); }
+  .check { width:12px; height:12px; }
+  .check path { stroke:currentColor; stroke-width:2.2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Round 6 — refined v2: all-sans, icon-first controls</h1>
+  <p>Changes from round 5 per your notes: serif is gone everywhere (wordmark and numerals now Space Grotesk 600 —
+  no more book voice), and header/card controls are icon buttons with tooltips — hover them. Only the single primary
+  CTA keeps a text label. Compare against the exact current app with the first button.</p>
+</div>
+<div class="switcher">
+  <button class="on" data-skin="current" data-mode="dark">Current (exact)</button>
+  <button data-skin="v2" data-mode="dark">Refined v2 (dark)</button>
+  <button data-skin="v2" data-mode="light">Refined v2 (light twin)</button>
+</div>
+
+<div class="frame">
+<div class="root" id="root" data-skin="current" data-mode="dark">
+  <div class="titlebar"><span class="dot" style="background:#E96E5F"></span><span class="dot" style="background:#F5BF4F"></span><span class="dot" style="background:#61C554"></span></div>
+
+  <header class="app-header">
+    <span class="wordmark">Tailor <i>Studio</i></span>
+    <span class="spacer"></span>
+    <button class="icon-btn" title="Guide — how Tailor works">
+      <svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.7 2.2c-.8.5-1.2 1-1.2 1.8"/><line x1="12" y1="16.5" x2="12" y2="16.6"/></svg>
+    </button>
+    <button class="icon-btn" title="Listing defaults & style editor">
+      <svg class="ic" viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><circle cx="9" cy="7" r="2.2"/><line x1="4" y1="15" x2="20" y2="15"/><circle cx="15" cy="15" r="2.2"/></svg>
+    </button>
+    <div class="seg">
+      <button class="on" title="Board view"><svg class="ic" style="width:15px;height:15px" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/></svg></button>
+      <button title="List view"><svg class="ic" style="width:15px;height:15px" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg></button>
+    </div>
+    <button class="icon-btn" title="Confirm drafts — 2 waiting">
+      <svg class="ic" viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4.5V3.5A1.5 1.5 0 0 1 10.5 2h3A1.5 1.5 0 0 1 15 3.5v1"/><path d="M9.5 13.5l2 2 3.5-4"/></svg>
+      <span class="badge">2</span>
+    </button>
+    <button class="btn-primary" title="Import a folder of photos">
+      <svg class="ic" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New batch
+    </button>
+  </header>
+
+  <div class="content">
+    <div class="summary">
+      <div class="stat act"><div class="n">3</div><div class="l">Need your review</div></div>
+      <div class="stat"><div class="n">9</div><div class="l">Ready to fill</div></div>
+      <div class="stat"><div class="n">12</div><div class="l">Listed this week</div></div>
+      <div class="stat money"><div class="n">$1,240</div><div class="l">Est. value ready</div></div>
+    </div>
+
+    <div class="board-bar">
+      <span class="board-title">Batch board</span>
+      <span class="board-count">9 of 12 ready<b> · 12 listed</b></span>
+      <span class="kbd-hints"><span><kbd>J</kbd><kbd>K</kbd> move</span><span><kbd>↵</kbd> open</span><span><kbd>F</kbd> fill</span></span>
+      <div class="filters">
+        <button class="on">All</button><button>Needs attention</button><button>Ready</button><button>Listed</button>
+      </div>
+      <select class="album-sel"><option>All batches</option><option>July 12 closet</option></select>
+    </div>
+
+    <ul class="grid">
+      <li class="card">
+        <div class="qa">
+          <button class="icon-btn" title="Open draft"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></button>
+        </div>
+        <div class="ph" style="background:#565A66">🧢<span class="n-photos">6</span></div>
+        <div class="body">
+          <div class="title">Vintage 90s Nike windbreaker jacket navy white spell-out L</div>
+          <div class="row2"><span class="state warn">Review</span><span class="score">64</span></div>
+          <div class="priceline"><span class="p">$62</span> · 4 comps · low</div>
+        </div>
+      </li>
+      <li class="card">
+        <div class="qa">
+          <button class="icon-btn" title="Open draft"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></button>
+          <button class="icon-btn" title="Fill in Chrome"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M5 4l14 8-14 8z"/></svg></button>
+        </div>
+        <div class="ph" style="background:#8B8A70">🧥<span class="n-photos">6</span></div>
+        <div class="body">
+          <div class="title">Stone Island wool overshirt olive size M</div>
+          <div class="row2"><span class="state ok"><svg class="check" viewBox="0 0 14 14"><path d="M2.5 7.5 5.5 10.5 11.5 3.5"/></svg>Ready</span><span class="score">92</span></div>
+          <div class="priceline"><span class="p">$185</span> · 12 comps · high</div>
+        </div>
+      </li>
+      <li class="card">
+        <div class="qa">
+          <button class="icon-btn" title="Open draft"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></button>
+          <button class="icon-btn" title="Fill in Chrome"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M5 4l14 8-14 8z"/></svg></button>
+        </div>
+        <div class="ph" style="background:#6E5F52">👖<span class="n-photos">8</span></div>
+        <div class="body">
+          <div class="title">Levi's 501 raw selvedge denim 32×32</div>
+          <div class="row2"><span class="state ok"><svg class="check" viewBox="0 0 14 14"><path d="M2.5 7.5 5.5 10.5 11.5 3.5"/></svg>Ready</span><span class="score">88</span></div>
+          <div class="priceline"><span class="p">$88</span> · 21 comps · high</div>
+        </div>
+      </li>
+      <li class="card" style="opacity:.8">
+        <div class="qa">
+          <button class="icon-btn" title="Open"><svg class="ic" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M9 7h8v8"/></svg></button>
+        </div>
+        <div class="ph" style="background:#C9BFA8">🧣<span class="n-photos">5</span></div>
+        <div class="body">
+          <div class="title">Carhartt duck chore coat brown blanket-lined</div>
+          <div class="row2"><span class="state ok"><svg class="check" viewBox="0 0 14 14"><path d="M2.5 7.5 5.5 10.5 11.5 3.5"/></svg>Listed</span><span class="score">95</span></div>
+          <div class="priceline"><span class="p" style="color:var(--success)">$120</span> · 9 comps · high</div>
+        </div>
+      </li>
+      <li class="card">
+        <div class="ph" style="background:#4A4E5A">🏷️<span class="n-photos">2</span></div>
+        <div class="body">
+          <div class="title" style="font-weight:400;font-style:italic;color:var(--muted)">(needs review — no listing yet)</div>
+          <div class="row2"><span class="state warn">Single photo — confirm</span><span class="score">31</span></div>
+          <div class="priceline"><span class="p">—</span></div>
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<script>
+  const root = document.getElementById('root');
+  document.querySelector('.switcher').addEventListener('click', e => {
+    const b = e.target.closest('button[data-skin]');
+    if (!b) return;
+    root.dataset.skin = b.dataset.skin;
+    root.dataset.mode = b.dataset.mode;
+    document.querySelectorAll('.switcher button').forEach(x => x.classList.toggle('on', x === b));
+  });
+</script>
+</body>
+</html>

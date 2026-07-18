@@ -27,3 +27,21 @@ test('non-403 statuses and unparseable URLs are never signals', () => {
   assert.strictEqual(isFirstParty403('https://www.grailed.com/api', 401), false);
   assert.strictEqual(isFirstParty403('not a url', 403), false);
 });
+
+// ---- collabParts (designer collab fallback, fixed 2026-07-18) ----
+
+const { collabParts } = require('../ui/autofill-driver');
+
+test('collabParts: primary brand is the FIRST part across separator styles', () => {
+  assert.deepStrictEqual(collabParts('Stussy x Nike'), ['Stussy', 'Nike']);
+  assert.deepStrictEqual(collabParts('Supreme × Comme des Garcons'), ['Supreme', 'Comme des Garcons']);
+  assert.deepStrictEqual(collabParts('A/B'), ['A', 'B']);
+  assert.deepStrictEqual(collabParts('A & B'), ['A', 'B']);
+});
+
+test('collabParts: single brands and x-containing names stay whole', () => {
+  assert.deepStrictEqual(collabParts('Nike'), ['Nike']);
+  // "x" without surrounding spaces is part of the name, not a collab separator
+  assert.deepStrictEqual(collabParts('Exit Clothing'), ['Exit Clothing']);
+  assert.deepStrictEqual(collabParts(''), []);
+});
