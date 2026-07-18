@@ -104,6 +104,13 @@ export function PricePanel({ item, update, toast }: Props) {
       .finally(() => setRecomputing(false));
   };
 
+  // M-8 phase 1: the confidence detail, readable without a mouse — the same
+  // text rides on the pill's title (hover) and on sr-only content screen
+  // readers announce inline. Zero visual change (sr-only is out of flow).
+  const confDetail = r?.confidence
+    ? `${r.confidence.explanation} ${r.confidence.strongMatches} near-identical + ${r.confidence.moderateMatches} similar comps · effective sample ${r.confidence.effectiveN}. The CI95 below is where the true going rate likely sits, not the min–max of sales.`
+    : null;
+
   const comps: Comp[] = r ? (r.allComps?.length ? r.allComps : r.mostRelevantComps) : [];
   const nComps = r?.sampleSize ?? comps.length;
   const topComps = r?.mostRelevantComps.slice(0, 3) ?? [];
@@ -162,9 +169,10 @@ export function PricePanel({ item, update, toast }: Props) {
                   'rounded-full border px-2.5 py-1 font-mono text-2xs font-medium',
                   CONF_CLASS[r.confidence.level]
                 )}
-                title={`${r.confidence.explanation} ${r.confidence.strongMatches} near-identical + ${r.confidence.moderateMatches} similar comps · effective sample ${r.confidence.effectiveN}. The CI95 below is where the true going rate likely sits, not the min–max of sales.`}
+                title={confDetail ?? undefined}
               >
                 {r.confidence.level} confidence
+                <span className="sr-only"> — {confDetail}</span>
               </span>
             )}
           </div>

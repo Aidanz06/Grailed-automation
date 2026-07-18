@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { ArrowUpRight, ChevronDown, ChevronRight, Pencil, RefreshCw } from 'lucide-react';
 import type { Item } from '@/types';
 import { api, type AutofillOptions, type ChromeStatus, type FillChanges } from '@/lib/api';
@@ -364,6 +364,17 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
   // A re-fill targets only the edited fields when a snapshot exists and the
   // diff is non-empty (photo changes aren't tracked — Grailed-form territory).
   const changedFill = !!fillChanges?.lastFillAt && fillChanges.changes.length > 0;
+
+  // M-8 phase 1: the Fill explanation, reachable without a mouse — the same
+  // text rides on the wrapper's title (hover) and on an sr-only description
+  // the button announces on keyboard focus. Zero visual change.
+  const fillDescId = useId();
+  const fillExplain =
+    changedFill && !armed
+      ? 'Updates only the fields you edited since the last fill, in the same Sell form (still open in Chrome). Never submits.'
+      : confirmed
+        ? "Fills title, description, price, condition, photos + the confirmed category with size/sub-category/designer into Grailed's sell form in the launched Chrome. Never submits."
+        : "Fills title, description, price, condition + photos into Grailed's sell form in the launched Chrome. Category/size/designer stay manual until you confirm the category. Never submits.";
   const changedCount = fillChanges?.changes.length ?? 0;
   const startFill = (changedOnly = false) => {
     setFilling(true);
@@ -1095,19 +1106,11 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
         </div>
 
         <section className="rise-in rounded-xl border bg-card p-4" style={{ animationDelay: '180ms' }}>
-          <span
-            className="block"
-            title={
-              changedFill && !armed
-                ? 'Updates only the fields you edited since the last fill, in the same Sell form (still open in Chrome). Never submits.'
-                : confirmed
-                  ? "Fills title, description, price, condition, photos + the confirmed category with size/sub-category/designer into Grailed's sell form in the launched Chrome. Never submits."
-                  : "Fills title, description, price, condition + photos into Grailed's sell form in the launched Chrome. Category/size/designer stay manual until you confirm the category. Never submits."
-            }
-          >
+          <span className="block" title={fillExplain}>
             <Button
               className={cn('w-full', !filling && 'glow-primary')}
               disabled={filling}
+              aria-describedby={fillDescId}
               onClick={() => fillListing({ changedOnly: changedFill && !armed })}
             >
               <ArrowUpRight />
@@ -1119,6 +1122,9 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
                     ? `Fill ${changedCount} change${changedCount === 1 ? '' : 's'} in Chrome`
                     : 'Fill listing in Chrome'}
             </Button>
+          </span>
+          <span id={fillDescId} className="sr-only">
+            {fillExplain}
           </span>
           {/* Beta Part F: one-time first-fill heads-up (localStorage-gated).
               Confirm proceeds with the exact click that was deferred. */}
