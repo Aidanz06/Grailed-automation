@@ -5,7 +5,7 @@ import type { Album } from '@/lib/api';
 import { GRAILED_PHOTO_LIMIT, triageSort } from '@/lib/readiness';
 import { quality, qualityTitle, type Quality, type QualityState } from '@/lib/quality';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
+import { cn, money } from '@/lib/utils';
 
 /*
  * Batch triage board (refinement plan §C/§E5): the batch — not the item — is
@@ -16,8 +16,6 @@ import { cn } from '@/lib/utils';
  * order the sidebar, J/K, and fill-next use. Purely a lens over the items:
  * opening a card goes to the same editor; nothing here fills or submits.
  */
-
-const money = (n: number | null | undefined) => (n == null ? '—' : '$' + n);
 
 export const FLAG_LABELS: Record<string, string> = {
   multi_item_photo: 'Multiple garments in one photo',

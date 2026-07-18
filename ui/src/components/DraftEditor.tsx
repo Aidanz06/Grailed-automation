@@ -4,7 +4,7 @@ import type { Item } from '@/types';
 import { api, type AutofillOptions, type ChromeStatus, type FillChanges } from '@/lib/api';
 import { suggestGrailedCategory } from '@/lib/grailedCategory';
 import { activeTemplate, finalizeDescription } from '@/lib/description';
-import { agoLabel, cn, errorMessage, isCollabBrand, primaryBrand } from '@/lib/utils';
+import { agoLabel, cn, errorMessage, isCollabBrand, money, primaryBrand } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,8 +19,6 @@ import { FillProgressCard, applyFillProgress, emptyFillRun, type FillRunState } 
 import { FillChangesCard } from '@/components/FillChangesCard';
 import { useOpenSellTab } from '@/components/ChromeStatusChip';
 import { ConditionChips } from '@/components/ConditionChips';
-
-const money = (n: number | null | undefined) => (n == null ? '—' : '$' + n);
 
 // Beta Part F: the very first fill ever shows a one-time heads-up.
 const FIRST_FILL_KEY = 'tailor.firstFillConfirmed';

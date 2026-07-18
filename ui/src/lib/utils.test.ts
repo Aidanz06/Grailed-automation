@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { agoLabel, cn, errorMessage, formatWhen, isCollabBrand, primaryBrand } from '@/lib/utils';
+import { agoLabel, cn, errorMessage, formatWhen, isCollabBrand, money, primaryBrand } from '@/lib/utils';
+
+describe('money', () => {
+  it('formats with thousands separators', () => {
+    expect(money(80)).toBe('$80');
+    expect(money(1200)).toBe('$1,200');
+    expect(money(1234567)).toBe('$1,234,567');
+  });
+
+  it('keeps 0 as a real price and dashes missing values', () => {
+    expect(money(0)).toBe('$0');
+    expect(money(null)).toBe('—');
+    expect(money(undefined)).toBe('—');
+  });
+});
 
 describe('cn', () => {
   it('merges conflicting tailwind classes (last wins)', () => {

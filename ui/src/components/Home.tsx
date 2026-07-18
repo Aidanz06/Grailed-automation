@@ -11,9 +11,7 @@ import { GettingStarted } from '@/components/GettingStarted';
 import { FLAG_LABELS, TriageBoard, reviewReason } from '@/components/TriageBoard';
 import { CheckUpdatesButton, type Updater } from '@/components/Updater';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { cn, formatWhen } from '@/lib/utils';
-
-const money = (n: number | null | undefined) => (n == null ? '—' : '$' + n);
+import { cn, formatWhen, money } from '@/lib/utils';
 
 // Persisted Home layout preference: the batch board is the default surface
 // (refinement plan §C); the classic status lists stay one toggle away.

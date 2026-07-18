@@ -23,6 +23,13 @@ export function formatWhen(value?: string | null): string {
   );
 }
 
+/** Price display shared by Home/TriageBoard/DraftEditor/PricePanel (QW-1) —
+ * render-only ("$1,200"); nothing parses it back. Price inputs bind to
+ * range.median directly. */
+export function money(n: number | null | undefined): string {
+  return n == null ? '—' : '$' + n.toLocaleString('en-US');
+}
+
 /** Relative "time ago" for the save indicator. */
 export function agoLabel(fromMs: number, nowMs: number): string {
   const s = Math.max(0, Math.round((nowMs - fromMs) / 1000));

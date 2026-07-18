@@ -2,11 +2,9 @@ import { useState } from 'react';
 import { ChevronDown, ChevronRight, ExternalLink, RefreshCw } from 'lucide-react';
 import type { Comp, Item, PriceRange } from '@/types';
 import { api } from '@/lib/api';
-import { cn, errorMessage } from '@/lib/utils';
+import { cn, errorMessage, money } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-
-const money = (n: number | null | undefined) => (n == null ? '—' : '$' + n);
 
 // Estimate-confidence pill (owner request 2026-07-05; restyled to the
 // owner's 2026-07-14 mock — outlined, rounded-full). Level and the 95% CI
