@@ -343,6 +343,23 @@ function collabParts(value) {
     .filter(Boolean);
 }
 
+// Fallback ladder for autocomplete wants whose exact Grailed entry doesn't
+// exist. Collabs → the primary brand (first part). Non-collab multi-word
+// brands (sub-lines — "Fear of God Essentials" probed live 2026-07-18:
+// Grailed has "Fear of God" and "Essentials" but no combined entry, and its
+// lookup is strict, so the full name surfaces NOTHING) → progressively
+// shorter word-prefixes, longest first, at most two. The full want is always
+// matched first; a fallback selection carries a note. Exported for tests.
+function autocompleteFallbacks(value) {
+  const want = String(value || '').replace(/\s+/g, ' ').trim();
+  const parts = collabParts(want);
+  if (parts.length > 1) return [parts[0]];
+  const words = want.split(' ');
+  const out = [];
+  for (let n = words.length - 1; n >= 1 && out.length < 2; n--) out.push(words.slice(0, n).join(' '));
+  return out;
+}
+
 class AutofillAbort extends Error {
   constructor(message, signals) {
     super(message);
@@ -658,15 +675,16 @@ async function connect({ freshTab = false } = {}) {
     const attempts = 1 + (t.retries ?? 2);
     const backoffMs = t.retryBackoffMs ?? 700;
 
-    // §K collab fallback, corrected 2026-07-18: Grailed's designer lookup has
-    // NO "A x B" entries at all (probed live — every variant returns only the
-    // "Designer not listed" row), so demanding both collab tokens match was a
-    // guaranteed failure. Retries type the PRIMARY brand (first collab part —
-    // Grailed lists collab items under the primary designer) and acRectExpr
-    // accepts it as a fallback match when the full want isn't on offer; the
-    // result carries a note so the checklist says what was actually selected.
-    const parts = collabParts(want);
-    const collabFragment = parts.length > 1 ? parts[0] : null;
+    // §K fallback ladder, corrected 2026-07-18: Grailed's designer lookup has
+    // NO "A x B" entries at all, and no combined sub-line entries either
+    // ("Fear of God Essentials" surfaces nothing — probed live). Retries walk
+    // autocompleteFallbacks(): collabs type the PRIMARY brand (Grailed lists
+    // collab items under the primary designer); multi-word brands type shorter
+    // word-prefixes. acRectExpr accepts the typed fragment as a fallback match
+    // only when the full want isn't on offer; the result carries a note so the
+    // checklist says what was actually selected.
+    const isCollab = collabParts(want).length > 1;
+    const fragments = autocompleteFallbacks(want);
 
     let lastFail = { ok: false, reason: 'no matching suggestion' };
     for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -674,7 +692,9 @@ async function connect({ freshTab = false } = {}) {
       // Fragment retries apply only to "nothing matched" failures — a failed
       // CLICK (bug G's case) retypes the full value as before.
       const typed =
-        attempt > 1 && collabFragment && /no matching suggestion/.test(lastFail.reason || '') ? collabFragment : want;
+        attempt > 1 && fragments.length && /no matching suggestion/.test(lastFail.reason || '')
+          ? fragments[Math.min(attempt - 2, fragments.length - 1)]
+          : want;
       await pressEscape(); // an open menu (e.g. from a failed dropdown) would swallow the typing + click
       // Designer (and any dependent autocomplete) is DISABLED until a category
       // is chosen and Grailed enables it asynchronously after the category
@@ -703,9 +723,9 @@ async function connect({ freshTab = false } = {}) {
       let rect = { ok: false, reason: 'no matching suggestion' };
       let lastRead = rect; // last poll regardless of match — carries what WAS shown
       let lastSig = null;
-      // Fragment attempts may accept the primary brand alone — the full want
+      // Fragment attempts may accept the fragment alone — the full want
       // still matches first when Grailed does offer it.
-      const fallbackWant = typed === collabFragment ? collabFragment : null;
+      const fallbackWant = typed !== want ? typed : null;
       for (let i = 0; i < pollTries; i++) {
         await sleep(pollMs);
         const r = await evaluate(acRectExpr(sel, want, fallbackWant), `fillAutocomplete(${sel})`);
@@ -738,7 +758,7 @@ async function connect({ freshTab = false } = {}) {
       await assertClean(`fillAutocomplete(${sel})`);
       const ok =
         norm(got) === norm(rect.text) ||
-        (!!got && norm(got).includes(norm(rect.usedFallback ? collabFragment : want)));
+        (!!got && norm(got).includes(norm(rect.usedFallback ? fallbackWant : want)));
       if (ok) {
         return {
           ok: true,
@@ -748,7 +768,9 @@ async function connect({ freshTab = false } = {}) {
           ...(rect.usedFallback
             ? {
                 usedFallback: true,
-                note: `“${want}” isn't a Grailed designer entry — selected the primary brand “${rect.text}”; put the collab in the title/description`,
+                note: isCollab
+                  ? `“${want}” isn't a Grailed designer entry — selected the primary brand “${rect.text}”; put the collab in the title/description`
+                  : `“${want}” isn't a Grailed designer entry — selected “${rect.text}” (closest parent brand); adjust in Chrome if needed`,
               }
             : {}),
         };
@@ -1033,7 +1055,7 @@ async function fillListing(fields, onProgress) {
 
 // getJSON/portUp/sellTarget are shared with ui/chrome-dock.js (window
 // choreography uses the same :9222 endpoint but a browser-level connection).
-module.exports = { connect, fillListing, AutofillAbort, getJSON, portUp, sellTarget, openFreshSellTab, PORT, isFirstParty403, collabParts };
+module.exports = { connect, fillListing, AutofillAbort, getJSON, portUp, sellTarget, openFreshSellTab, PORT, isFirstParty403, collabParts, autocompleteFallbacks };
 
 // ---------------------------------------------------------------- CLI test modes
 // Live per-primitive verification without the app. Prereq: `npm run 0b:launch`,

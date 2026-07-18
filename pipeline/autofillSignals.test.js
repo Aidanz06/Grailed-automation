@@ -45,3 +45,22 @@ test('collabParts: single brands and x-containing names stay whole', () => {
   assert.deepStrictEqual(collabParts('Exit Clothing'), ['Exit Clothing']);
   assert.deepStrictEqual(collabParts(''), []);
 });
+
+// ---- autocompleteFallbacks (sub-line/word-prefix ladder, 2026-07-18) ----
+
+const { autocompleteFallbacks } = require('../ui/autofill-driver');
+
+test('fallbacks: collab -> primary brand only', () => {
+  assert.deepStrictEqual(autocompleteFallbacks('Stussy x Nike'), ['Stussy']);
+  assert.deepStrictEqual(autocompleteFallbacks('Supreme x Comme des Garçons SHIRT'), ['Supreme']);
+});
+
+test('fallbacks: multi-word brand -> up to two word-prefixes, longest first', () => {
+  assert.deepStrictEqual(autocompleteFallbacks('Fear of God Essentials'), ['Fear of God', 'Fear of']);
+  assert.deepStrictEqual(autocompleteFallbacks('Carhartt WIP'), ['Carhartt']);
+});
+
+test('fallbacks: single-word brand has no ladder (fails clean instead)', () => {
+  assert.deepStrictEqual(autocompleteFallbacks('ISOKNOCK'), []);
+  assert.deepStrictEqual(autocompleteFallbacks(''), []);
+});
