@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { CheckCircle2, CheckSquare, ChevronDown, ChevronRight, Folder, FolderPlus, Plus, Square, Trash2 } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ChevronRight, Folder, FolderPlus, Plus, Trash2 } from 'lucide-react';
 import type { Item, ItemStatus } from '@/types';
-import type { Selection, UpdateItem } from '@/App';
+import type { Selection } from '@/App';
 import { cn } from '@/lib/utils';
 import { GRAILED_PHOTO_LIMIT, isTriageDraft, readiness, useTriageOrder } from '@/lib/readiness';
 import { quality, qualityTitle } from '@/lib/quality';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { BulkActionBar } from '@/components/BulkActionBar';
 
 const STATUS_LABEL: Record<ItemStatus, string> = {
   draft: 'draft',
@@ -62,24 +61,10 @@ interface SidebarProps {
   items: Item[];
   selected: Selection;
   onSelect: (s: Selection) => void;
-  /** R4 bulk edits apply through the same per-item state/save path. */
-  updateItem: UpdateItem;
-  toast: (msg: string) => void;
 }
 
-export function Sidebar({ items, selected, onSelect, updateItem, toast }: SidebarProps) {
+export function Sidebar({ items, selected, onSelect }: SidebarProps) {
   const [filter, setFilter] = useState<TriageFilter>('all');
-  // R4 multi-select: checked draft ids for the bulk action bar. Stale ids
-  // (item listed/deleted meanwhile) are dropped when computing targets.
-  const [checked, setChecked] = useState<Set<number>>(() => new Set());
-  const toggleChecked = (id: number) =>
-    setChecked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  const bulkTargets = items.filter((it) => checked.has(it.id) && isTriageDraft(it));
 
   // Folders: persisted on every change; deleted items simply don't resolve
   // when rendering members (no eager pruning needed).
@@ -139,7 +124,6 @@ export function Sidebar({ items, selected, onSelect, updateItem, toast }: Sideba
     // quality score rides along in the tooltip.
     const q = isTriageDraft(it) ? quality(it) : null;
     const r = q?.r ?? null;
-    const isChecked = checked.has(it.id);
     return (
       <li
         key={it.id}
@@ -155,24 +139,6 @@ export function Sidebar({ items, selected, onSelect, updateItem, toast }: Sideba
           setDragOverFolder(null);
         }}
       >
-        {/* R4 multi-select checkbox — a SIBLING of the row button (a
-            button can't nest in a button), floated over its corner. */}
-        {r && (
-          <button
-            aria-label={isChecked ? `deselect ${it.content?.title}` : `select ${it.content?.title} for bulk edit`}
-            title="Select for bulk edit (condition / tags / description style)"
-            className={cn(
-              'absolute right-1.5 top-1.5 z-10 rounded p-0.5 transition-colors',
-              isChecked ? 'text-primary' : 'text-muted-foreground/50 hover:text-foreground'
-            )}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleChecked(it.id);
-            }}
-          >
-            {isChecked ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
-          </button>
-        )}
         <button
           onClick={() => onSelect(it.id)}
           className={cn(
@@ -213,7 +179,7 @@ export function Sidebar({ items, selected, onSelect, updateItem, toast }: Sideba
               </span>
             )}
           </div>
-          <div className={cn('min-w-0 flex-1', r && 'pr-4')}>
+          <div className="min-w-0 flex-1">
             <div className={cn('line-clamp-2 text-sm font-medium leading-snug', !hasListing && 'font-normal italic text-muted-foreground')}>
               {hasListing ? it.content!.title : '(needs review — no listing yet)'}
             </div>
@@ -386,14 +352,6 @@ export function Sidebar({ items, selected, onSelect, updateItem, toast }: Sideba
           </li>
         </ul>
       </ScrollArea>
-      {bulkTargets.length > 0 && (
-        <BulkActionBar
-          targets={bulkTargets}
-          updateItem={updateItem}
-          toast={toast}
-          onClear={() => setChecked(new Set())}
-        />
-      )}
     </aside>
   );
 }

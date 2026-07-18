@@ -493,7 +493,7 @@ export default function App() {
             }}
           />
           <div className="grid min-h-0 flex-1 grid-cols-[320px_1fr]">
-            <Sidebar items={items} selected={selected} onSelect={setSelected} updateItem={updateItem} toast={setToastMsg} />
+            <Sidebar items={items} selected={selected} onSelect={setSelected} />
             <Editor
               selection={selected}
               item={selectedItem}
