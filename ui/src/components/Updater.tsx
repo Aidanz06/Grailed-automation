@@ -3,6 +3,7 @@ import { AlertTriangle, ArrowDownToLine, Check, Copy, Loader2, RefreshCw, X } fr
 import { api, type UpdateProgress, type UpdateStep } from '@/lib/api';
 import { cn, errorMessage } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/Modal';
 
 /*
  * In-app one-click updater (renderer half). The main process does the real
@@ -255,8 +256,13 @@ export function UpdateModal({ u, toast }: { u: Updater; toast: (msg: string) => 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6" role="dialog" aria-modal="true" aria-label="Updating Tailor">
-      <div className="w-full max-w-md rounded-xl border bg-card p-5 shadow-xl">
+    // Deliberately un-closeable while applying (R8): no backdrop/Escape close
+    // ever — the only exits are the Cancel/Close buttons the state allows.
+    <Modal
+      title="Updating Tailor"
+      onClose={m.close}
+      className="left-1/2 top-1/2 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border bg-card p-5 shadow-xl"
+    >
         <div className="mb-3 text-base font-semibold">
           {err ? (err.cancelled ? 'Update cancelled' : 'Update failed') : 'Updating Tailor'}
         </div>
@@ -322,7 +328,6 @@ export function UpdateModal({ u, toast }: { u: Updater; toast: (msg: string) => 
             </div>
           </>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }
