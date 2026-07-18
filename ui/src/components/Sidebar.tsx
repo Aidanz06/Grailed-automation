@@ -155,7 +155,7 @@ export function Sidebar({ items, selected, onSelect, updateItem, toast }: Sideba
                   />
                   {/* Item thumbnail (photo 1) — the fastest way to tell listings apart. */}
                   <div
-                    className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border"
+                    className="relative h-[88px] w-[88px] shrink-0 overflow-hidden rounded-md border"
                     style={{ background: cover?.tint ?? '#333' }}
                   >
                     {cover?.src && (
