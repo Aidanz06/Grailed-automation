@@ -36,7 +36,7 @@ export function FillChangesCard({ changes, lastFillAt, run, filling }: Props) {
   return (
     <section className="rounded-xl border bg-card p-4">
       <div className="mb-2.5 flex items-baseline justify-between">
-        <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Changed since last fill</span>
+        <span className="text-2xs uppercase tracking-wider text-muted-foreground">Changed since last fill</span>
         <span className="font-mono text-xs tabular-nums text-muted-foreground">{changes.length}</span>
       </div>
       <ul className="space-y-2.5">
@@ -64,11 +64,11 @@ export function FillChangesCard({ changes, lastFillAt, run, filling }: Props) {
                 )}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="flex items-baseline justify-between gap-2 text-[13px]">
+                <div className="flex items-baseline justify-between gap-2 text-sm-">
                   <span className="font-medium">{FIELD_LABEL[c.field] ?? c.field}</span>
                   <span
                     className={cn(
-                      'shrink-0 text-[11px]',
+                      'shrink-0 text-2xs',
                       st === 'failed' ? 'text-destructive' : st === 'ok' ? 'text-success' : 'text-muted-foreground'
                     )}
                   >

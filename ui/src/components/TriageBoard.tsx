@@ -44,7 +44,7 @@ const FILTERS: Array<{ key: BoardFilter; label: string }> = [
 function StateLine({ item, q }: { item: Item; q: Quality }) {
   if (q.state === 'listed') {
     return (
-      <span className="inline-flex min-w-0 items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-success">
+      <span className="inline-flex min-w-0 items-center gap-1 text-3xs font-medium uppercase tracking-wide text-success">
         <CheckCircle2 className="h-3 w-3 shrink-0" /> Listed
       </span>
     );
@@ -52,7 +52,7 @@ function StateLine({ item, q }: { item: Item; q: Quality }) {
   if (q.state === 'ready') {
     return (
       <span
-        className="inline-flex min-w-0 items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-success"
+        className="inline-flex min-w-0 items-center gap-1 text-3xs font-medium uppercase tracking-wide text-success"
         title="Every required field is set — fill it whenever you're ready."
       >
         <CheckCircle2 className="h-3 w-3 shrink-0" /> Ready
@@ -61,14 +61,14 @@ function StateLine({ item, q }: { item: Item; q: Quality }) {
   }
   if (q.state === 'review') {
     return (
-      <span className="truncate text-[10px] font-medium uppercase tracking-wide text-warning" title={reviewReason(item)}>
+      <span className="truncate text-3xs font-medium uppercase tracking-wide text-warning" title={reviewReason(item)}>
         Review
       </span>
     );
   }
   return (
     <span
-      className="truncate text-[10px] font-medium uppercase tracking-wide text-warning"
+      className="truncate text-3xs font-medium uppercase tracking-wide text-warning"
       title={`Next: ${q.r.blocker!.label} — ${q.r.blocker!.sub} (${q.r.doneCount}/${q.r.requiredCount} required done)`}
     >
       {q.r.blocker!.short}
@@ -123,7 +123,7 @@ export function TriageBoard({ items, albums, initialAlbumId, onOpenItem, onDelet
               key={f.key}
               onClick={() => setFilter(f.key)}
               className={cn(
-                'rounded-md px-2 py-1 text-[11px] transition-colors',
+                'rounded-md px-2 py-1 text-2xs transition-colors',
                 filter === f.key ? 'bg-primary/15 font-medium text-primary' : 'text-muted-foreground hover:bg-secondary/60'
               )}
             >
@@ -177,7 +177,7 @@ export function TriageBoard({ items, albums, initialAlbumId, onOpenItem, onDelet
                     {it.photos.length > 1 && (
                       <span
                         className={cn(
-                          'absolute bottom-1 right-1 rounded bg-black/60 px-1 text-[9px] tabular-nums',
+                          'absolute bottom-1 right-1 rounded bg-black/60 px-1 text-4xs tabular-nums',
                           it.photos.length > GRAILED_PHOTO_LIMIT ? 'font-semibold text-warning' : 'text-white'
                         )}
                         title={
@@ -198,7 +198,7 @@ export function TriageBoard({ items, albums, initialAlbumId, onOpenItem, onDelet
                     <div className="min-h-[2.5rem]">
                       <div
                         className={cn(
-                          'line-clamp-2 text-[13px] font-medium leading-snug',
+                          'line-clamp-2 text-sm- font-medium leading-snug',
                           !title && 'font-normal italic text-muted-foreground'
                         )}
                       >
@@ -207,14 +207,14 @@ export function TriageBoard({ items, albums, initialAlbumId, onOpenItem, onDelet
                     </div>
                     <div className="mt-1.5 flex items-center justify-between gap-2">
                       <StateLine item={it} q={q} />
-                      <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground" title={qualityTitle(q)}>
+                      <span className="shrink-0 font-mono text-2xs tabular-nums text-muted-foreground" title={qualityTitle(q)}>
                         {q.score}
                       </span>
                     </div>
                     {/* §F: the price with its comp context inline — how many
                         sales back the number and how much to trust it. */}
                     <div
-                      className="mt-1 truncate font-mono text-[11px] tabular-nums text-muted-foreground"
+                      className="mt-1 truncate font-mono text-2xs tabular-nums text-muted-foreground"
                       title={
                         it.range?.confidence
                           ? `${it.range.sampleSize ?? it.range.mostRelevantComps.length} sold comps · ${it.range.confidence.level} confidence — ${it.range.confidence.explanation}`

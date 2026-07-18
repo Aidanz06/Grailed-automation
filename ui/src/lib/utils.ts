@@ -1,5 +1,13 @@
 import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { extendTailwindMerge } from 'tailwind-merge';
+
+// The M-3 fontSize tokens (ui/tailwind.config.cjs) that don't match
+// tailwind-merge's built-in t-shirt-size heuristic must be registered as
+// font-size classes — otherwise `cn('text-sm-', 'text-white')` would treat
+// "sm-" as a color and drop one of them.
+const twMerge = extendTailwindMerge({
+  extend: { classGroups: { 'font-size': [{ text: ['2xs', '3xs', '4xs', 'sm-', 'sm+'] }] } },
+});
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

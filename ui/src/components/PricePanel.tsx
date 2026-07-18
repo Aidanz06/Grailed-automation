@@ -117,7 +117,7 @@ export function PricePanel({ item, update, toast }: Props) {
   return (
     <section id="sec-price" className="rounded-xl border bg-card p-4">
       <div className="mb-1 flex items-center gap-2">
-        <label className="text-[11px] uppercase tracking-wider text-muted-foreground">Suggested price</label>
+        <label className="text-2xs uppercase tracking-wider text-muted-foreground">Suggested price</label>
         <span className="flex-1" />
         <Button variant="outline" size="sm" disabled={recomputing} onClick={recompute}>
           <RefreshCw className={recomputing ? 'animate-spin' : ''} />
@@ -159,7 +159,7 @@ export function PricePanel({ item, update, toast }: Props) {
             {r.confidence && (
               <span
                 className={cn(
-                  'rounded-full border px-2.5 py-1 font-mono text-[11px] font-medium',
+                  'rounded-full border px-2.5 py-1 font-mono text-2xs font-medium',
                   CONF_CLASS[r.confidence.level]
                 )}
                 title={`${r.confidence.explanation} ${r.confidence.strongMatches} near-identical + ${r.confidence.moderateMatches} similar comps · effective sample ${r.confidence.effectiveN}. The CI95 below is where the true going rate likely sits, not the min–max of sales.`}
@@ -178,7 +178,7 @@ export function PricePanel({ item, update, toast }: Props) {
           )}
           {isNwt && (
             <div className="mt-1.5">
-              <span className="inline-block rounded-md border border-transparent bg-success/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-success">
+              <span className="inline-block rounded-md border border-transparent bg-success/15 px-2 py-0.5 text-3xs font-semibold uppercase tracking-wide text-success">
                 New with tags — priced against new-condition sales
               </span>
               {nwtThin && (
@@ -212,7 +212,7 @@ export function PricePanel({ item, update, toast }: Props) {
                     type="button"
                     disabled={!hasLink}
                     title={hasLink ? `Sold ${c.soldDate} — open on Grailed` : `Sold ${c.soldDate}`}
-                    className="group flex w-full items-baseline gap-2 rounded px-1 py-1 text-left text-[13px] enabled:cursor-pointer enabled:hover:bg-secondary/50 disabled:cursor-default"
+                    className="group flex w-full items-baseline gap-2 rounded px-1 py-1 text-left text-sm- enabled:cursor-pointer enabled:hover:bg-secondary/50 disabled:cursor-default"
                     onClick={() => openComp(c)}
                   >
                     <span className={cn('min-w-0 flex-1 truncate text-muted-foreground', hasLink && 'group-hover:text-foreground')}>
@@ -227,7 +227,7 @@ export function PricePanel({ item, update, toast }: Props) {
           {comps.length > topComps.length && (
             <button
               type="button"
-              className="mt-1 inline-flex items-center gap-0.5 text-[13px] text-primary hover:underline"
+              className="mt-1 inline-flex items-center gap-0.5 text-sm- text-primary hover:underline"
               onClick={() => setOpen((o) => !o)}
             >
               all {nComps} comp{nComps === 1 ? '' : 's'}
@@ -303,7 +303,7 @@ export function PricePanel({ item, update, toast }: Props) {
           />
           <span className="text-sm font-medium">Smart Pricing (Grailed)</span>
           {spOn && (
-            <span className="rounded-full border border-primary/50 px-2 py-0.5 font-mono text-[10px] font-medium uppercase text-primary">
+            <span className="rounded-full border border-primary/50 px-2 py-0.5 font-mono text-3xs font-medium uppercase text-primary">
               set at next fill
             </span>
           )}

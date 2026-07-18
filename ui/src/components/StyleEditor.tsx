@@ -212,7 +212,7 @@ export function StyleEditor({ stylesRaw, onSaved, onClose, toast }: Props) {
               <Check /> Use as default
             </Button>
           ) : (
-            <span className="rounded-full border border-success/60 px-2 py-0.5 text-[11px] text-success">default style</span>
+            <span className="rounded-full border border-success/60 px-2 py-0.5 text-2xs text-success">default style</span>
           )}
           <span className="flex-1" />
           <Button variant="outline" size="sm" className="h-8 px-2 text-xs" onClick={addStyle}>
@@ -238,11 +238,11 @@ export function StyleEditor({ stylesRaw, onSaved, onClose, toast }: Props) {
 
         <div className="grid min-h-0 flex-1 grid-cols-2 gap-3">
           <div className="flex min-h-0 flex-col">
-            <div className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+            <div className="mb-1 text-2xs uppercase tracking-wide text-muted-foreground">
               Template — click a detail to insert it at the caret
             </div>
             <ChipTemplateEditor value={template} onChange={setTemplate} />
-            <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">
+            <p className="mt-1.5 text-2xs leading-snug text-muted-foreground">
               {footer
                 ? `Constant footer (always the last line, on every draft): “${footer.split('\n')[0]}${footer.includes('\n') ? '…' : ''}”`
                 : 'No constant footer — end the template with plain text to add one.'}
@@ -250,11 +250,11 @@ export function StyleEditor({ stylesRaw, onSaved, onClose, toast }: Props) {
           </div>
 
           <div className="flex min-h-0 flex-col">
-            <div className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">Live preview — sample jacket</div>
+            <div className="mb-1 text-2xs uppercase tracking-wide text-muted-foreground">Live preview — sample jacket</div>
             <pre className="min-h-[220px] flex-1 overflow-auto whitespace-pre-wrap rounded-md border bg-secondary/40 p-2.5 text-xs leading-relaxed">
               {preview || '(empty template)'}
             </pre>
-            <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">
+            <p className="mt-1.5 text-2xs leading-snug text-muted-foreground">
               Details the AI can’t see on a real item drop out automatically — the sample has everything, so every chip
               shows here.
             </p>
@@ -262,7 +262,7 @@ export function StyleEditor({ stylesRaw, onSaved, onClose, toast }: Props) {
         </div>
 
         <div className="mt-3 flex items-center justify-end gap-2 border-t pt-3">
-          <span className="mr-auto text-[11px] text-muted-foreground">
+          <span className="mr-auto text-2xs text-muted-foreground">
             Applies to newly generated drafts (import, confirm, Regenerate). Existing text is untouched until you regenerate.
           </span>
           <Button variant="outline" size="sm" onClick={onClose}>

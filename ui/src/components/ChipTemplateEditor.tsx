@@ -52,7 +52,7 @@ function chipEl(key: string): HTMLElement {
   span.contentEditable = 'false';
   span.title = def?.hint ?? key;
   span.className = cn(
-    'group/chip mx-0.5 inline-flex select-none items-center gap-0.5 rounded-full border px-1.5 py-px align-baseline font-sans text-[11px] leading-4',
+    'group/chip mx-0.5 inline-flex select-none items-center gap-0.5 rounded-full border px-1.5 py-px align-baseline font-sans text-2xs leading-4',
     def?.kind === 'prose' ? 'border-primary/50 bg-primary/10 text-primary' : 'border-border bg-secondary text-foreground/80'
   );
   const label = document.createElement('span');
@@ -203,7 +203,7 @@ export function ChipTemplateEditor({ value, onChange }: Props) {
             onMouseDown={(e) => e.preventDefault() /* keep the editor's caret */}
             onClick={() => insert(c.key)}
             className={cn(
-              'rounded-full border px-2 py-0.5 text-[11px] leading-4 transition-colors',
+              'rounded-full border px-2 py-0.5 text-2xs leading-4 transition-colors',
               c.kind === 'prose'
                 ? 'border-primary/40 text-primary hover:bg-primary/10'
                 : 'border-border text-muted-foreground hover:bg-secondary hover:text-foreground'

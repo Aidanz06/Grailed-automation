@@ -610,7 +610,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
           Brand confidence moved into the band (titles are brandless now). */}
       <section id="sec-title" className="mb-5 scroll-mt-4">
         <div className="mb-2 flex items-center gap-2.5">
-          <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground/70">
+          <span className="text-3xs font-medium uppercase tracking-[0.14em] text-muted-foreground/70">
             AI-drafted — glance, correct if wrong
           </span>
           <span className="flex-1" />
@@ -624,7 +624,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
         <Input
           ref={titleRef}
           value={content.title}
-          className="text-[15px] font-medium"
+          className="text-sm+ font-medium"
           onChange={(e) =>
             update((d) => {
               d.content!.title = e.target.value;
@@ -647,10 +647,10 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
             title="Expand to read and edit the full description"
             onClick={() => setDescOpen(true)}
           >
-            <span className="line-clamp-3 whitespace-pre-line font-mono text-[13px] text-muted-foreground">
+            <span className="line-clamp-3 whitespace-pre-line font-mono text-sm- text-muted-foreground">
               {content.description}
             </span>
-            <span className="mt-1.5 block text-[11px] text-primary">expand to edit ▾</span>
+            <span className="mt-1.5 block text-2xs text-primary">expand to edit ▾</span>
           </button>
         ) : (
         <>
@@ -678,7 +678,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
         <div className="relative">
           <Textarea
             ref={descRef}
-            className="min-h-[240px] pb-12 font-mono text-[13px]"
+            className="min-h-[240px] pb-12 font-mono text-sm-"
             value={content.description}
             onChange={(e) =>
               update((d) => {
@@ -724,7 +724,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
           Brand editing is NEW here (it previously needed the Confirm pass);
           it feeds the designer autofill + comps queries. */}
       <section id="sec-details" className="mb-5 scroll-mt-4">
-        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary">
+        <p className="mb-1.5 text-3xs font-semibold uppercase tracking-[0.14em] text-primary">
           Your call — the fields that sell it
         </p>
         <div className="space-y-4 rounded-lg border border-primary/40 bg-card p-4">
@@ -749,7 +749,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
               <Button
                 variant="outline"
                 size="sm"
-                className="h-6 self-start px-2 text-[11px]"
+                className="h-6 self-start px-2 text-2xs"
                 title="Records that you checked the physical tag — the low-confidence warning goes away."
                 onClick={() =>
                   update((d) => {
@@ -887,7 +887,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
                 <Badge variant="outline" className="border-transparent bg-success/15 text-success">
                   ✓ selected — will autofill
                 </Badge>
-                <span className="text-[13px] font-medium">
+                <span className="text-sm- font-medium">
                   {attrs.grailed_department} / {attrs.grailed_category}
                 </span>
                 <span className="flex-1" />
@@ -908,7 +908,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
                 <Badge variant="outline" className="border-transparent bg-warning/15 text-warning">
                   suggestion — not filled until you confirm
                 </Badge>
-                <span className="text-[13px]">
+                <span className="text-sm-">
                   {suggestion ? (
                     <>
                       Suggested:{' '}
@@ -966,7 +966,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
             const n = item.range?.sampleSize ?? item.range?.mostRelevantComps.length ?? 0;
             const conf = item.range?.confidence?.level;
             return (
-              <span className="font-mono text-[11px] tabular-nums text-muted-foreground transition-colors group-hover:text-foreground">
+              <span className="font-mono text-2xs tabular-nums text-muted-foreground transition-colors group-hover:text-foreground">
                 {n > 0 ? `${n} comps` : 'no comps yet'}
                 {conf ? ` · ${conf} confidence` : ''} · edit →
               </span>
@@ -980,8 +980,8 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
       {content.disclaimers.length > 0 && (
         <section className="mb-5">
           <div className="rounded-md border border-l-[3px] border-l-warning bg-secondary/40 p-3">
-            <div className="mb-1.5 text-[11px] uppercase tracking-wide text-warning">Verify before posting</div>
-            <ul className="list-disc space-y-1 pl-5 text-[13px] text-muted-foreground">
+            <div className="mb-1.5 text-2xs uppercase tracking-wide text-warning">Verify before posting</div>
+            <ul className="list-disc space-y-1 pl-5 text-sm- text-muted-foreground">
               {content.disclaimers.map((d, i) => (
                 <li key={i}>{d}</li>
               ))}
@@ -1123,7 +1123,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
           {/* Beta Part F: one-time first-fill heads-up (localStorage-gated).
               Confirm proceeds with the exact click that was deferred. */}
           {firstFillPrompt && !filling && (
-            <div className="mt-2.5 rounded-md border border-l-[3px] border-l-primary bg-secondary/40 p-3 text-[13px]">
+            <div className="mt-2.5 rounded-md border border-l-[3px] border-l-primary bg-secondary/40 p-3 text-sm-">
               <div className="font-medium">Quick heads-up before your first fill</div>
               <div className="mt-0.5 text-muted-foreground">
                 Tailor will type this listing into your Chrome Sell form. It will <span className="font-medium text-foreground">not</span>{' '}
@@ -1158,7 +1158,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
               stakes as the not-saved banner) until Recheck passes, the item
               changes, or the user overrides with Fill anyway. */}
           {fillBlocked && !filling && (
-            <div className="mt-2.5 rounded-md border border-warning/60 border-l-[3px] border-l-warning bg-warning/10 p-3 text-[13px]">
+            <div className="mt-2.5 rounded-md border border-warning/60 border-l-[3px] border-l-warning bg-warning/10 p-3 text-sm-">
               <div className="font-medium text-warning">Chrome isn’t on a fresh Sell form.</div>
               <div className="mt-0.5 text-muted-foreground">
                 {!fillBlocked.connected
@@ -1252,7 +1252,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
         {/* Q1: persistent post-fill warning — the highest-stakes fact in the app.
             A toast is not proportional to "a reload silently discards the fill". */}
         {fillOutcome && (
-          <div className="rounded-md border border-warning/60 border-l-[3px] border-l-warning bg-warning/10 p-3 text-[13px]">
+          <div className="rounded-md border border-warning/60 border-l-[3px] border-l-warning bg-warning/10 p-3 text-sm-">
             <div className="font-medium text-warning">Filled in Chrome — but NOT saved on Grailed yet.</div>
             <div className="mt-0.5 text-muted-foreground">
               Filled: {fillOutcome.join(', ')}. A page reload there reverts to Grailed’s last saved draft. Click{' '}
@@ -1268,7 +1268,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
               </Button>
             )}
             {nextDraft && (
-              <div className="mt-1 truncate text-center text-[11px] text-muted-foreground" title={nextDraft.title}>
+              <div className="mt-1 truncate text-center text-2xs text-muted-foreground" title={nextDraft.title}>
                 next: {nextDraft.title}
               </div>
             )}

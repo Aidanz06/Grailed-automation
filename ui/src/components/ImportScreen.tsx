@@ -196,7 +196,7 @@ export function ImportScreen({ toast, onImported, onOpenItem, onOpenBoard, autoP
             {result.photoCount} photos → {result.groups} groups · {result.drafts} drafted · {result.review} to review
           </div>
           {(result.groupingNotice || result.processingNotice) && (
-            <div className="mb-4 flex items-start gap-2 rounded-md border border-l-[3px] border-l-warning bg-secondary/40 p-3 text-[13px] text-muted-foreground">
+            <div className="mb-4 flex items-start gap-2 rounded-md border border-l-[3px] border-l-warning bg-secondary/40 p-3 text-sm- text-muted-foreground">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
               <span>
                 {result.groupingNotice} {result.processingNotice}
@@ -214,7 +214,7 @@ export function ImportScreen({ toast, onImported, onOpenItem, onOpenBoard, autoP
                   <Badge
                     variant="outline"
                     className={cn(
-                      'shrink-0 border-transparent px-2 py-0 text-[10px] uppercase tracking-wide',
+                      'shrink-0 border-transparent px-2 py-0 text-3xs uppercase tracking-wide',
                       isDraft ? 'bg-primary/15 text-primary' : 'bg-warning/15 text-warning'
                     )}
                   >

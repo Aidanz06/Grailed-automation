@@ -19,7 +19,7 @@ export function ListingChecklist({ item }: { item: Item }) {
   return (
     <section className="rounded-xl border bg-card p-4">
       <div className="mb-2 flex items-baseline">
-        <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Listing checklist</span>
+        <span className="text-2xs uppercase tracking-wider text-muted-foreground">Listing checklist</span>
         <span className="ml-auto font-mono text-sm font-medium tabular-nums">
           {done} / {req.length}
         </span>
@@ -37,17 +37,17 @@ export function ListingChecklist({ item }: { item: Item }) {
               {r.state === 'done' ? (
                 <AnimatedCheck />
               ) : r.state === 'warn' ? (
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-warning/20 text-[11px] font-bold text-warning">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-warning/20 text-2xs font-bold text-warning">
                   !
                 </span>
               ) : (
                 <PendingDot />
               )}
               <span className="min-w-0 flex-1">
-                <span className="block text-[13px] font-medium leading-tight">
+                <span className="block text-sm- font-medium leading-tight">
                   {r.label}
                   {r.tag && (
-                    <span className="ml-1.5 align-middle text-[10px] font-normal uppercase tracking-wide text-muted-foreground/70">
+                    <span className="ml-1.5 align-middle text-3xs font-normal uppercase tracking-wide text-muted-foreground/70">
                       {r.tag}
                     </span>
                   )}

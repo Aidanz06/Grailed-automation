@@ -367,7 +367,7 @@ export default function App() {
     <ErrorBoundary>
     <div className="flex h-full flex-col">
       {circuitOpen && (
-        <div className="border-b border-destructive/50 bg-destructive/15 px-4 py-2 text-center text-[13px] font-medium text-destructive">
+        <div className="border-b border-destructive/50 bg-destructive/15 px-4 py-2 text-center text-sm- font-medium text-destructive">
           Pricing and Fill are paused as a safety precaution — something looked off with the Grailed account, so the
           app stopped touching it. Nothing was submitted. Check the account in Chrome, then reach out to whoever set
           this up to re-enable.
@@ -375,7 +375,7 @@ export default function App() {
       )}
       {/* Beta Part E: calm setup banners for a keyless build. */}
       {config && !config.hasAnthropicKey && (
-        <div className="border-b border-warning/50 bg-warning/10 px-4 py-2 text-center text-[13px] font-medium text-warning">
+        <div className="border-b border-warning/50 bg-warning/10 px-4 py-2 text-center text-sm- font-medium text-warning">
           This copy isn’t finished setting up (it’s missing an API key). Importing photos and drafting listings won’t
           work until it’s configured — reach out to whoever shared this with you.
         </div>

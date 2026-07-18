@@ -141,7 +141,7 @@ export function GuideMenu({ open, initialSection = 'how', onClose }: Props) {
               <ul className="space-y-2.5">
                 {SCREENS.map((s) => (
                   <li key={s.name}>
-                    <span className="block text-[13px] font-medium">{s.name}</span>
+                    <span className="block text-sm- font-medium">{s.name}</span>
                     <span className="block text-xs leading-relaxed text-muted-foreground">{s.body}</span>
                   </li>
                 ))}
@@ -158,7 +158,7 @@ export function GuideMenu({ open, initialSection = 'how', onClose }: Props) {
               <ul className="space-y-2.5">
                 {TROUBLESHOOTING.map((t) => (
                   <li key={t.q}>
-                    <span className="block text-[13px] font-medium">{t.q}</span>
+                    <span className="block text-sm- font-medium">{t.q}</span>
                     <span className="block text-xs leading-relaxed text-muted-foreground">{t.a}</span>
                   </li>
                 ))}

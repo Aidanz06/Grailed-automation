@@ -15,14 +15,14 @@ export function ShortcutRows() {
             {s.keys.map((k) => (
               <kbd
                 key={k}
-                className="rounded border bg-secondary/60 px-1.5 py-0.5 font-mono text-[11px] leading-none text-foreground"
+                className="rounded border bg-secondary/60 px-1.5 py-0.5 font-mono text-2xs leading-none text-foreground"
               >
                 {k}
               </kbd>
             ))}
           </span>
           <span className="min-w-0">
-            <span className="block text-[13px] font-medium leading-tight">{s.label}</span>
+            <span className="block text-sm- font-medium leading-tight">{s.label}</span>
             <span className="block text-xs text-muted-foreground">{s.description}</span>
           </span>
         </li>

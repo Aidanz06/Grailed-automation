@@ -50,7 +50,7 @@ export function BatchProgressBar({ hidden = false }: Props) {
 
   return (
     <div className="border-b bg-card px-4 py-1.5" role="status" aria-live="polite">
-      <div className="flex items-center gap-2 text-[12px]">
+      <div className="flex items-center gap-2 text-xs leading-normal">
         <span className={isError ? 'font-medium text-destructive' : 'font-medium text-foreground'}>
           {isError ? 'Import failed' : 'Importing photos'}
         </span>

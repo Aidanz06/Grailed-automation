@@ -133,7 +133,7 @@ export function ReviewScreen({ item, toast, onResolved }: Props) {
             >
               {p.src && <img src={p.src} alt={p.label} className="h-full w-full object-cover" />}
               {isSel && (
-                <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
+                <span className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-2xs font-bold text-primary-foreground">
                   ✓
                 </span>
               )}

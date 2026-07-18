@@ -86,7 +86,7 @@ export function DefaultsMenu({ stylesRaw, onStylesChanged, onEditStyles, toast }
 
             <div className="space-y-4">
               <div>
-                <div className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">Tags added to every new draft</div>
+                <div className="mb-1 text-2xs uppercase tracking-wide text-muted-foreground">Tags added to every new draft</div>
                 <Input
                   value={tags}
                   placeholder="e.g. vintage, my-shop-name (comma-separated)"
@@ -103,7 +103,7 @@ export function DefaultsMenu({ stylesRaw, onStylesChanged, onEditStyles, toast }
               </div>
 
               <div>
-                <div className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">Description style</div>
+                <div className="mb-1 text-2xs uppercase tracking-wide text-muted-foreground">Description style</div>
                 <div className="flex items-center gap-1.5">
                   <Select
                     value={resolved.active}

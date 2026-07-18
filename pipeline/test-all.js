@@ -17,6 +17,7 @@ const { execSync } = require('child_process');
 const STEPS = [
   { name: 'unit tests', cmd: 'npm run test:unit', gate: true },
   { name: 'UI unit tests (vitest)', cmd: 'npm run ui:test', gate: true },
+  { name: 'typography token gate (M-3)', cmd: 'node pipeline/check-type-tokens.js', gate: true },
   { name: 'clustering gate', cmd: 'npm run clustering:gate', gate: true },
   { name: 'comp-recall eval (dry-run, canned real comps)', cmd: 'npm run test:comps:dry', gate: true },
   { name: 'identify harness smoke (dry-run)', cmd: 'node pipeline/eval/identify.js --dry-run', gate: true },

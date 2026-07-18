@@ -43,11 +43,11 @@ export function PhotoTile({
       )}
       {/* Position badge on EVERY tile — this is also the Grailed upload order,
           so reordering/deleting renumbers instantly. */}
-      <span className="absolute left-1 top-1 z-10 rounded bg-black/55 px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-white">
+      <span className="absolute left-1 top-1 z-10 rounded bg-black/55 px-1.5 py-0.5 text-4xs uppercase tracking-wide text-white">
         {thumbnail ? '1 · thumbnail' : position}
       </span>
       {children}
-      <span className="relative z-10 truncate text-[11px] text-white [text-shadow:0_1px_2px_rgba(0,0,0,.5)]">{photo.label}</span>
+      <span className="relative z-10 truncate text-2xs text-white [text-shadow:0_1px_2px_rgba(0,0,0,.5)]">{photo.label}</span>
     </div>
   );
 }
@@ -56,7 +56,7 @@ function DeleteButton({ onDelete }: { onDelete: () => void }) {
   return (
     <button
       aria-label="delete photo"
-      className="absolute right-1 top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-black/55 text-[13px] leading-none text-white hover:bg-destructive"
+      className="absolute right-1 top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-black/55 text-sm- leading-none text-white hover:bg-destructive"
       onClick={(e) => {
         e.stopPropagation();
         onDelete();
@@ -94,7 +94,7 @@ export function PhotoRow({ item, update }: Props) {
         </span>
       </label>
       {over > 0 && (
-        <div className="mb-2 flex items-start gap-2 rounded-md border border-l-[3px] border-l-warning bg-secondary/40 p-2.5 text-[13px] text-muted-foreground">
+        <div className="mb-2 flex items-start gap-2 rounded-md border border-l-[3px] border-l-warning bg-secondary/40 p-2.5 text-sm- text-muted-foreground">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
           <span>
             Grailed allows {GRAILED_PHOTO_LIMIT} photos per listing — remove {over} photo{over === 1 ? '' : 's'}{' '}

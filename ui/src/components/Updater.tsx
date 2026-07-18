@@ -275,7 +275,7 @@ export function UpdateModal({ u, toast }: { u: Updater; toast: (msg: string) => 
               ))}
             </ol>
             {m.lines.length > 0 && (
-              <div className="mt-3 max-h-24 overflow-hidden rounded-md bg-secondary/50 p-2 font-mono text-[11px] leading-relaxed text-muted-foreground">
+              <div className="mt-3 max-h-24 overflow-hidden rounded-md bg-secondary/50 p-2 font-mono text-2xs leading-relaxed text-muted-foreground">
                 {m.lines.map((l, i) => (
                   <div key={i} className="truncate">
                     {l}
@@ -307,7 +307,7 @@ export function UpdateModal({ u, toast }: { u: Updater; toast: (msg: string) => 
             )}
             <p className="text-sm">{err.message}</p>
             {err.output.length > 0 && (
-              <div className="mt-2 max-h-32 overflow-y-auto rounded-md bg-secondary/50 p-2 font-mono text-[11px] leading-relaxed text-muted-foreground">
+              <div className="mt-2 max-h-32 overflow-y-auto rounded-md bg-secondary/50 p-2 font-mono text-2xs leading-relaxed text-muted-foreground">
                 {err.output.slice(-12).map((l, i) => (
                   <div key={i}>{l}</div>
                 ))}

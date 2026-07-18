@@ -136,13 +136,13 @@ export function CommandPalette({ open, onClose, commands, items, onOpenItem }: P
                   <>
                     <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     <span className="min-w-0 flex-1 truncate">{e.label}</span>
-                    {e.hint && <span className="shrink-0 text-[11px] text-muted-foreground">{e.hint}</span>}
+                    {e.hint && <span className="shrink-0 text-2xs text-muted-foreground">{e.hint}</span>}
                   </>
                 ) : (
                   <>
                     <CoverThumb photo={e.item.photos[0]} className="h-8 w-6 rounded" />
                     <span className="min-w-0 flex-1 truncate">{e.item.content?.title}</span>
-                    <span className="shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">
+                    <span className="shrink-0 text-2xs uppercase tracking-wide text-muted-foreground">
                       {STATUS_WORD[e.item.status] ?? e.item.status}
                     </span>
                   </>

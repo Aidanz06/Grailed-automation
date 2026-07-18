@@ -54,7 +54,7 @@ export function HowItWorksSteps() {
 export function TrustContract() {
   return (
     <div className="rounded-lg border border-l-[3px] border-l-success bg-secondary/30 p-3.5">
-      <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-success">
+      <div className="mb-2 flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-wider text-success">
         <ShieldCheck className="h-3.5 w-3.5" /> What Tailor does — and doesn’t
       </div>
       <div className="grid gap-3 sm:grid-cols-2">

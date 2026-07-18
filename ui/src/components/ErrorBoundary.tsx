@@ -86,7 +86,7 @@ export class ErrorBoundary extends Component<Props, State> {
             Your drafts are safe — they're saved in the app's database as you type (an edit from the last second or two may
             need retyping). Nothing was sent to Grailed.
           </p>
-          <pre className="mb-3 max-h-24 overflow-auto whitespace-pre-wrap rounded-md bg-secondary px-2.5 py-2 font-mono text-[11px] text-destructive">
+          <pre className="mb-3 max-h-24 overflow-auto whitespace-pre-wrap rounded-md bg-secondary px-2.5 py-2 font-mono text-2xs text-destructive">
             {String(error)}
             {where ? `\n${where.trim()}` : ''}
           </pre>

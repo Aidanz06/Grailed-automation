@@ -90,7 +90,7 @@ export function FillProgressCard({ run, filling }: Props) {
   return (
     <section className="rounded-xl border bg-card p-4">
       <div className="mb-1 flex items-baseline justify-between">
-        <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+        <span className="text-2xs uppercase tracking-wider text-muted-foreground">
           {filling ? 'Filling in Chrome…' : 'Last fill'}
         </span>
         <span className="font-mono text-xs tabular-nums text-muted-foreground">
@@ -111,7 +111,7 @@ export function FillProgressCard({ run, filling }: Props) {
               ? `Photos (${st.done ?? 0}/${st.total})`
               : FIELD_LABEL[f] ?? f;
           return (
-            <li key={f} className="flex items-start gap-2 text-[13px]">
+            <li key={f} className="flex items-start gap-2 text-sm-">
               <RowIcon s={st.status} />
               <span className="min-w-0 flex-1 pt-0.5">
                 <span className={cn(st.status === 'pending' && 'text-muted-foreground', st.status === 'failed' && 'text-destructive')}>

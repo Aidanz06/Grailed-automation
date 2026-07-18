@@ -47,7 +47,7 @@ interface Props {
 function Field({ label, flag, className, children }: { label: string; flag?: string | null; className?: string; children: React.ReactNode }) {
   return (
     <div className={cn('flex min-w-0 flex-col gap-1', className)}>
-      <span className={cn('truncate text-[11px] uppercase tracking-wide', flag ? 'font-medium text-warning' : 'text-muted-foreground')} title={flag ?? undefined}>
+      <span className={cn('truncate text-2xs uppercase tracking-wide', flag ? 'font-medium text-warning' : 'text-muted-foreground')} title={flag ?? undefined}>
         {label}
         {flag ? ` — ${flag}` : ''}
       </span>
@@ -126,7 +126,7 @@ export function ConfirmCard({ item, fillOptions, pendingCatKey, onPendingCat, re
             <Button
               variant="outline"
               size="sm"
-              className="h-6 self-start px-2 text-[11px]"
+              className="h-6 self-start px-2 text-2xs"
               title="Records that you checked the physical tag — the low-confidence warning goes away."
               onClick={() =>
                 edit((d) => {
@@ -138,7 +138,7 @@ export function ConfirmCard({ item, fillOptions, pendingCatKey, onPendingCat, re
             </Button>
           )}
           {(isCollabBrand(attrs.resembles_brand) || attrs.collaboration) && (
-            <span className="text-[11px] text-muted-foreground">
+            <span className="text-2xs text-muted-foreground">
               collab{attrs.collaboration ? ` with ${attrs.collaboration}` : ''} — fill sets designer “
               {primaryBrand(attrs.resembles_brand)}” (Grailed has no collab designers)
             </span>
@@ -163,7 +163,7 @@ export function ConfirmCard({ item, fillOptions, pendingCatKey, onPendingCat, re
             <Button
               variant="outline"
               size="sm"
-              className="h-6 self-start px-2 text-[11px]"
+              className="h-6 self-start px-2 text-2xs"
               title="Records that you checked the physical tag — the guessed-size warning goes away."
               onClick={() =>
                 edit((d) => {
@@ -253,7 +253,7 @@ export function ConfirmCard({ item, fillOptions, pendingCatKey, onPendingCat, re
               <RefreshCw className={cn('h-3.5 w-3.5', recomputing && 'animate-spin')} />
             </Button>
           </div>
-          {soldMedian != null && <span className="text-[11px] text-muted-foreground">typically sells ~${soldMedian}</span>}
+          {soldMedian != null && <span className="text-2xs text-muted-foreground">typically sells ~${soldMedian}</span>}
         </Field>
 
         <Field label="Floor — Smart Pricing">
@@ -272,7 +272,7 @@ export function ConfirmCard({ item, fillOptions, pendingCatKey, onPendingCat, re
           />
           {soldMedian != null && floor == null && (
             <button
-              className="self-start text-[11px] text-primary hover:underline"
+              className="self-start text-2xs text-primary hover:underline"
               title="Opt in to Grailed's Smart Pricing with the typical sale price as the floor — the next fill sets the toggle + floor for your review."
               onClick={() =>
                 edit((d) => {
@@ -289,7 +289,7 @@ export function ConfirmCard({ item, fillOptions, pendingCatKey, onPendingCat, re
 
       {/* ---- Tier 2: AI-drafted — glance, correct only if wrong ---- */}
       <div className="mt-4 border-t pt-3">
-        <div className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground/70">AI-drafted — glance, correct if wrong</div>
+        <div className="mb-2 text-2xs uppercase tracking-wide text-muted-foreground/70">AI-drafted — glance, correct if wrong</div>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Title" flag={row('title').state !== 'done' ? 'missing' : null} className="col-span-2">
             <Input
@@ -306,7 +306,7 @@ export function ConfirmCard({ item, fillOptions, pendingCatKey, onPendingCat, re
             <Textarea
               value={item.content?.description ?? ''}
               placeholder="write a description"
-              className="min-h-[64px] font-mono text-[13px]"
+              className="min-h-[64px] font-mono text-sm-"
               onChange={(e) =>
                 edit((d) => {
                   if (d.content) d.content.description = e.target.value;
