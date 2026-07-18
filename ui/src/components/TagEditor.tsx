@@ -30,7 +30,11 @@ export function TagEditor({ tags, onChange }: Props) {
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && draft.trim()) {
-            onChange([...tags, draft.trim().toLowerCase()]);
+            const t = draft.trim().toLowerCase();
+            // Case-insensitive dedupe on add, silent no-op like BulkActionBar
+            // (QW-4). Stored items may already hold duplicates → key stays
+            // index-based above (manifest U1).
+            if (!tags.some((x) => x.toLowerCase() === t)) onChange([...tags, t]);
             setDraft('');
           }
         }}
