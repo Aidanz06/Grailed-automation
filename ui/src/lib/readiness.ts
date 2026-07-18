@@ -6,6 +6,7 @@
  * final review + publish always happens manually in Chrome.
  */
 
+import { useRef } from 'react';
 import type { Item } from '@/types';
 import { suggestGrailedCategory } from '@/lib/grailedCategory';
 
@@ -188,4 +189,25 @@ export function triageSort(items: Item[]): Item[] {
     .map((it, i) => ({ it, i, band: band(it) }))
     .sort((a, b) => a.band - b.band || a.i - b.i)
     .map((x) => x.it);
+}
+
+/*
+ * Display/queue order with FROZEN positions: editing a draft can flip its
+ * readiness (e.g. the confident-category auto-adopt on open), and a live
+ * triageSort then physically moves rows mid-navigation. This hook re-bands
+ * only on deliberate transitions — items added/removed, a status change, or
+ * content appearing — so chips update live but rows stay put. Every consumer
+ * of the order (sidebar, J/K queue, fill-next) must use it, or "next" drifts
+ * from what's on screen.
+ */
+export function useTriageOrder(items: Item[]): Item[] {
+  const orderKey = items.map((it) => `${it.id}:${it.status}:${it.content?.title ? 1 : 0}`).join('|');
+  const rankRef = useRef<{ key: string; rank: Map<number, number> } | null>(null);
+  if (rankRef.current?.key !== orderKey) {
+    rankRef.current = { key: orderKey, rank: new Map(triageSort(items).map((it, i) => [it.id, i])) };
+  }
+  const rank = rankRef.current.rank;
+  // Map fresh item objects onto the frozen ranks each render (never return
+  // stale objects — the chips must reflect live edits).
+  return [...items].sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
 }

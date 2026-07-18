@@ -26,7 +26,7 @@ export function PhotoTile({
   return (
     <div
       className={`relative flex flex-col justify-end overflow-hidden rounded-md border p-1.5 ${
-        thumbnail ? 'h-[240px] w-[192px]' : 'h-[116px] w-[116px]'
+        thumbnail ? 'h-[375px] w-[300px]' : 'aspect-square w-full'
       } ${overLimit ? 'border-warning ring-1 ring-warning' : ''}`}
       title={overLimit ? `Past Grailed's ${GRAILED_PHOTO_LIMIT}-photo limit — drag it into the first ${GRAILED_PHOTO_LIMIT} or delete it` : undefined}
       style={{ background: photo.tint }}
@@ -102,9 +102,9 @@ export function PhotoRow({ item, update }: Props) {
           </span>
         </div>
       )}
-      {/* Streamlined layout: the tall thumbnail sits left; the rest pack a tight
-          grid beside it. Two 116px rows + gap ≈ the 240px thumbnail, so there's
-          no dead band under the small tiles. */}
+      {/* Streamlined layout: the tall thumbnail sits left; the rest pack an
+          auto-fill grid beside it whose tiles GROW with the window (min 132px,
+          square) — no dead space at any width. */}
       <div className="flex items-start gap-2">
         {item.photos.slice(0, 1).map((p) => (
           <div
@@ -126,7 +126,7 @@ export function PhotoRow({ item, update }: Props) {
             </PhotoTile>
           </div>
         ))}
-        <div className="flex min-w-0 flex-1 flex-wrap content-start gap-2">
+        <div className="grid min-w-0 flex-1 grid-cols-[repeat(auto-fill,minmax(132px,1fr))] content-start gap-2">
           {item.photos.slice(1).map((p, iRest) => {
             const i = iRest + 1;
             return (
@@ -157,7 +157,7 @@ export function PhotoRow({ item, update }: Props) {
                 d.dirty = true;
               })
             }
-            className="flex h-[116px] w-[116px] items-center justify-center rounded-md border border-dashed border-input bg-secondary/40 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            className="flex aspect-square w-full items-center justify-center rounded-md border border-dashed border-input bg-secondary/40 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
           >
             + add photo
           </button>

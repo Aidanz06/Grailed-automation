@@ -272,8 +272,16 @@ export function PricePanel({ item, update, toast }: Props) {
           still reviews and publishes. Never auto-enabled, never autonomous.
           Pairs with §D2: the editable number above is the list price, the
           suggested floor is what comparable items typically sold for. */}
-      <div className="mt-3 rounded-lg border bg-secondary/30 p-3">
-        <label className="flex cursor-pointer items-center gap-2">
+      <div
+        className={cn(
+          'mt-3 rounded-lg border p-3 transition-colors',
+          spOn ? 'border-primary/50 bg-primary/5' : 'bg-secondary/30'
+        )}
+      >
+        <label
+          className="flex cursor-pointer items-center gap-2"
+          title="Grailed's own auto-discount: lowers the price ~10% a week until your floor and nudges likers. Enabling here only records the choice — the next fill sets Grailed's toggle + floor on the Sell form, and you still review and publish."
+        >
           <input
             type="checkbox"
             className="h-4 w-4 accent-primary"
@@ -294,11 +302,14 @@ export function PricePanel({ item, update, toast }: Props) {
             }}
           />
           <span className="text-sm font-medium">Smart Pricing (Grailed)</span>
+          {spOn && (
+            <span className="rounded-full border border-primary/50 px-2 py-0.5 font-mono text-[10px] font-medium uppercase text-primary">
+              set at next fill
+            </span>
+          )}
         </label>
         <p className="mt-1 text-xs text-muted-foreground">
-          Grailed’s own auto-discount: it lowers the price ~10% a week until your floor, and nudges likers. Off unless
-          you turn it on here — the next fill then sets the toggle + floor on the Sell form for you to review before
-          publishing.
+          Grailed’s auto-discount — drops the price weekly until your floor. You still review and publish.
         </p>
         {spOn && (
           <div className="mt-2 flex items-center gap-1.5">

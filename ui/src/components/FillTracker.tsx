@@ -1,8 +1,7 @@
 import { ArrowRight } from 'lucide-react';
 import type { Item } from '@/types';
-import type { Album } from '@/lib/api';
 import type { Selection } from '@/App';
-import { isTriageDraft, triageSort } from '@/lib/readiness';
+import { isTriageDraft, useTriageOrder } from '@/lib/readiness';
 import { Button } from '@/components/ui/button';
 import { ProgressBar } from '@/components/motion';
 
@@ -17,23 +16,21 @@ import { ProgressBar } from '@/components/motion';
 
 interface Props {
   items: Item[];
-  albums: Album[];
   selected: Selection;
   /** The tracker's one control: jump to this draft and start its (gated) fill. */
   onFillNext: (id: number) => void;
 }
 
-export function FillTracker({ items, albums, selected, onFillNext }: Props) {
+export function FillTracker({ items, selected, onFillNext }: Props) {
   const current = typeof selected === 'number' ? items.find((it) => it.id === selected) ?? null : null;
 
   // Scope to the current item's import batch (album) when it has one;
   // otherwise track across all items with listings.
   const albumId = current?.albumId ?? null;
   const scope = items.filter((it) => !!it.content?.title && (albumId == null || it.albumId === albumId));
-  const album = albumId != null ? albums.find((a) => a.id === albumId) : null;
 
   const listed = scope.filter((it) => it.status === 'submitted').length;
-  const drafts = triageSort(scope).filter(isTriageDraft);
+  const drafts = useTriageOrder(scope).filter(isTriageDraft);
   const total = listed + drafts.length;
 
   // Collapsed when nothing is in flight: a single-item scope isn't a batch,
@@ -50,22 +47,19 @@ export function FillTracker({ items, albums, selected, onFillNext }: Props) {
           ? drafts[(curIdx + 1) % drafts.length]
           : null;
 
+  // Slimmed (owner request 2026-07-17): count + bar + current draft + the one
+  // control. The album name and "next up" echo are gone — the button's tooltip
+  // carries the next title.
   return (
-    <div className="flex items-center gap-3 border-b bg-card/60 px-4 py-1.5 text-xs">
+    <div className="flex items-center gap-3 border-b bg-card/60 px-4 py-1 text-xs">
       <span className="shrink-0 font-medium tabular-nums">
-        {listed} of {total} listed
+        {listed}/{total} listed
       </span>
-      <ProgressBar pct={(listed / total) * 100} className="w-24 shrink-0" />
-      {album && <span className="hidden shrink-0 text-muted-foreground lg:inline">{album.name}</span>}
+      <ProgressBar pct={(listed / total) * 100} className="w-20 shrink-0" />
       <span className="min-w-0 flex-1 truncate text-muted-foreground">
         {current && curIdx !== -1 && (
           <>
             now: <span className="text-foreground">{current.content?.title}</span>
-          </>
-        )}
-        {next && (
-          <>
-            {current && curIdx !== -1 && ' · '}next up: <span className="text-foreground">{next.content?.title}</span>
           </>
         )}
       </span>
@@ -74,10 +68,10 @@ export function FillTracker({ items, albums, selected, onFillNext }: Props) {
           variant="outline"
           size="sm"
           className="h-6 shrink-0 px-2 text-xs"
-          title="Jump to the next draft and start its fill — same single-click trigger as “fill next draft”, and it only fires onto a fresh Sell form. Never submits."
+          title={`Next: ${next.content?.title ?? ''} — jump there and start its fill. Same single-click trigger as “fill next draft”; only fires onto a fresh Sell form. Never submits.`}
           onClick={() => onFillNext(next.id)}
         >
-          Fill next draft <ArrowRight className="h-3 w-3" />
+          Fill next <ArrowRight className="h-3 w-3" />
         </Button>
       )}
     </div>
