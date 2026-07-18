@@ -13,6 +13,19 @@ beforeEach(() => {
   localStorage.setItem(ONBOARDED_KEY, '1');
 });
 
+describe('GuideMenu (shared Modal)', () => {
+  it('opens as a dialog; Escape does NOT close (U6 — X button only)', async () => {
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: 'open guide' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Guide' });
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.getByRole('dialog', { name: 'Guide' })).toBeTruthy(); // still open
+    fireEvent.click(screen.getByRole('button', { name: 'close guide' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Guide' })).toBeNull());
+  });
+});
+
 describe('DefaultsMenu (shared Modal)', () => {
   it('opens as an accessible dialog with its Selects present', async () => {
     render(<App />);

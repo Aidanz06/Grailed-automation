@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { BookOpenText, ChevronDown, ChevronRight, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Modal } from '@/components/Modal';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { HowItWorksSteps, TrustContract } from '@/components/Onboarding';
 import { ShortcutRows } from '@/components/ShortcutHelp';
@@ -116,8 +117,13 @@ export function GuideMenu({ open, initialSection = 'how', onClose }: Props) {
   const [openId, setOpenId] = useState<GuideSection | null>(initialSection);
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6">
-      <div className="rise-in flex max-h-[85vh] w-full max-w-xl flex-col rounded-xl border bg-card shadow-xl">
+    // U6: deliberately X-button-only — no backdrop/Escape close until the
+    // owner opts in (Modal defaults are already off).
+    <Modal
+      title="Guide"
+      onClose={onClose}
+      className="rise-in left-1/2 top-1/2 flex max-h-[85vh] w-full max-w-xl -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl border bg-card shadow-xl"
+    >
         <div className="flex items-center gap-2 border-b px-5 py-3.5">
           <BookOpenText className="h-4 w-4 text-primary" />
           <h2 className="text-base font-semibold">Guide</h2>
@@ -170,7 +176,6 @@ export function GuideMenu({ open, initialSection = 'how', onClose }: Props) {
             </Section>
           </div>
         </ScrollArea>
-      </div>
-    </div>
+    </Modal>
   );
 }
