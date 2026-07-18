@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { CheckCircle2, CheckSquare, Plus, Square } from 'lucide-react';
 import type { Item, ItemStatus } from '@/types';
 import type { Selection, UpdateItem } from '@/App';
 import { cn } from '@/lib/utils';
-import { GRAILED_PHOTO_LIMIT, isTriageDraft, readiness, triageSort } from '@/lib/readiness';
+import { GRAILED_PHOTO_LIMIT, isTriageDraft, readiness, useTriageOrder } from '@/lib/readiness';
 import { quality, qualityTitle } from '@/lib/quality';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -58,8 +58,10 @@ export function Sidebar({ items, selected, onSelect, updateItem, toast }: Sideba
 
   // Triage order (R1): review first, then drafts needing a human, then ready
   // drafts, then listed — shared with App's J/K + fill-next queue via
-  // lib/readiness.ts so "next" always matches what's on screen.
-  const ordered = useMemo(() => triageSort(items), [items]);
+  // lib/readiness.ts so "next" always matches what's on screen. Positions are
+  // frozen between status changes (useTriageOrder) so rows don't jump when a
+  // draft's readiness flips mid-edit.
+  const ordered = useTriageOrder(items);
   const shown = ordered.filter((it) => {
     if (filter === 'all') return true;
     if (!isTriageDraft(it)) return filter === 'attention' && (it.status === 'needs_review' || !it.content?.title);

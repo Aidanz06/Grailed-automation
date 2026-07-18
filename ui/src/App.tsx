@@ -3,7 +3,7 @@ import { ArrowLeft, ClipboardCheck, Link2, Unlink2 } from 'lucide-react';
 import type { Item } from '@/types';
 import { api, type Album, type ConfigStatus } from '@/lib/api';
 import { errorMessage } from '@/lib/utils';
-import { isTriageDraft, readiness, triageSort } from '@/lib/readiness';
+import { isTriageDraft, readiness, useTriageOrder } from '@/lib/readiness';
 import { matchShortcut } from '@/lib/shortcuts';
 import { ChromeStatusChip } from '@/components/ChromeStatusChip';
 import { GuideMenu, type GuideSection } from '@/components/GuideMenu';
@@ -231,7 +231,7 @@ export default function App() {
   // item, wrapping) — the one-click post-publish flow advances to it. Sidebar
   // order is now the R1 triage order (needs-attention drafts first), shared
   // via lib/readiness.ts so "next" always matches what's on screen.
-  const draftQueue = triageSort(items).filter(isTriageDraft);
+  const draftQueue = useTriageOrder(items).filter(isTriageDraft);
   const curIdx = typeof selected === 'number' ? draftQueue.findIndex((it) => it.id === selected) : -1;
   const nextDraftItem =
     draftQueue.length === 0
