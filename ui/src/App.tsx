@@ -9,7 +9,7 @@ import { ChromeStatusChip } from '@/components/ChromeStatusChip';
 import { GuideMenu, type GuideSection } from '@/components/GuideMenu';
 import { Onboarding, ONBOARDED_KEY } from '@/components/Onboarding';
 import { CheckUpdatesButton, UpdateBanner, UpdateModal, useUpdater } from '@/components/Updater';
-import { editsOf } from '@/components/DraftEditor';
+import { editsOf } from '@/lib/edits';
 import { Home } from '@/components/Home';
 import { ConfirmScreen } from '@/components/ConfirmScreen';
 import { CommandPalette, type PaletteCommand } from '@/components/CommandPalette';
