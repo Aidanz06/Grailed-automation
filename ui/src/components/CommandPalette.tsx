@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Command as CommandIcon } from 'lucide-react';
 import type { Item } from '@/types';
 import { cn } from '@/lib/utils';
+import { STATUS_WORD } from '@/lib/statusLabels';
 
 /*
  * ⌘K command palette (refinement plan §E9): navigation + actions + draft
@@ -30,13 +31,6 @@ interface Props {
   items: Item[];
   onOpenItem: (id: number) => void;
 }
-
-const STATUS_WORD: Record<string, string> = {
-  draft: 'draft',
-  needs_review: 'review',
-  submitted: 'listed',
-  grouped: 'grouped',
-};
 
 export function CommandPalette({ open, onClose, commands, items, onOpenItem }: Props) {
   const [q, setQ] = useState('');

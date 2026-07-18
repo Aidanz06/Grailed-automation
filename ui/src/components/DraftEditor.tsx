@@ -32,9 +32,9 @@ function firstFillSeen(): boolean {
 // §F hierarchy (option B, owner-picked from 3 mocks): the page keeps its
 // order but stops shouting evenly. Tier-1 fields (the seller's call) sit in
 // a brass-bordered band with loud labels (BAND_LABEL); AI-drafted text gets
-// a quiet tier header + quiet labels (FIELD_LABEL); rarely-used fields
+// a quiet tier header + quiet labels (FIELD_LABEL_CLS); rarely-used fields
 // collapse behind "More details".
-const FIELD_LABEL = 'text-xs font-medium uppercase tracking-wide text-muted-foreground';
+const FIELD_LABEL_CLS = 'text-xs font-medium uppercase tracking-wide text-muted-foreground';
 const BAND_LABEL = 'text-xs font-semibold uppercase tracking-wide text-foreground';
 
 interface Props {
@@ -626,7 +626,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
             {item.regenerating ? 'regenerating…' : 'Regenerate'}
           </Button>
         </div>
-        <span className={cn(FIELD_LABEL, 'mb-1 block')}>Title</span>
+        <span className={cn(FIELD_LABEL_CLS, 'mb-1 block')}>Title</span>
         <Input
           ref={titleRef}
           value={content.title}
@@ -642,7 +642,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
 
       {/* Description + detail selector */}
       <section id="sec-desc" className="mb-5 scroll-mt-4">
-        <span className={cn(FIELD_LABEL, 'mb-1 block')}>Description</span>
+        <span className={cn(FIELD_LABEL_CLS, 'mb-1 block')}>Description</span>
         {/* §F option B: once a description exists it collapses to a preview —
             proofreading is one click away, and the page stops leading with a
             240px textarea. Empty descriptions stay open (they need writing). */}
@@ -713,7 +713,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
 
       {/* Tags */}
       <section id="sec-tags" className="mb-5 scroll-mt-4">
-        <label className={cn(FIELD_LABEL, 'mb-2 block')}>Tags</label>
+        <label className={cn(FIELD_LABEL_CLS, 'mb-2 block')}>Tags</label>
         <TagEditor
           tags={content.tags}
           onChange={(tags) =>
@@ -876,7 +876,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
               </div>
               <div className="mb-2 flex flex-wrap items-end gap-3">
                 <div className="flex min-w-[260px] flex-col gap-1">
-                  <span className={FIELD_LABEL}>Department › Category</span>
+                  <span className={FIELD_LABEL_CLS}>Department › Category</span>
                   <Select
                     value={pendingDept && pendingCat ? `${pendingDept}||${pendingCat}` : undefined}
                     onValueChange={(v) => {
@@ -976,7 +976,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
             </p>
             <div className="flex flex-wrap gap-4">
               <div className="flex min-w-[220px] flex-col gap-1">
-                <span className={FIELD_LABEL}>Color (Grailed)</span>
+                <span className={FIELD_LABEL_CLS}>Color (Grailed)</span>
                 <Select
                   value={attrs.grailed_color || undefined}
                   onValueChange={(v) =>
@@ -999,7 +999,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
                 </Select>
               </div>
               <div className="flex min-w-[220px] flex-col gap-1">
-                <span className={FIELD_LABEL}>Style (Grailed)</span>
+                <span className={FIELD_LABEL_CLS}>Style (Grailed)</span>
                 <Select
                   value={attrs.grailed_style || undefined}
                   onValueChange={(v) =>
@@ -1022,7 +1022,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
                 </Select>
               </div>
               <div className="flex min-w-[220px] flex-col gap-1">
-                <span className={FIELD_LABEL}>Country of origin</span>
+                <span className={FIELD_LABEL_CLS}>Country of origin</span>
                 <Input
                   value={attrs.country_of_origin ?? ''}
                   placeholder="e.g. Portugal — skipped if blank"

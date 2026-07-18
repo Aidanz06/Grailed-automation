@@ -5,16 +5,10 @@ import type { Selection, UpdateItem } from '@/App';
 import { cn } from '@/lib/utils';
 import { GRAILED_PHOTO_LIMIT, isTriageDraft, readiness, triageSort } from '@/lib/readiness';
 import { quality, qualityTitle } from '@/lib/quality';
+import { STATUS_LABEL } from '@/lib/statusLabels';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BulkActionBar } from '@/components/BulkActionBar';
-
-const STATUS_LABEL: Record<ItemStatus, string> = {
-  draft: 'draft',
-  needs_review: 'needs review',
-  submitted: 'listed', // vocab aligned with Home's "Currently listed on Grailed"
-  grouped: 'grouped',
-};
 
 // Colored badges per status (change #9 from the vanilla shell): blue / amber / green.
 const STATUS_CLASS: Record<ItemStatus, string> = {
