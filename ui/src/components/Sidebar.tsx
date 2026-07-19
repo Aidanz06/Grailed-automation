@@ -190,6 +190,14 @@ export function Sidebar({ items, selected, onSelect }: SidebarProps) {
               )}
               {it.dirty && <span className="ml-auto shrink-0 text-2xs text-primary">• edited</span>}
             </div>
+            {/* M-8 phase 2 (owner-approved): the blocker's how-to-fix detail,
+                previously hover-only — one quiet truncated line, only on
+                blocked drafts so ready/listed rows stay as dense as before. */}
+            {r && !r.ready && (
+              <div className="mt-0.5 truncate text-2xs text-muted-foreground">
+                {r.doneCount}/{r.requiredCount} done · {r.blocker!.sub}
+              </div>
+            )}
           </div>
         </button>
       </li>
