@@ -348,6 +348,79 @@ const acClearExpr = (sel) => `(() => {
   return { cleared: true };
 })()`;
 
+// Approved-collab picker expressions (probed live 2026-07-19,
+// phase0b-collab-photos-probe*): once a primary designer is committed, the
+// designer section renders a plain "Add A Collaboration" <button>. The proven
+// synthetic pointer sequence swaps it for a "Select an approved collaboration"
+// trigger row whose [role=menu] lists the approved "Primary x Partner"
+// menuitems. selectExpr (above) clicks the matched menuitem.
+
+// Current collab UI state — which control is showing, plus every leaf text in
+// the designers area (post-commit the collab label renders there; also the
+// idempotency signal). The area is scoped by the DesignersAndCollabs /
+// Designers-module class prefixes (captured live 2026-07-19) — the anchor
+// input's own container holds ONLY the input + clear button, so a
+// closest()-based read comes back empty (found live: the first verify pass).
+const collabStateExpr = () => `(() => {
+  const leafText = (n) => (n.textContent || '').replace(/\\u00a0/g, ' ').replace(/\\s+/g, ' ').trim();
+  const leaves = Array.from(document.querySelectorAll('button, span, div, p, li'))
+    .filter((n) => n.children.length === 0)
+    .filter((n) => n.closest('[class*="DesignersAndCollabs"], [class*="Designers-module"]'));
+  const texts = leaves.map(leafText).filter(Boolean);
+  // A COMMITTED collab lives in the designer input's VALUE ("Nike x NOCTA" —
+  // verified live 2026-07-19), which textContent never carries — include it.
+  const input = document.querySelector('#designer-autocomplete');
+  if (input && input.value.trim()) texts.unshift(input.value.trim());
+  return {
+    ok: true,
+    hasAddButton: texts.some((t) => /add a collaboration/i.test(t)),
+    hasTrigger: texts.some((t) => /select an approved collaboration/i.test(t)),
+    sectionText: texts.join(' | ').slice(0, 500),
+  };
+})()`;
+
+// Center coords of the approved-collab menuitem whose text equals `pick` —
+// for a REAL CDP mouse click. Synthetic pointer events do NOT commit these
+// menuitems (found live 2026-07-19, first verify pass) — same lesson as the
+// autocomplete suggestion <li>s (2026-07-03).
+const collabOptionRectExpr = (menuSel, pick) => `(() => {
+  const norm = (s) => String(s || '').replace(/\\u00a0/g, ' ').replace(/\\s+/g, ' ').trim().toLowerCase();
+  const w = norm(${JSON.stringify(pick)});
+  const items = Array.from(document.querySelectorAll(${JSON.stringify(menuSel)})).filter((n) => n.offsetParent !== null);
+  const item = items.find((n) => norm(n.textContent) === w) || items.find((n) => norm(n.textContent).includes(w));
+  if (!item) return { ok: false, reason: 'menuitem gone', available: items.map((n) => (n.textContent || '').trim()).slice(0, 10) };
+  item.scrollIntoView({ block: 'center' });
+  const r = item.getBoundingClientRect();
+  return { ok: true, x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2), text: (item.textContent || '').trim() };
+})()`;
+
+// Click the "Add A Collaboration" button (or, if it already swapped, the
+// "Select an approved collaboration" trigger row) with the proven synthetic
+// pointer sequence.
+const collabOpenExpr = () => `(() => {
+  const leafText = (n) => (n.textContent || '').replace(/\\s+/g, ' ').trim();
+  const leaves = Array.from(document.querySelectorAll('button, span, div, p')).filter((n) => n.children.length === 0);
+  let el = leaves.find((n) => /add a collaboration/i.test(leafText(n)));
+  let via = 'add-button';
+  if (!el) {
+    el = leaves.find((n) => /select an approved collaboration/i.test(leafText(n)));
+    via = 'trigger-row';
+  }
+  if (!el) return { ok: false, reason: 'no "Add A Collaboration" control — is a designer selected?' };
+  const target = el.closest('button, [role="button"], [role="menuitem"]') || el.parentElement;
+  target.scrollIntoView({ block: 'center' });
+  const o = { bubbles: true, cancelable: true, button: 0, pointerId: 1, isPrimary: true, view: window };
+  try { target.dispatchEvent(new PointerEvent('pointerdown', o)); target.dispatchEvent(new PointerEvent('pointerup', o)); target.dispatchEvent(new MouseEvent('click', o)); } catch (e) {}
+  return { ok: true, via };
+})()`;
+
+// Visible collab menuitems ("Nike x Nocta", …) — the settle/read signal.
+const collabMenuTextsExpr = (menuSel) => `(() => {
+  const items = Array.from(document.querySelectorAll(${JSON.stringify(menuSel)}))
+    .filter((n) => n.offsetParent !== null);
+  return { texts: items.map((n) => (n.textContent || '').replace(/\\u00a0/g, ' ').replace(/\\s+/g, ' ').trim()).slice(0, 80) };
+})()`;
+
 // §K collabs: split "A x B" / "A × B" / "A/B" / "A & B" into parts. The FIRST
 // part is the primary brand — the twin of ui/main.js primaryBrand() and
 // pipeline/priceProvider.js buildNarrowQueryText(), and the entry Grailed
@@ -375,6 +448,29 @@ function autocompleteFallbacks(value) {
   const out = [];
   for (let n = words.length - 1; n >= 1 && out.length < 2; n--) out.push(words.slice(0, n).join(' '));
   return out;
+}
+
+// Approved-collab menu matcher (probed live 2026-07-19): the picker lists
+// Grailed-approved "Primary x Partner" menuitems for the selected designer.
+// Order-insensitive token-set EQUALITY first ("NOCTA x Nike" → "Nike x
+// Nocta", and "Nike x Fragment Design" can never grab the "…x Travis Scott"
+// triple), then the SMALLEST superset for partner-only wants ("Nocta").
+// Diacritics fold like the autocomplete. The trigger/CANCEL row is excluded.
+// Returns the menuitem's exact text (the click target) or null. Exported for
+// offline tests.
+function matchCollabOption(texts, want) {
+  const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+  const toks = (s) => norm(s).split(/[^a-z0-9]+/).filter((t) => t && t !== 'x');
+  const wt = toks(want);
+  if (!wt.length) return null;
+  const rows = (texts || [])
+    .filter((t) => !/select an approved collaboration/i.test(String(t)))
+    .map((t) => ({ t, set: new Set(toks(t)) }))
+    .filter((r) => r.set.size);
+  const exact = rows.find((r) => r.set.size === new Set(wt).size && wt.every((x) => r.set.has(x)));
+  if (exact) return exact.t;
+  const supersets = rows.filter((r) => wt.every((x) => r.set.has(x))).sort((a, b) => a.set.size - b.set.size);
+  return supersets.length ? supersets[0].t : null;
 }
 
 class AutofillAbort extends Error {
@@ -654,10 +750,14 @@ async function connect({ freshTab = false } = {}) {
     return { ok: norm(verify.triggerText) === norm(wantLabel), triggerLabel: verify.triggerText, want: wantLabel };
   }
 
-  // One file per photo_input_N slot via DOM.setFileInputFiles (proven step 8).
-  // Grailed uploads on select then clears the input, so el.files stays 0 —
-  // the POST to the media host is the success signal. `onSlot(done, total)`
-  // (optional) reports each uploaded slot for the live fill checklist.
+  // Photos via DOM.setFileInputFiles. The form renders only 9 empty slots and
+  // never adds an input past photo_input_8 — but every input is `multiple`
+  // and Grailed's listing cap is 25 (support FAQ), so the WHOLE batch goes to
+  // the FIRST empty input in ONE call (probed live 2026-07-19: 12 files → 12
+  // media POSTs, all 12 kept; the exact gesture of a human dropping the set
+  // on the first tile). Grailed uploads on select then clears the input, so
+  // el.files stays 0 — media-host POSTs are the success signal, polled so
+  // `onSlot(done, total)` still streams progress to the live fill checklist.
   //
   // HARD RULE (bug F #2): photos are NEVER added to a form that already has
   // some — that appends this item's photos to a previous listing's. If any
@@ -678,18 +778,26 @@ async function connect({ freshTab = false } = {}) {
         reason: `this Sell form already has ${totalSlots - nodeIds.length} photo(s) — open a fresh, empty Sell form and fill again (photos are never added to an existing set)`,
       };
     }
-    if (paths.length > nodeIds.length) {
-      return { ok: false, reason: `only ${nodeIds.length} empty photo slots for ${paths.length} photos` };
+    const maxPhotos = Number(selectors.photos.maxPhotos) || totalSlots;
+    if (paths.length > maxPhotos) {
+      return { ok: false, reason: `Grailed allows ${maxPhotos} photos per listing — this item has ${paths.length}` };
     }
     const before = uploads.length;
-    for (let i = 0; i < paths.length; i++) {
-      await client.DOM.setFileInputFiles({ nodeId: nodeIds[i], files: [paths[i]] });
-      await sleep(2500); // human-paced: let Grailed POST to the media host + render the preview
-      await assertClean(`uploadPhotos(slot ${i}: ${path.basename(paths[i])})`);
-      if (onSlot) {
-        try { onSlot(i + 1, paths.length); } catch (err) { console.error('[autofill] onSlot listener failed:', err.message); }
+    await client.DOM.setFileInputFiles({ nodeId: nodeIds[0], files: paths });
+    // Watch the media POSTs land (~1-3s each when Grailed runs them in
+    // parallel); budget generously, finish early once all are seen.
+    const deadline = Date.now() + 15000 + paths.length * 5000;
+    let reported = 0;
+    while (Date.now() < deadline) {
+      await sleep(1000);
+      const done = Math.min(uploads.length - before, paths.length);
+      if (done !== reported && onSlot) {
+        try { onSlot(done, paths.length); } catch (err) { console.error('[autofill] onSlot listener failed:', err.message); }
       }
+      reported = done;
+      if (done >= paths.length) break;
     }
+    await assertClean(`uploadPhotos(${paths.length} files: ${path.basename(paths[0])}…)`);
     const uploadPosts = uploads.length - before;
     return {
       ok: uploadPosts >= 1,
@@ -844,6 +952,69 @@ async function connect({ freshTab = false } = {}) {
     };
   }
 
+  // Add an APPROVED collaboration to an already-committed primary designer
+  // (probed live 2026-07-19 — see grailed-selectors.json designer.collab).
+  // `want` is the full collab string ("Nike x Nocta" / "Nocta x Nike" /
+  // "Nocta"); matching is matchCollabOption's token-set logic. Not in
+  // Grailed's approved list → close the menu and fail clean (the caller keeps
+  // the primary designer and notes the collab for the title/description).
+  async function addDesignerCollab(want) {
+    const cfg = (selectors.autocompletes.designer || {}).collab || {};
+    const menuSel = cfg.menuItems || '[role="menu"] [role="menuitem"]';
+    const state0 = await evaluate(collabStateExpr(), 'addDesignerCollab(state)');
+    // Idempotency: a committed collab renders as a leaf in the designers area
+    // ("Nike x Nocta") — token-match against those before touching anything.
+    if (state0.sectionText && matchCollabOption(state0.sectionText.split(' | '), want)) {
+      return { ok: true, alreadySet: true, sectionText: state0.sectionText };
+    }
+    await pressEscape(); // an open menu would swallow the button click
+    const open = await evaluate(collabOpenExpr(), 'addDesignerCollab(open)');
+    if (!open.ok) return { ok: false, reason: open.reason };
+
+    // The menu can render in one hop (button click) or need the trigger row
+    // clicked too — poll for real "A x B" items, nudging once midway.
+    let texts = [];
+    for (let i = 0; i < 8; i++) {
+      await sleep(500);
+      const read = await evaluate(collabMenuTextsExpr(menuSel), 'addDesignerCollab(menu)');
+      texts = read.texts || [];
+      if (texts.some((t) => / x /i.test(t))) break;
+      if (i === 3) await evaluate(collabOpenExpr(), 'addDesignerCollab(reopen)');
+    }
+    const pick = matchCollabOption(texts, want);
+    if (!pick) {
+      await pressEscape(); // leave the form usable — same rule as selectDropdown
+      const collabsOnly = texts.filter((t) => / x /i.test(t));
+      return {
+        ok: false,
+        reason: collabsOnly.length
+          ? `“${want}” isn't in Grailed's approved collaborations for this designer`
+          : 'the approved-collaborations menu did not open',
+        available: collabsOnly.slice(0, 8),
+      };
+    }
+    // REAL mouse click — synthetic pointer events don't commit these
+    // menuitems (found live 2026-07-19), same as the autocomplete <li>s.
+    const rect = await evaluate(collabOptionRectExpr(menuSel, pick), `addDesignerCollab(${pick})`);
+    if (!rect.ok) {
+      await pressEscape();
+      return { ok: false, reason: `couldn't click “${pick}” (${rect.reason})` };
+    }
+    await sleep(300); // let scrollIntoView settle before the coords are used
+    const at = await evaluate(collabOptionRectExpr(menuSel, pick), `addDesignerCollab(${pick})`);
+    const { x, y } = at.ok ? at : rect;
+    await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x, y });
+    await client.Input.dispatchMouseEvent({ type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
+    await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+    await sleep(700);
+    const state1 = await evaluate(collabStateExpr(), 'addDesignerCollab(verify)');
+    await assertClean(`addDesignerCollab(${pick})`);
+    const committed = !!(state1.sectionText && matchCollabOption(state1.sectionText.split(' | '), pick));
+    return committed
+      ? { ok: true, selected: pick }
+      : { ok: false, selected: pick, reason: `clicked “${pick}” but the designer section didn't show it — verify in Chrome` };
+  }
+
   // Fresh tab: don't hand back the driver until the form has rendered — every
   // primitive (and the emptiness check) needs the React app up.
   if (freshTab) {
@@ -866,9 +1037,17 @@ async function connect({ freshTab = false } = {}) {
     selectNestedCategory,
     uploadPhotos,
     fillAutocomplete,
+    addDesignerCollab,
     countEmptyPhotoSlots,
     signals,
     uploads,
+    // Raw internals for phase0Test probe scripts ONLY — probes need ad-hoc
+    // reads/pokes on the same session (same detection watch, same breaker).
+    // App code goes through the named primitives above.
+    client,
+    evaluate,
+    assertClean,
+    pressEscape,
     close: () => client.close().catch(() => {}),
   };
 }
@@ -1076,7 +1255,33 @@ async function fillListing(fields, onProgress) {
           );
         }
         if (fields.designer) {
-          await step('designer', () => driver.fillAutocomplete(sel.autocompletes.designer.selector, fields.designer));
+          // Collabs (probed live 2026-07-19): the autocomplete has no "A x B"
+          // entries — type the PRIMARY brand there, then add the partner via
+          // the approved-collaborations menu. Not approved → keep the primary
+          // and note it (the collab still belongs in the title/description).
+          await step('designer', async () => {
+            const parts = collabParts(fields.designer);
+            const primary = parts.length > 1 ? parts[0] : fields.designer;
+            const r = await driver.fillAutocomplete(sel.autocompletes.designer.selector, primary);
+            if (!r.ok || parts.length < 2) return r;
+            const collab = await driver.addDesignerCollab(fields.designer);
+            if (collab.ok) {
+              return {
+                ...r,
+                collab: collab.selected || fields.designer,
+                note: collab.alreadySet
+                  ? `collaboration already set (“${fields.designer}”)`
+                  : `selected approved collaboration “${collab.selected}”`,
+              };
+            }
+            return {
+              ...r,
+              note:
+                `primary designer “${r.value || primary}” filled; ${collab.reason}` +
+                (collab.available && collab.available.length ? ` (approved: ${collab.available.slice(0, 4).join(', ')}, …)` : '') +
+                ' — mention the collab in the title/description',
+            };
+          });
         }
       } else {
         const skip = (what) => ({ ok: true, skipped: true, reason: `${what} skipped — category did not confirm` });
@@ -1100,7 +1305,7 @@ async function fillListing(fields, onProgress) {
 
 // getJSON/portUp/sellTarget are shared with ui/chrome-dock.js (window
 // choreography uses the same :9222 endpoint but a browser-level connection).
-module.exports = { connect, fillListing, AutofillAbort, getJSON, portUp, sellTarget, openFreshSellTab, PORT, isFirstParty403, collabParts, autocompleteFallbacks };
+module.exports = { connect, fillListing, AutofillAbort, getJSON, portUp, sellTarget, openFreshSellTab, PORT, isFirstParty403, collabParts, autocompleteFallbacks, matchCollabOption };
 
 // ---------------------------------------------------------------- CLI test modes
 // Live per-primitive verification without the app. Prereq: `npm run 0b:launch`,

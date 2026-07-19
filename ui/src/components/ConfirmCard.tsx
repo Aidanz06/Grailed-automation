@@ -140,7 +140,7 @@ export function ConfirmCard({ item, fillOptions, pendingCatKey, onPendingCat, re
           {(isCollabBrand(attrs.resembles_brand) || attrs.collaboration) && (
             <span className="text-2xs text-muted-foreground">
               collab{attrs.collaboration ? ` with ${attrs.collaboration}` : ''} — fill sets designer “
-              {primaryBrand(attrs.resembles_brand)}” (Grailed has no collab designers)
+              {primaryBrand(attrs.resembles_brand)}”, then Grailed’s approved collab if it’s offered
             </span>
           )}
         </Field>

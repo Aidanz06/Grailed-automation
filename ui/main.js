@@ -429,14 +429,17 @@ function buildFillPayload(item) {
   // Grailed bottoms sizes are waist digits ("US 32 /…") — "32x30" won't match.
   if (size && attrs.grailed_category === 'Bottoms') size = (size.match(/^\d{2}/) || [size])[0];
   // Designer comes from the (user-editable) brand attribute; never fill an
-  // unidentified brand. Grailed's designer list has NO collab entries
-  // (verified live 2026-07-14), so a collab string would always fail the
-  // autocomplete — send the PRIMARY brand ("Supreme x Comme des Garçons" →
-  // "Supreme"). New extractions already split the partner into
-  // attrs.collaboration; this normalization covers older items and
-  // hand-typed collab strings. Twin helper in ui/src/lib/utils.ts.
-  const brand = primaryBrand(attrs.resembles_brand);
-  const designer = confirmed && brand && brand.toLowerCase() !== 'unclear' ? brand : null;
+  // unidentified brand. The driver now handles collabs itself (probed live
+  // 2026-07-19): it types the PRIMARY brand into the autocomplete, then picks
+  // the partner from Grailed's approved-collaborations menu — so send the
+  // FULL collab string. New extractions split the partner into
+  // attrs.collaboration (join it back); older/hand-typed items may carry the
+  // collab inline in resembles_brand already. Twin helper in ui/src/lib/utils.ts.
+  const brandRaw = String(attrs.resembles_brand || '').trim();
+  const partner = String(attrs.collaboration || '').trim();
+  const fullBrand = partner && !/\s+[x×]\s+/i.test(brandRaw) ? `${brandRaw} x ${partner}` : brandRaw;
+  const primary = primaryBrand(brandRaw);
+  const designer = confirmed && primary && primary.toLowerCase() !== 'unclear' ? fullBrand : null;
   // The pipeline's subcategory is free text ("graphic t-shirt"); Grailed's
   // options are fixed labels ("Short Sleeve T-Shirts"). Translate via the
   // per-category appValueRules in grailed-selectors.json (first regex wins);

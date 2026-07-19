@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { quality, qualityTitle } from '@/lib/quality';
+import { GRAILED_PHOTO_LIMIT } from '@/lib/readiness';
 import { makeItem, makePhotos } from '@/test/fixtures';
 
 /*
@@ -36,7 +37,7 @@ describe('quality score', () => {
   });
 
   it('over-limit photos: warn on the row AND no photo boost', () => {
-    const q = quality(makeItem({ photos: makePhotos(10) }));
+    const q = quality(makeItem({ photos: makePhotos(GRAILED_PHOTO_LIMIT + 1) }));
     // photos row warns (half credit) but brand boost still applies: ≈82.3 → 82
     expect(q.score).toBe(82);
     expect(q.boosts).not.toContain('5+ photos');

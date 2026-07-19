@@ -48,7 +48,12 @@
       "kind": "autocomplete",
       "note": "disabled until a category is chosen",
       "technique": "PROVEN (2026-07-03, via fillListing live run): identical to countryOfOrigin — clear + focus, REAL typing via Input.insertText, REAL mouse click on the suggestion li. 'Carhartt' typed → suggestion clicked → value persisted past blur.",
-      "collabs": "PROBED 2026-07-18: Grailed has NO 'A x B' designer entries — every collab variant ('Stussy x Nike', 'Nike x Stussy', 'stussy nike') returns only the 'Designer not listed' row. A collab designer value therefore falls back to the PRIMARY brand (first collab part — the entry Grailed lists collab items under); the fill result carries a note. Suggestion matching is diacritic-folded ('Comme des Garçons' → Grailed's unaccented 'Comme des Garcons' entry, verified live)."
+      "collabs": "CORRECTED 2026-07-19 (phase0b-collab-photos-probe*): the AUTOCOMPLETE has no 'A x B' entries (2026-07-18 probe stands), but the sell form DOES support collabs via a separate control — see `collab` below. The fill types the PRIMARY brand into the autocomplete, then selects the approved collaboration from the collab menu. Suggestion matching is diacritic-folded ('Comme des Garçons' → Grailed's unaccented 'Comme des Garcons' entry, verified live).",
+      "collab": {
+        "buttonText": "Add A Collaboration",
+        "menuItems": "[role=\"menu\"] [role=\"menuitem\"]",
+        "technique": "PROBED LIVE 2026-07-19: once a primary designer is committed, the designer section (DesignersAndCollabs-module container) renders a plain 'Add A Collaboration' <button>. Synthetic pointerdown+pointerup+click swaps it for a 'Select an approved collaboration' trigger row (with a CANCEL affordance) whose [role=menu] lists Grailed-APPROVED 'Primary x Partner' menuitems only (Nike showed 40+: 'Nike x Nocta', 'Nike x Fragment Design x Travis Scott', …). Select by order-insensitive token-set match, click with the proven synthetic menuitem sequence. A collab not in the approved list can NOT be added — fall back to primary-only + note. The first menuitem is the trigger/CANCEL row itself, never a selection target."
+      }
     },
     "countryOfOrigin": {
       "selector": "#country-of-origin",
@@ -290,7 +295,7 @@
     "floorNote": "type=tel, placeholder 'Floor Price (USD)'; digits only, same technique as price"
   },
   "fill": {
-    "_note": "fillListing step isolation (plan §K): every field step is time-capped and runs isolated — a thrown/hung field (the tester's collab-designer hang) is marked failed and the fill CONTINUES; it never aborts the run. Photos are filled FIRST (right after the fresh form opens) so a flaky cascade/designer can never cost them. The §8.1 detection abort (AutofillAbort) still stops everything immediately. photoStepTimeoutMs is larger — up to 9 real uploads.",
+    "_note": "fillListing step isolation (plan §K): every field step is time-capped and runs isolated — a thrown/hung field (the tester's collab-designer hang) is marked failed and the fill CONTINUES; it never aborts the run. Photos are filled FIRST (right after the fresh form opens) so a flaky cascade/designer can never cost them. The §8.1 detection abort (AutofillAbort) still stops everything immediately. photoStepTimeoutMs is larger — up to 25 real uploads in one batch.",
     "stepTimeoutMs": 30000,
     "photoStepTimeoutMs": 180000
   },
@@ -298,8 +303,9 @@
     "fileInputs": "input[type=\"file\"][id^=\"photo_input_\"]",
     "slotIdPattern": "photo_input_{n}",
     "slots": 9,
+    "maxPhotos": 25,
     "kind": "setFileInputFiles",
-    "note": "one file input per slot (photo_input_0..8, aria-label 'Upload photo'); use CDP DOM.setFileInputFiles per input — no drag/drop"
+    "note": "the fresh form renders 9 empty slots (photo_input_0..8, aria-label 'Upload photo') and NEVER renders an input past photo_input_8 — but every input is `multiple`, and Grailed's listing cap is 25 photos (support FAQ). PROBED LIVE 2026-07-19 (phase0b-collab-photos-probe*): handing 12 files to photo_input_0 in ONE DOM.setFileInputFiles call uploads and KEEPS all 12 (12 media-host POSTs, 12 preview tiles). So: batch ALL files into the first empty input in one call; the per-slot one-file loop caps out at 9. `slots` stays 9 = the empty-form signal for the bug-F emptiness check."
   },
   "submit": {
     "note": "NOT automated. Left to the user by design (PRD §4/§5.5, CLAUDE.md)."

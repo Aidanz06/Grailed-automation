@@ -20,10 +20,10 @@ describe('buildRows — photos', () => {
   });
 
   it('warn over the cap, with a remove-count call to action', () => {
-    const r10 = row(makeItem({ photos: makePhotos(10) }), 'photos');
-    expect(r10.state).toBe('warn');
-    expect(r10.short).toBe('remove 1 photo');
-    expect(row(makeItem({ photos: makePhotos(12) }), 'photos').short).toBe('remove 3 photos');
+    const r1over = row(makeItem({ photos: makePhotos(GRAILED_PHOTO_LIMIT + 1) }), 'photos');
+    expect(r1over.state).toBe('warn');
+    expect(r1over.short).toBe('remove 1 photo');
+    expect(row(makeItem({ photos: makePhotos(GRAILED_PHOTO_LIMIT + 3) }), 'photos').short).toBe('remove 3 photos');
   });
 });
 

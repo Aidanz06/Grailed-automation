@@ -12,11 +12,12 @@ import { suggestGrailedCategory } from '@/lib/grailedCategory';
 
 export type RowState = 'done' | 'warn' | 'todo';
 
-/** Grailed's per-listing photo cap — one file input per slot on the sell
- * form. Twin of grailed-selectors.json `photos.slots` (the driver's source;
- * the renderer can't read that file): the fill REFUSES to upload when the
- * item has more photos than empty slots, so surface it before the fill. */
-export const GRAILED_PHOTO_LIMIT = 9;
+/** Grailed's per-listing photo cap (support FAQ; multi-file upload past the 9
+ * rendered slots proven live 2026-07-19). Twin of grailed-selectors.json
+ * `photos.maxPhotos` (the driver's source; the renderer can't read that
+ * file): the fill REFUSES to upload more than this, so surface it before the
+ * fill. */
+export const GRAILED_PHOTO_LIMIT = 25;
 
 export interface ReadinessRow {
   key: string;

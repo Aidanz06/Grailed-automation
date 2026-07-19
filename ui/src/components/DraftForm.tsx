@@ -371,14 +371,15 @@ export function DraftForm({ item, update, toast, stylesRaw, onEditStyles, confir
                 I checked — it’s right
               </Button>
             )}
-            {/* Collabs: Grailed's designer list has no collab entries (verified
-                live) — the fill sends the primary label; say so up front
-                instead of failing at fill time. */}
+            {/* Collabs (probed live 2026-07-19): the fill sets the primary
+                designer, then selects the collab from Grailed's
+                approved-collaborations menu when it's offered; otherwise the
+                primary stays and the fill notes it. */}
             {(isCollabBrand(attrs.resembles_brand) || attrs.collaboration) && (
               <span className="text-xs text-muted-foreground">
                 collab{attrs.collaboration ? ` with ${attrs.collaboration}` : ''} — the fill sets designer “
-                {primaryBrand(attrs.resembles_brand)}” (Grailed has no collab designers; the partner belongs in
-                tags/description)
+                {primaryBrand(attrs.resembles_brand)}”, then Grailed’s approved collab (e.g. “Nike x Nocta”) if
+                it’s offered
               </span>
             )}
           </div>

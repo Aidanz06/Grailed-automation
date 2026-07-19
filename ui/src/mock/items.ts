@@ -96,7 +96,7 @@ export const MOCK_ITEMS: Item[] = [
     id: 2,
     createdAt: '2026-06-28',
     status: 'draft',
-    // 11 photos — 2 past Grailed's 9-photo cap, so the over-limit warning
+    // 27 photos — 2 past Grailed's 25-photo cap, so the over-limit warning
     // (readiness "remove 2 photos" + PhotoRow banner + outlined tiles) is
     // previewable on this item.
     photos: [
@@ -111,6 +111,11 @@ export const MOCK_ITEMS: Item[] = [
       { id: 'p9', label: 'hem', tint: '#55432a' },
       { id: 'p10', label: 'sleeve', tint: '#6f5636' },
       { id: 'p11', label: 'label', tint: '#443624' },
+      ...Array.from({ length: 16 }, (_, i) => ({
+        id: `p${12 + i}`,
+        label: `detail ${i + 1}`,
+        tint: i % 2 ? '#5a4630' : '#6a5438',
+      })),
     ],
     attributes: {
       resembles_brand: 'Carhartt',
