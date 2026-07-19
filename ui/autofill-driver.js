@@ -752,12 +752,14 @@ async function connect({ freshTab = false } = {}) {
 
   // Photos via DOM.setFileInputFiles. The form renders only 9 empty slots and
   // never adds an input past photo_input_8 — but every input is `multiple`
-  // and Grailed's listing cap is 25 (support FAQ), so the WHOLE batch goes to
-  // the FIRST empty input in ONE call (probed live 2026-07-19: 12 files → 12
-  // media POSTs, all 12 kept; the exact gesture of a human dropping the set
-  // on the first tile). Grailed uploads on select then clears the input, so
-  // el.files stays 0 — media-host POSTs are the success signal, polled so
-  // `onSlot(done, total)` still streams progress to the live fill checklist.
+  // and Grailed's listing cap is 25 (support FAQ), so files go to the FIRST
+  // file input in multi-file WAVES (probed live 2026-07-19: 12 in one call →
+  // all 12 kept in seconds, but 25 in one call PERMANENTLY wedged the
+  // renderer — ~57MB of photos processed at once. Waves are also the human
+  // gesture: nobody drops 25 files in one go). Grailed uploads on select then
+  // clears the input, so el.files stays 0 — media-host POSTs are the success
+  // signal, polled per wave so `onSlot(done, total)` still streams progress
+  // to the live fill checklist.
   //
   // HARD RULE (bug F #2): photos are NEVER added to a form that already has
   // some — that appends this item's photos to a previous listing's. If any
@@ -765,12 +767,16 @@ async function connect({ freshTab = false } = {}) {
   async function uploadPhotos(paths, onSlot) {
     const missing = paths.filter((p) => !fs.existsSync(p));
     if (missing.length) return { ok: false, reason: 'files not found', missing };
-    const { root } = await client.DOM.getDocument();
-    const { nodeIds } = await client.DOM.querySelectorAll({
-      nodeId: root.nodeId,
-      selector: selectors.photos.fileInputs,
-    });
-    if (!nodeIds || !nodeIds.length) return { ok: false, reason: 'no photo inputs found — is /sell/new open?' };
+    const findInputs = async () => {
+      const { root } = await client.DOM.getDocument();
+      const { nodeIds } = await client.DOM.querySelectorAll({
+        nodeId: root.nodeId,
+        selector: selectors.photos.fileInputs,
+      });
+      return nodeIds || [];
+    };
+    const nodeIds = await findInputs();
+    if (!nodeIds.length) return { ok: false, reason: 'no photo inputs found — is /sell/new open?' };
     const totalSlots = Number(selectors.photos.slots) || 9;
     if (nodeIds.length < totalSlots) {
       return {
@@ -782,22 +788,44 @@ async function connect({ freshTab = false } = {}) {
     if (paths.length > maxPhotos) {
       return { ok: false, reason: `Grailed allows ${maxPhotos} photos per listing — this item has ${paths.length}` };
     }
+    const waveSize = Number(selectors.photos.waveSize) || 8;
     const before = uploads.length;
-    await client.DOM.setFileInputFiles({ nodeId: nodeIds[0], files: paths });
-    // Watch the media POSTs land (~1-3s each when Grailed runs them in
-    // parallel); budget generously, finish early once all are seen.
-    const deadline = Date.now() + 15000 + paths.length * 5000;
-    let reported = 0;
-    while (Date.now() < deadline) {
-      await sleep(1000);
-      const done = Math.min(uploads.length - before, paths.length);
-      if (done !== reported && onSlot) {
-        try { onSlot(done, paths.length); } catch (err) { console.error('[autofill] onSlot listener failed:', err.message); }
+    let stalled = false;
+    for (let start = 0; start < paths.length && !stalled; start += waveSize) {
+      const wave = paths.slice(start, start + waveSize);
+      // After the first wave the original inputs are consumed — re-query and
+      // reuse whatever file input the form currently renders (it keeps the
+      // `multiple` input(s) available while under the photo cap).
+      const ids = start === 0 ? nodeIds : await findInputs();
+      if (!ids.length) {
+        return {
+          ok: uploads.length - before >= 1,
+          uploadPosts: uploads.length - before,
+          requested: paths.length,
+          note: `form stopped offering a file input after ${start} photos — verify previews in Chrome`,
+        };
       }
-      reported = done;
-      if (done >= paths.length) break;
+      await client.DOM.setFileInputFiles({ nodeId: ids[0], files: wave });
+      // Watch this wave's POSTs land before sending the next (~0.5-3s each);
+      // a wave that produces NO new POST for 20s = stalled — stop pushing.
+      const waveTarget = Math.min(start + wave.length, paths.length);
+      let lastProgressAt = Date.now();
+      let reported = -1;
+      while (Date.now() - lastProgressAt < 20000) {
+        await sleep(1000);
+        const done = Math.min(uploads.length - before, paths.length);
+        if (done !== reported) {
+          lastProgressAt = Date.now();
+          if (onSlot && done >= 0) {
+            try { onSlot(done, paths.length); } catch (err) { console.error('[autofill] onSlot listener failed:', err.message); }
+          }
+          reported = done;
+        }
+        if (done >= waveTarget) break;
+      }
+      if ((uploads.length - before) < waveTarget) stalled = true;
+      await assertClean(`uploadPhotos(wave ${Math.floor(start / waveSize) + 1}: ${path.basename(wave[0])}…)`);
     }
-    await assertClean(`uploadPhotos(${paths.length} files: ${path.basename(paths[0])}…)`);
     const uploadPosts = uploads.length - before;
     return {
       ok: uploadPosts >= 1,

@@ -304,8 +304,9 @@
     "slotIdPattern": "photo_input_{n}",
     "slots": 9,
     "maxPhotos": 25,
+    "waveSize": 8,
     "kind": "setFileInputFiles",
-    "note": "the fresh form renders 9 empty slots (photo_input_0..8, aria-label 'Upload photo') and NEVER renders an input past photo_input_8 — but every input is `multiple`, and Grailed's listing cap is 25 photos (support FAQ). PROBED LIVE 2026-07-19 (phase0b-collab-photos-probe*): handing 12 files to photo_input_0 in ONE DOM.setFileInputFiles call uploads and KEEPS all 12 (12 media-host POSTs, 12 preview tiles). So: batch ALL files into the first empty input in one call; the per-slot one-file loop caps out at 9. `slots` stays 9 = the empty-form signal for the bug-F emptiness check."
+    "note": "the fresh form renders 9 empty slots (photo_input_0..8, aria-label 'Upload photo') and NEVER renders an input past photo_input_8 — but every input is `multiple`, and Grailed's listing cap is 25 photos (support FAQ). PROBED LIVE 2026-07-19 (phase0b-collab-photos-probe*): handing 12 files to photo_input_0 in ONE DOM.setFileInputFiles call uploads and KEEPS all 12 — but 25 (~57MB) in one call PERMANENTLY WEDGED the renderer (tab unresponsive minutes later; had to be closed). So: multi-file WAVES of `waveSize` into the first available input, waiting for each wave's media POSTs before the next. `slots` stays 9 = the empty-form signal for the bug-F emptiness check."
   },
   "submit": {
     "note": "NOT automated. Left to the user by design (PRD §4/§5.5, CLAUDE.md)."
