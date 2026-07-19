@@ -411,6 +411,71 @@ function primaryBrand(raw) {
   return String(raw || '').split(/\s+[x×]\s+/i)[0].trim();
 }
 
+// Twin of ui/src/lib/grailedColor.ts mapGrailedColor (vitest covers the
+// logic there) — free-text primary_color → Grailed's fixed color option.
+// Needed here as the FILL-TIME fallback: the DraftForm adoption effect only
+// runs when the editor is opened, so items filled straight from the triage
+// queue shipped without a color (found live 2026-07-19; "grey" also never
+// matched "Gray" before the synonym fold). Keep the twins in sync.
+const GRAILED_COLOR_SYNONYMS = {
+  grey: 'Gray', charcoal: 'Gray', navy: 'Blue', cream: 'Beige',
+  'off-white': 'White', 'off white': 'White', ivory: 'White',
+  tan: 'Beige', khaki: 'Beige', olive: 'Green', burgundy: 'Red',
+  maroon: 'Red', multicolor: 'Multi', 'multi-color': 'Multi',
+  multicolour: 'Multi', multicolored: 'Multi',
+};
+function mapGrailedColor(primary, options) {
+  const pc = String(primary || '').trim().toLowerCase();
+  if (!pc || !options.length) return null;
+  const exact = options.find((c) => c.toLowerCase() === pc);
+  if (exact) return exact;
+  const syn = Object.entries(GRAILED_COLOR_SYNONYMS).find(([k]) => pc === k || pc.includes(k));
+  if (syn) {
+    const target = options.find((c) => c.toLowerCase() === syn[1].toLowerCase());
+    if (target) return target;
+  }
+  return options.find((c) => pc.includes(c.toLowerCase()) || c.toLowerCase().includes(pc)) ?? null;
+}
+
+/*
+ * Fill-time adoption of color/style (the DraftForm effect's persistent twin):
+ * when the item still has no grailed_color/grailed_style but the AI attributes
+ * carry a mappable primary_color / grailed_style_estimate, adopt them into the
+ * stored attributes BEFORE the payload is built — so triage-queue fills that
+ * never opened the editor still fill color, and the editor shows exactly what
+ * the fill sent. Conservative: only fills blanks, never overrides a value the
+ * user (or a previous adoption) set.
+ */
+function adoptFillDefaults(store, item) {
+  const attrs = item.attributes || {};
+  let sel;
+  try {
+    sel = JSON.parse(fs.readFileSync(path.join(PROJECT_ROOT, 'grailed-selectors.json'), 'utf8'));
+  } catch {
+    return item; // no selectors, no adoption — the fill will cope
+  }
+  const colors = sel.dropdowns?.color?.options || [];
+  const styles = sel.dropdowns?.style?.options || [];
+  const next = {};
+  if (!attrs.grailed_color && attrs.primary_color) {
+    const c = mapGrailedColor(attrs.primary_color, colors);
+    if (c) next.grailed_color = c;
+  }
+  if (!attrs.grailed_style && attrs.grailed_style_estimate) {
+    const est = String(attrs.grailed_style_estimate).trim().toLowerCase();
+    const s = styles.find((o) => o.toLowerCase() === est);
+    if (s) next.grailed_style = s;
+  }
+  if (!Object.keys(next).length) return item;
+  try {
+    store.saveItemEdits(item.id, { attributes: { ...attrs, ...next } });
+    return store.getItem(item.id);
+  } catch (err) {
+    console.error('[autofill] color/style adoption failed (fill continues without):', err.message);
+    return item;
+  }
+}
+
 function buildFillPayload(item) {
   const listing = item.listing || {};
   const content = listing.content || {};
@@ -542,8 +607,11 @@ ipcMain.handle('autofill:fill', async (e, id, opts = {}) => {
     if (!wc.isDestroyed()) wc.send('autofill:progress', p);
   };
   const store = getStore();
-  const item = store.getItem(id);
+  let item = store.getItem(id);
   if (!item) throw new Error(`Item ${id} not found.`);
+  // Fill-time color/style adoption (see adoptFillDefaults) — items filled
+  // straight from the triage queue never ran the editor's adoption effect.
+  item = adoptFillDefaults(store, item);
   const payload = buildFillPayload(item);
   const lastFill = item.last_fill || null;
 

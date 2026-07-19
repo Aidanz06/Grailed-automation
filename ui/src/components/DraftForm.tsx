@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, Pencil, RefreshCw } from 'lucide-react';
 import type { Item } from '@/types';
 import { api, type AutofillOptions } from '@/lib/api';
 import { suggestGrailedCategory } from '@/lib/grailedCategory';
+import { mapGrailedColor } from '@/lib/grailedColor';
 import { sizeOptionsFor } from '@/lib/sizes';
 import { activeTemplate, finalizeDescription } from '@/lib/description';
 import { agoLabel, cn, errorMessage, isCollabBrand, money, primaryBrand } from '@/lib/utils';
@@ -138,11 +139,9 @@ export function DraftForm({ item, update, toast, stylesRaw, onEditStyles, confir
     if (!colors.length && !Object.keys(tree).length) return; // options not loaded yet
     let nextColor: string | null = null;
     if (!attrs.grailed_color && attrs.primary_color) {
-      const pc = attrs.primary_color.trim().toLowerCase();
-      nextColor =
-        colors.find((c) => c.toLowerCase() === pc) ??
-        colors.find((c) => pc.includes(c.toLowerCase()) || c.toLowerCase().includes(pc)) ??
-        null;
+      // Synonym-aware mapping (lib/grailedColor): the old exact/substring pair
+      // silently missed "grey" → Gray, "cream" → Beige (found live 2026-07-19).
+      nextColor = mapGrailedColor(attrs.primary_color, colors);
     }
     // Style: adopt the vision estimate when it matches one of Grailed's fixed
     // options ("Unclear" never matches by construction, so it stays manual).
