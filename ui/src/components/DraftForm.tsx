@@ -211,7 +211,7 @@ export function DraftForm({ item, update, toast, stylesRaw, onEditStyles, confir
   return (
       <div className="rise-in min-w-0">
       <div id="sec-photos" className="scroll-mt-4">
-        <PhotoRow item={item} update={update} />
+        <PhotoRow item={item} update={update} toast={toast} />
       </div>
 
       {/* Tier 2 (§F option B): the AI's draft — glance and correct, don't

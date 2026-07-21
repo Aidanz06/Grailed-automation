@@ -1,9 +1,9 @@
 import { useRef, type ReactNode } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import type { Item, Photo } from '@/types';
+import { api } from '@/lib/api';
+import { errorMessage } from '@/lib/utils';
 import { GRAILED_PHOTO_LIMIT } from '@/lib/readiness';
-
-const PALETTE = ['#1d3f8a', '#7a1420', '#2f6b3a', '#6b4a2b', '#5a3a6b', '#2a2f38'];
 
 export function PhotoTile({
   photo,
@@ -70,11 +70,28 @@ function DeleteButton({ onDelete }: { onDelete: () => void }) {
 interface Props {
   item: Item;
   update: (recipe: (draft: Item) => void) => void;
+  toast: (msg: string) => void;
 }
 
-export function PhotoRow({ item, update }: Props) {
+export function PhotoRow({ item, update, toast }: Props) {
   const dragFrom = useRef<number | null>(null);
   const over = item.photos.length - GRAILED_PHOTO_LIMIT;
+
+  // Real "add photo" (UX audit #1): native image picker → the files persist in
+  // the store and come back as real tiles. The old fake tinted tile silently
+  // vanished from every save (non-numeric id) while the count included it.
+  const addPhotos = async () => {
+    try {
+      const photos = await api.addPhotos(item.id);
+      if (!photos) return; // picker canceled — no change
+      update((d) => {
+        d.photos = photos;
+        d.dirty = true;
+      });
+    } catch (err) {
+      toast(`Couldn’t add photos: ${errorMessage(err)}`);
+    }
+  };
 
   const move = (from: number, to: number) =>
     update((d) => {
@@ -155,13 +172,7 @@ export function PhotoRow({ item, update }: Props) {
             );
           })}
           <button
-            onClick={() =>
-              update((d) => {
-                const n = d.photos.length + 1;
-                d.photos.push({ id: 'p' + Date.now(), label: 'photo ' + n, tint: PALETTE[n % PALETTE.length] });
-                d.dirty = true;
-              })
-            }
+            onClick={addPhotos}
             className="flex aspect-square w-full items-center justify-center rounded-md border border-dashed border-input bg-secondary/40 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-primary"
           >
             + add photo

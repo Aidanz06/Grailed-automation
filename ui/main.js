@@ -209,6 +209,19 @@ ipcMain.handle('batch:pickFolder', async () => {
   return res.canceled || !res.filePaths.length ? null : res.filePaths[0];
 });
 
+// Real "add photo" (UX audit #1): native image picker → append the picked
+// files to the item's photos in the store. Local paths only — nothing goes to
+// Grailed until the user triggers Fill listing. Canceled dialog → null.
+ipcMain.handle('photos:add', async (_e, itemId) => {
+  const res = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow(), {
+    title: 'Add photos',
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'heic'] }],
+  });
+  if (res.canceled || !res.filePaths.length) return null;
+  return getStore().addPhotos(itemId, res.filePaths);
+});
+
 ipcMain.handle('batch:process', async (e, folder) => {
   const store = getStore();
   // Live progress for the renderer (integration plan P1.4): grouping is one

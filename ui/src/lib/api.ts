@@ -12,7 +12,7 @@
  * therefore show their raw stored description rather than the assembled one.
  */
 
-import type { Comp, DescParts, ExtractedAttributes, Item, ItemStatus, ListingContent, Measurements, PriceRange } from '@/types';
+import type { Comp, DescParts, ExtractedAttributes, Item, ItemStatus, ListingContent, Measurements, Photo, PriceRange } from '@/types';
 import { MOCK_ITEMS } from '@/mock/items';
 import { assembleDescription } from '@/lib/description';
 
@@ -238,6 +238,7 @@ interface TailorBridge {
   markSubmitted(id: number): Promise<boolean>;
   deleteItem(id: number): Promise<boolean>;
   duplicateItem(id: number): Promise<{ itemId: number }>;
+  addPhotos(id: number): Promise<StorePhoto[] | null>;
   listAlbums(): Promise<StoreAlbum[]>;
   setAlbumHidden(id: number, hidden: boolean): Promise<boolean>;
   reviewConfirm(id: number): Promise<ReviewConfirmResult>;
@@ -382,6 +383,10 @@ export interface Api {
   /** §E8: clone a draft as a NEW draft — text/details copied; photos, fill
    * history, flags, and the Smart Pricing opt-in reset. Returns the new id. */
   duplicateItem(id: number): Promise<{ itemId: number }>;
+  /** Real "add photo" (audit #1): native image picker; picked files append to
+   * the item in the store. Resolves to the item's FULL fresh photo list (in
+   * display order), or null when the dialog was canceled. */
+  addPhotos(id: number): Promise<Photo[] | null>;
   /** Albums: one per import batch; hide finished batches from the Home lists. */
   listAlbums(): Promise<Album[]>;
   setAlbumHidden(id: number, hidden: boolean): Promise<void>;
@@ -565,18 +570,25 @@ function adaptAlbum(a: StoreAlbum): Album {
   };
 }
 
+/** Store photo rows -> UI Photo tiles. Shared by adaptItem and addPhotos so
+ * picker-added photos render (and persist — numeric ids survive editsOf)
+ * exactly like imported ones. */
+export function adaptPhotos(photos: StorePhoto[]): Photo[] {
+  return photos.map((p) => ({
+    id: String(p.id),
+    label: basename(p.file_path),
+    tint: '#333', // fallback tint behind/if the image fails to load
+    src: `tailor-photo://local/${encodeURIComponent(p.file_path)}`,
+    clusterConfidence: p.cluster_confidence ?? null,
+  }));
+}
+
 export function adaptItem(raw: StoreItem): Item {
   return {
     id: raw.id,
     status: (raw.status as ItemStatus) ?? 'draft',
     albumId: raw.album_id ?? null,
-    photos: (raw.photos ?? []).map((p) => ({
-      id: String(p.id),
-      label: basename(p.file_path),
-      tint: '#333', // fallback tint behind/if the image fails to load
-      src: `tailor-photo://local/${encodeURIComponent(p.file_path)}`,
-      clusterConfidence: p.cluster_confidence ?? null,
-    })),
+    photos: adaptPhotos(raw.photos ?? []),
     attributes: { ...EMPTY_ATTRIBUTES, ...(raw.attributes ?? {}) },
     content: adaptContent(raw.listing),
     // desc_parts + measurements ride inside content_json (no dedicated columns).
@@ -674,6 +686,17 @@ const mockApi: Api = {
     delete clone.attributes.smart_pricing_floor;
     mockAddedItems.push(clone);
     return { itemId: clone.id };
+  },
+  // No native dialog in the browser preview — append a placeholder tile so
+  // the flow stays walkable. Its non-numeric id keeps it preview-only (the
+  // save shape filters it), exactly like the pre-picker behavior.
+  async addPhotos(id) {
+    console.log('[mock] addPhotos — placeholder tile only (no native dialog)');
+    const it = assembledMocks().find((x) => x.id === id);
+    const photos = it ? [...it.photos] : [];
+    const n = photos.length + 1;
+    photos.push({ id: 'p' + Date.now(), label: `photo ${n}`, tint: '#5a3a6b' });
+    return photos;
   },
   // No backend in the browser preview — edits live only in React state.
   async saveItem(id) {
@@ -1040,6 +1063,10 @@ function realApi(bridge: TailorBridge): Api {
     },
     async duplicateItem(id) {
       return bridge.duplicateItem(id);
+    },
+    async addPhotos(id) {
+      const rows = await bridge.addPhotos(id);
+      return rows ? adaptPhotos(rows) : null;
     },
     async listAlbums() {
       return (await bridge.listAlbums()).map(adaptAlbum);

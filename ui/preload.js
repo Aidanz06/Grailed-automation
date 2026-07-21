@@ -27,6 +27,9 @@ contextBridge.exposeInMainWorld('tailor', {
   recomputeComps: (attributes) => ipcRenderer.invoke('comps:recompute', attributes),
   // Open a comp's Grailed listing in the system browser (allowlisted in main).
   openExternal: (url) => ipcRenderer.invoke('open:external', url),
+  // Real "add photo" (UX audit #1): native image picker in main; the picked
+  // files append to the item's photos in the store. null = dialog canceled.
+  addPhotos: (itemId) => ipcRenderer.invoke('photos:add', itemId),
   // Slice 5: batch intake — folder picker + cluster/process/save.
   pickBatchFolder: () => ipcRenderer.invoke('batch:pickFolder'),
   processBatch: (folder) => ipcRenderer.invoke('batch:process', folder),

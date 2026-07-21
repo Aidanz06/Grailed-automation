@@ -332,6 +332,33 @@ function openStore(dbPath = DEFAULT_DB, opts = {}) {
       }
     },
 
+    /** Append photos (file paths) to an item, after its current last photo —
+     * the editor's real "+ add photo" (UX audit #1). Returns the item's fresh
+     * photo rows in display order (same shape/order as getItem's photos). */
+    addPhotos(itemId, paths) {
+      if (!db.prepare('SELECT id FROM items WHERE id = ?').get(itemId)) {
+        throw new Error(`Item ${itemId} not found.`);
+      }
+      const tx = db.exec.bind(db);
+      tx('BEGIN');
+      try {
+        // New rows must sort AFTER every existing photo. Legacy rows have
+        // NULL position and sort by id, so the append point is
+        // max(COALESCE(position, id)) — a row count would sort before them.
+        const m = db.prepare('SELECT MAX(COALESCE(position, id)) AS m FROM photos WHERE item_id = ?').get(itemId).m;
+        let pos = m == null ? 0 : Number(m) + 1;
+        const ins = db.prepare('INSERT INTO photos (item_id, file_path, cluster_confidence, position) VALUES (?, ?, NULL, ?)');
+        for (const p of paths) ins.run(itemId, String(p), pos++);
+        tx('COMMIT');
+      } catch (e) {
+        tx('ROLLBACK');
+        throw e;
+      }
+      return db
+        .prepare('SELECT id, file_path, cluster_confidence FROM photos WHERE item_id = ? ORDER BY COALESCE(position, id), id')
+        .all(itemId);
+    },
+
     /** Move photos (by photo id) onto another item. */
     movePhotos(photoIds, targetItemId) {
       const upd = db.prepare('UPDATE photos SET item_id = ? WHERE id = ?');
