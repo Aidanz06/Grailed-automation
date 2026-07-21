@@ -286,6 +286,7 @@ interface TailorBridge {
   startDock(): Promise<DockStart>;
   stopDock(): Promise<boolean>;
   onDockStopped(cb: (info: DockStopped) => void): () => void;
+  onMenuOpenGuide(cb: () => void): () => void;
 }
 
 /** §8.1 circuit-breaker state (pipeline/compGuard.js). */
@@ -465,6 +466,9 @@ export interface Api {
   stopDock(): Promise<void>;
   /** Fires when docking ends main-side (Chrome quit); returns an unsubscribe fn. */
   onDockStopped(cb: (info: DockStopped) => void): () => void;
+  /** Fires when Help → "Tailor Studio Guide" is picked in the app menu
+   * (audit #11); the renderer opens GuideMenu. Returns an unsubscribe fn. */
+  onMenuOpenGuide(cb: () => void): () => void;
 }
 
 // ---- store -> UI adapters ----
@@ -1021,6 +1025,11 @@ const mockApi: Api = {
   onDockStopped() {
     return () => {};
   },
+  // No native menu in the browser preview — the header's own guide button
+  // covers the flow.
+  onMenuOpenGuide() {
+    return () => {};
+  },
   // Mirrors grailed-selectors.json (real source of truth in the main process).
   async getAutofillOptions() {
     return {
@@ -1237,6 +1246,9 @@ function realApi(bridge: TailorBridge): Api {
     },
     onDockStopped(cb) {
       return bridge.onDockStopped(cb);
+    },
+    onMenuOpenGuide(cb) {
+      return bridge.onMenuOpenGuide(cb);
     },
   };
 }

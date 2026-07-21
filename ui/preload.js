@@ -90,6 +90,13 @@ contextBridge.exposeInMainWorld('tailor', {
   launchChrome: () => ipcRenderer.invoke('chrome:launch'),
   // Open a fresh Sell-form tab in the launched Chrome (new tab only).
   openSellTab: () => ipcRenderer.invoke('chrome:openSellTab'),
+  // Help → "Tailor Studio Guide" menu item (audit #11): the renderer opens
+  // the existing GuideMenu. Returns an unsubscribe function.
+  onMenuOpenGuide: (cb) => {
+    const listener = () => cb();
+    ipcRenderer.on('menu:openGuide', listener);
+    return () => ipcRenderer.removeListener('menu:openGuide', listener);
+  },
   // §5.5 window docking: snap the real Chrome window against the app window.
   // onDockStopped returns an unsubscribe function (fires if Chrome quits).
   startDock: () => ipcRenderer.invoke('dock:start'),

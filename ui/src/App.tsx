@@ -278,6 +278,9 @@ export default function App() {
     }
   };
   const [guide, setGuide] = useState<GuideSection | null>(null);
+  // Help → "Tailor Studio Guide" in the application menu (audit #11) opens
+  // the same guide the header button does.
+  useEffect(() => api.onMenuOpenGuide(() => setGuide('how')), []);
 
   // ⌘K command palette — available from EVERY screen (its binding lives in
   // lib/shortcuts.ts with the rest, so the guide documents it for free).

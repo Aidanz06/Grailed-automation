@@ -10,7 +10,7 @@
  * Run:  npm run ui   (or: electron ui/main.js)
  */
 
-const { app, BrowserWindow, ipcMain, dialog, protocol, net, screen, shell } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, dialog, protocol, net, screen, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { pathToFileURL } = require('url');
@@ -20,6 +20,9 @@ const { openStore } = require('../pipeline/store');
 // URLs are tailor-photo://local/<encoded file_path>; relative paths (seeded
 // items) resolve against the project root, absolute paths (batch imports) as-is.
 const PROJECT_ROOT = path.join(__dirname, '..');
+// The macOS app menu takes its name from the process — without this a dev run
+// (`npm run ui`) shows "Electron" in the menu bar (UX audit #11).
+app.name = 'Tailor Studio';
 protocol.registerSchemesAsPrivileged([
   { scheme: 'tailor-photo', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
 ]);
@@ -899,6 +902,62 @@ ipcMain.handle('autofill:options', () => {
   return { colors: sel.dropdowns.color.options || [], styles: sel.dropdowns.style.options || [], categoryTree: tree };
 });
 
+/*
+ * Application menu (UX audit #11): a real "Tailor Studio" menu instead of
+ * Electron's defaults. Standard Edit/Window/zoom roles stay (consumers use
+ * menu-level copy/paste); Reload + DevTools stay for now because the owner
+ * debugs with them — they hide automatically once a packaged build exists
+ * (app.isPackaged). Help opens the in-app guide via IPC.
+ */
+function buildAppMenu() {
+  const isMac = process.platform === 'darwin';
+  const template = [
+    ...(isMac
+      ? [{
+          label: app.name,
+          submenu: [
+            { role: 'about' },
+            { type: 'separator' },
+            { role: 'services' },
+            { type: 'separator' },
+            { role: 'hide' },
+            { role: 'hideOthers' },
+            { role: 'unhide' },
+            { type: 'separator' },
+            { role: 'quit' },
+          ],
+        }]
+      : []),
+    { label: 'File', submenu: [isMac ? { role: 'close' } : { role: 'quit' }] },
+    { role: 'editMenu' },
+    {
+      label: 'View',
+      submenu: [
+        ...(app.isPackaged ? [] : [{ role: 'reload' }, { role: 'toggleDevTools' }, { type: 'separator' }]),
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+      ],
+    },
+    { role: 'windowMenu' },
+    {
+      role: 'help',
+      submenu: [
+        {
+          label: 'Tailor Studio Guide',
+          click: () => {
+            const win = BrowserWindow.getAllWindows()[0];
+            if (win && !win.webContents.isDestroyed()) win.webContents.send('menu:openGuide');
+          },
+        },
+      ],
+    },
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1240,
@@ -913,6 +972,27 @@ function createWindow() {
       nodeIntegration: false,
     },
   });
+  // Standard right-click menu (UX audit #10): Electron ships none, and this
+  // audience reaches for right-click before keyboard shortcuts. Editable
+  // fields get Cut/Copy/Paste/Select All (enabled per Chromium's own
+  // editFlags); elsewhere a text selection offers Copy. Nothing app-specific
+  // yet — that layer can grow on top later.
+  win.webContents.on('context-menu', (_e, params) => {
+    const items = [];
+    if (params.isEditable) {
+      items.push(
+        { role: 'cut', enabled: params.editFlags.canCut },
+        { role: 'copy', enabled: params.editFlags.canCopy },
+        { role: 'paste', enabled: params.editFlags.canPaste },
+        { type: 'separator' },
+        { role: 'selectAll', enabled: params.editFlags.canSelectAll }
+      );
+    } else if (params.selectionText.trim()) {
+      items.push({ role: 'copy' });
+    }
+    if (items.length) Menu.buildFromTemplate(items).popup({ window: win });
+  });
+
   // Renderer is now a Vite/React build. In dev, point Electron at the Vite dev
   // server (set VITE_DEV_SERVER_URL); otherwise load the built output in dist/.
   const devUrl = process.env.VITE_DEV_SERVER_URL;
@@ -932,6 +1012,7 @@ app.whenReady().then(() => {
       return new Response('bad photo request', { status: 400 });
     }
   });
+  buildAppMenu();
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
