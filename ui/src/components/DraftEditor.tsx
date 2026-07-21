@@ -4,7 +4,9 @@ import { api } from '@/lib/api';
 import { editsOf } from '@/lib/edits';
 import { useFillOrchestration } from '@/components/useFillOrchestration';
 import { activeTemplate, finalizeDescription } from '@/lib/description';
+import { copyText } from '@/lib/clipboard';
 import { errorMessage, money } from '@/lib/utils';
+import { ManualCopyModal } from '@/components/ManualCopy';
 import { PricePanel } from '@/components/PricePanel';
 import { ListingChecklist } from '@/components/ListingChecklist';
 import { FillActionsCard } from '@/components/FillActionsCard';
@@ -144,6 +146,10 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
     lastSavedAt,
   });
 
+  // Clipboard failure → the manual-copy modal (audit #18): the packaged app
+  // has no console, so "logged to console" was an instruction the seller
+  // couldn't follow. null = closed.
+  const [manualCopy, setManualCopy] = useState<string | null>(null);
   const copyListing = () => {
     // Footer backstop (Description Styles): the copied text carries the active
     // style's constant footer even on legacy drafts stored before composition.
@@ -151,18 +157,10 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
     const parts = [content.title, '', desc];
     parts.push('', 'Tags: ' + content.tags.join(', '), '', `Price: ${money(item.range?.median)}`);
     const text = parts.join('\n');
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard
-        .writeText(text)
-        .then(() => toast('Listing copied — paste into Grailed’s sell form.'))
-        .catch(() => {
-          console.log('[copy] clipboard blocked; text follows:\n' + text);
-          toast('Clipboard blocked — text logged to console.');
-        });
-    } else {
-      console.log('[copy] listing text:\n' + text);
-      toast('Copied to console (clipboard unavailable).');
-    }
+    copyText(text).then((ok) => {
+      if (ok) toast('Listing copied — paste into Grailed’s sell form.');
+      else setManualCopy(text);
+    });
   };
 
   return (
@@ -210,6 +208,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
         />
       </aside>
       </div>
+      {manualCopy && <ManualCopyModal text={manualCopy} onClose={() => setManualCopy(null)} />}
     </div>
   );
 }

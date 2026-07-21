@@ -1,4 +1,5 @@
 import { Component, Fragment, type ErrorInfo, type ReactNode } from 'react';
+import { copyText } from '@/lib/clipboard';
 import { Button } from '@/components/ui/button';
 
 /*
@@ -51,25 +52,14 @@ export class ErrorBoundary extends Component<Props, State> {
   private copy = () => {
     const { error, componentStack } = this.state;
     const text = `${String(error)}\n${error?.stack ?? ''}\n${componentStack ?? ''}`.trim();
-    const done = () => {
+    // Shared fallback chain (lib/clipboard — extracted from here, audit #18).
+    // Both mechanisms failing is fine on THIS screen: the error text is
+    // already visible and selectable in the <pre> above the buttons.
+    copyText(text).then((ok) => {
+      if (!ok) return;
       this.setState({ copied: true });
       setTimeout(() => this.setState({ copied: false }), 1500);
-    };
-    // execCommand fallback: the async clipboard rejects when the window isn't
-    // focused (e.g. clicking Copy right after switching from Chrome).
-    const legacy = () => {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      const ok = document.execCommand('copy');
-      ta.remove();
-      if (ok) done();
-    };
-    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done).catch(legacy);
-    else legacy();
+    });
   };
 
   render() {

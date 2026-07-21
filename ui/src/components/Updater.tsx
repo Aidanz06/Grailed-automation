@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, ArrowDownToLine, Check, Copy, Loader2, RefreshCw, X } from 'lucide-react';
 import { api, type UpdateProgress, type UpdateStep } from '@/lib/api';
 import { cn, errorMessage } from '@/lib/utils';
+import { copyText } from '@/lib/clipboard';
 import { Button } from '@/components/ui/button';
+import { ManualCopyModal } from '@/components/ManualCopy';
 import { Modal } from '@/components/Modal';
 
 /*
@@ -233,6 +235,9 @@ export function UpdateModal({ u, toast }: { u: Updater; toast: (msg: string) => 
   const err = m.error;
   const finished = !m.applying && (err || m.steps.restart === 'running');
 
+  // Clipboard failure → manual-copy modal (audit #18): the packaged app has
+  // no console, so "logged to the console" was a dead end.
+  const [manualCopy, setManualCopy] = useState<string | null>(null);
   const copyDetails = () => {
     const text = [
       `Tailor update failed at step: ${err?.step ?? 'unknown'}`,
@@ -241,18 +246,10 @@ export function UpdateModal({ u, toast }: { u: Updater; toast: (msg: string) => 
       'Output tail:',
       ...(err?.output ?? []),
     ].join('\n');
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard
-        .writeText(text)
-        .then(() => toast('Details copied — send them to the owner.'))
-        .catch(() => {
-          console.log('[update] failure details:\n' + text);
-          toast('Clipboard blocked — details logged to the console.');
-        });
-    } else {
-      console.log('[update] failure details:\n' + text);
-      toast('Details logged to the console.');
-    }
+    copyText(text).then((ok) => {
+      if (ok) toast('Details copied — send them to the owner.');
+      else setManualCopy(text);
+    });
   };
 
   return (
@@ -328,6 +325,7 @@ export function UpdateModal({ u, toast }: { u: Updater; toast: (msg: string) => 
             </div>
           </>
         )}
+        {manualCopy && <ManualCopyModal text={manualCopy} onClose={() => setManualCopy(null)} />}
     </Modal>
   );
 }
