@@ -47,12 +47,14 @@ interface Props {
   /** Category cascade confirmed (derived in DraftEditor, shared with the fill). */
   confirmed: boolean;
   /** Debounced-save state for the SaveChip — owned by DraftEditor. */
-  saveState: 'idle' | 'saving' | 'saved';
+  saveState: 'idle' | 'saving' | 'saved' | 'failed';
+  /** Retry a failed save now (audit #9) — owned by DraftEditor. */
+  onSaveRetry: () => void;
   lastSavedAt: number | null;
   now: number;
 }
 
-export function DraftForm({ item, update, toast, stylesRaw, onEditStyles, confirmed, saveState, lastSavedAt, now }: Props) {
+export function DraftForm({ item, update, toast, stylesRaw, onEditStyles, confirmed, saveState, onSaveRetry, lastSavedAt, now }: Props) {
   const content = item.content!;
   const attrs = item.attributes;
   const highConf = attrs.brand_confidence >= 0.65 && !!attrs.resembles_brand && attrs.resembles_brand !== 'unclear';
@@ -223,7 +225,7 @@ export function DraftForm({ item, update, toast, stylesRaw, onEditStyles, confir
             AI-drafted — glance, correct if wrong
           </span>
           <span className="flex-1" />
-          <SaveChip state={saveState} savedLabel={`Saved ${lastSavedAt ? agoLabel(lastSavedAt, now) : ''}`.trim()} />
+          <SaveChip state={saveState} onRetry={onSaveRetry} savedLabel={`Saved ${lastSavedAt ? agoLabel(lastSavedAt, now) : ''}`.trim()} />
           <Button variant="outline" size="sm" disabled={item.regenerating} onClick={regenerate}>
             <RefreshCw className={item.regenerating ? 'animate-spin' : ''} />
             {item.regenerating ? 'regenerating…' : 'Regenerate'}

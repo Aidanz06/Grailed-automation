@@ -46,12 +46,20 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
   // keystroke replaces item.content/range/attributes identities, resetting the
   // timer (debounce). Note: measurements/descParts have no store column yet
   // (schema gap) — they persist in-session only.
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  // UX audit #9: a failed save re-attempts on this nonce — bumped by the
+  // chip's retry click and by the 5s auto-retry timer below.
+  const [saveRetryNonce, setSaveRetryNonce] = useState(0);
 
   useEffect(() => {
-    if (!item.dirty) return;
+    if (!item.dirty) {
+      // A save from another path (fill flush, save-and-next) landed — the
+      // failed chip must not outlive the failure it reported.
+      setSaveState((s) => (s === 'failed' ? 'idle' : s));
+      return;
+    }
     setSaveState('saving');
     const t = setTimeout(() => {
       api
@@ -66,12 +74,22 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
         })
         .catch((err) => {
           console.error('[api] saveItem failed', err);
-          setSaveState('idle');
+          // Stay visibly failed (the chip is persistent + clickable) — idle
+          // here looked exactly like success once the toast expired.
+          setSaveState('failed');
           toast(`Save failed: ${errorMessage(err)}`);
         });
     }, 800);
     return () => clearTimeout(t);
-  }, [item.dirty, item.content, item.range, item.attributes, item.id]);
+  }, [item.dirty, item.content, item.range, item.attributes, item.id, saveRetryNonce]);
+
+  // Auto-retry while failed and still dirty (~5s) — a missed toast must not
+  // mean a silently lost edit; success returns to the normal saved flow.
+  useEffect(() => {
+    if (saveState !== 'failed') return;
+    const t = setTimeout(() => setSaveRetryNonce((n) => n + 1), 5000);
+    return () => clearTimeout(t);
+  }, [saveState, saveRetryNonce]);
 
   // Keep the "saved Ns ago" label fresh without re-rendering constantly.
   useEffect(() => {
@@ -164,6 +182,7 @@ export function DraftEditor({ item, update, stylesRaw, onEditStyles, toast, next
         onEditStyles={onEditStyles}
         confirmed={confirmed}
         saveState={saveState}
+        onSaveRetry={() => setSaveRetryNonce((n) => n + 1)}
         lastSavedAt={lastSavedAt}
         now={now}
       />

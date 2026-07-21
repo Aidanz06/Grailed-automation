@@ -39,7 +39,10 @@ export function ConfirmScreen({ drafts, toast, onOpenItem, onDone }: Props) {
   const [values, setValues] = useState<Record<number, Item>>(() => Object.fromEntries(queue.map((d) => [d.id, d])));
   const [idx, setIdx] = useState(0);
   const [dirty, setDirty] = useState<Set<number>>(() => new Set());
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
+  // UX audit #9 twin of DraftEditor: failed saves re-attempt on this nonce
+  // (retry click + 5s auto-retry) instead of fading into looks-like-saved.
+  const [saveRetryNonce, setSaveRetryNonce] = useState(0);
   const [recomputing, setRecomputing] = useState<Set<number>>(() => new Set());
   // Pending Department||Category picks, staged until Confirm (A1 gate).
   const [pendingCat, setPendingCat] = useState<Record<number, string>>({});
@@ -66,12 +69,19 @@ export function ConfirmScreen({ drafts, toast, onOpenItem, onDone }: Props) {
         })
         .catch((err) => {
           console.error('[confirm] save failed', err);
-          setSaveState('idle');
+          setSaveState('failed'); // persistent chip — dirty ids stay queued for the retry
           toast(`Save failed: ${errorMessage(err)}`);
         });
     }, 800);
     return () => clearTimeout(t);
-  }, [values, dirty, toast]);
+  }, [values, dirty, toast, saveRetryNonce]);
+
+  // Auto-retry while failed (the dirty set still holds the unsaved ids).
+  useEffect(() => {
+    if (saveState !== 'failed') return;
+    const t = setTimeout(() => setSaveRetryNonce((n) => n + 1), 5000);
+    return () => clearTimeout(t);
+  }, [saveState, saveRetryNonce]);
 
   const edit = (id: number, recipe: (d: Item) => void) => {
     setValues((prev) => {
@@ -143,7 +153,7 @@ export function ConfirmScreen({ drafts, toast, onOpenItem, onDone }: Props) {
               : `${remaining} of ${queue.length} still need${remaining === 1 ? 's' : ''} attention`}
         </span>
         <span className="flex-1" />
-        <SaveChip state={saveState} />
+        <SaveChip state={saveState} onRetry={() => setSaveRetryNonce((n) => n + 1)} />
         <ThemeToggle />
       </header>
 
