@@ -295,6 +295,19 @@ export default function App() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+  // '?' help — ALSO global (audit #17): the guide and header advertise it, so
+  // Home must honor it too. J/K etc. stay workspace-only below.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (paletteOpen) return;
+      if (matchShortcut(e) === 'help') {
+        e.preventDefault();
+        setGuide((g) => (g ? null : 'shortcuts'));
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [paletteOpen]);
   // Every command runs an EXISTING path — the palette adds reach, not powers.
   const paletteCommands: PaletteCommand[] = [
     ...(view !== 'home'
@@ -302,10 +315,10 @@ export default function App() {
       : []),
     { id: 'new-batch', label: 'New batch — import photos', hint: 'opens the folder picker', run: newBatch },
     ...(unreadyCount > 0 && view !== 'confirm'
-      ? [{ id: 'confirm', label: `Confirm drafts (${unreadyCount})`, hint: 'one card per gap', run: () => openConfirm(view === 'workspace' ? 'workspace' : 'home') }]
+      ? [{ id: 'confirm', label: `Confirm drafts (${unreadyCount})`, hint: 'one card per unfinished draft', run: () => openConfirm(view === 'workspace' ? 'workspace' : 'home') }]
       : []),
     ...(view === 'workspace' && selectedItem && selectedItem.status !== 'submitted' && selectedItem.content?.title
-      ? [{ id: 'fill', label: `Fill “${selectedItem.content.title}” in Chrome`, hint: 'same gated path as F', run: () => setFillSignal((s) => s + 1) }]
+      ? [{ id: 'fill', label: `Fill “${selectedItem.content.title}” in Chrome`, hint: 'same as pressing F', run: () => setFillSignal((s) => s + 1) }]
       : []),
     { id: 'guide', label: 'Open the guide', hint: 'how it works + shortcuts', run: () => setGuide('how') },
   ];
@@ -354,10 +367,9 @@ export default function App() {
           e.preventDefault();
           setFillSignal((s) => s + 1);
         }
-      } else if (id === 'help') {
-        e.preventDefault();
-        setGuide((g) => (g ? null : 'shortcuts'));
       }
+      // 'help' is handled by the global listener above — matching it here too
+      // would double-toggle the guide shut.
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

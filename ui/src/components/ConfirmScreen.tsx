@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, ClipboardCheck } from 'lucide-react';
 import type { Item } from '@/types';
 import { api, type AutofillOptions } from '@/lib/api';
@@ -115,6 +115,10 @@ export function ConfirmScreen({ drafts, toast, onOpenItem, onDone }: Props) {
   const cur = queue[idx] ? values[queue[idx].id] : null;
   const remaining = queue.filter((d) => !readiness(values[d.id]).ready).length;
   const go = (dir: 1 | -1) => setIdx((i) => Math.min(queue.length - 1, Math.max(0, i + dir)));
+  // The key handler is mounted once (queue.length dep) — it reads the live
+  // index through a ref so the last-card check below can't go stale.
+  const idxRef = useRef(idx);
+  idxRef.current = idx;
 
   // Same bindings as the workspace (lib/shortcuts.ts is the single source):
   // J/K/arrows walk the queue, Cmd/Ctrl+Enter advances even mid-typing (the
@@ -122,7 +126,12 @@ export function ConfirmScreen({ drafts, toast, onOpenItem, onDone }: Props) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const id = matchShortcut(e);
-      if (id === 'nextDraft' || id === 'saveAndNext') {
+      if (id === 'saveAndNext' && idxRef.current >= queue.length - 1) {
+        // Last card (audit #24): the advertised chord finishes the pass —
+        // go(1) would clamp into a silent no-op while the button says Done.
+        e.preventDefault();
+        onDone();
+      } else if (id === 'nextDraft' || id === 'saveAndNext') {
         e.preventDefault();
         go(1);
       } else if (id === 'prevDraft') {

@@ -207,11 +207,12 @@ export function TriageBoard({ items, albums, initialAlbumId, onOpenItem, onDelet
                     </div>
                     <div className="mt-1.5 flex items-center justify-between gap-2">
                       <StateLine item={it} q={q} />
-                      {/* M-8 phase 2 (owner-approved): the bare number gets its
-                          unit — "quality 72" — so the score's meaning is visible,
-                          not hover-only. Breakdown stays in the tooltip. */}
+                      {/* M-8 phase 2 (owner-approved): the score with its unit
+                          AND scale — "quality 72/100" (audit #22) — so its
+                          meaning is visible, not hover-only. Breakdown stays
+                          in the tooltip. */}
                       <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground" title={qualityTitle(q)}>
-                        quality {q.score}
+                        quality {q.score}/100
                       </span>
                     </div>
                     {/* §F: the price with its comp context inline — how many

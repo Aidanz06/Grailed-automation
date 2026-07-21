@@ -90,7 +90,9 @@ export function PricePanel({ item, update, toast }: Props) {
         });
         const span = range.low != null && range.high != null ? ` $${range.low}–$${range.high}` : '';
         const n = range.sampleSize ?? range.mostRelevantComps.length;
-        toast(`Recomputed from ${providerName}:${span} (${n} comps${cached ? ', cached' : ''}).`);
+        // Consumer voice (audit #22): the provider name ("grailed-live") is
+        // an internal detail — say what it means instead.
+        toast(`Recomputed from sold listings:${span} (${n} comps${cached ? ', cached' : ''}).`);
       })
       .catch((err) => {
         console.error('[api] recomputeComps failed', err);
