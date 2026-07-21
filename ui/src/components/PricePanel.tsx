@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ChevronDown, ChevronRight, ExternalLink, RefreshCw } from 'lucide-react';
 import type { Comp, Item, PriceRange } from '@/types';
 import { api } from '@/lib/api';
-import { cn, errorMessage, money } from '@/lib/utils';
+import { cn, errorMessage, money, parsePrice } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -150,8 +150,8 @@ export function PricePanel({ item, update, toast }: Props) {
                 className="h-11 w-24 border-transparent px-1 font-display text-3xl text-primary shadow-none focus-visible:border-input"
                 onChange={(e) =>
                   update((d) => {
-                    const v = e.target.value;
-                    d.range!.median = v === '' ? null : Number(v);
+                    // parsePrice: "$140" / "1,200" land as numbers, never NaN.
+                    d.range!.median = parsePrice(e.target.value);
                     d.dirty = true;
                   })
                 }

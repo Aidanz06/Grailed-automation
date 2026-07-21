@@ -33,9 +33,19 @@ export function formatWhen(value?: string | null): string {
 
 /** Price display shared by Home/TriageBoard/DraftEditor/PricePanel (QW-1) —
  * render-only ("$1,200"); nothing parses it back. Price inputs bind to
- * range.median directly. */
+ * range.median directly. Non-finite values dash out as a backstop — "$NaN"
+ * must never render even if a bad value reaches a stored range (audit #2). */
 export function money(n: number | null | undefined): string {
-  return n == null ? '—' : '$' + n.toLocaleString('en-US');
+  return n == null || !Number.isFinite(n) ? '—' : '$' + n.toLocaleString('en-US');
+}
+
+/** Parse a price the way people type it ("$140", "1,200") — digits only,
+ * matching the Smart Pricing floor field's sanitizing; null when nothing
+ * numeric remains. Every price input stores through this so a stray "$" or
+ * "," can never persist NaN into the draft (UX audit #2). */
+export function parsePrice(raw: string): number | null {
+  const digits = raw.replace(/[^0-9]/g, '');
+  return digits === '' ? null : Number(digits);
 }
 
 /** Relative "time ago" for the save indicator. */

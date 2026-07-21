@@ -5,7 +5,7 @@ import type { AutofillOptions } from '@/lib/api';
 import { readiness } from '@/lib/readiness';
 import { quality, qualityTitle } from '@/lib/quality';
 import { suggestGrailedCategory } from '@/lib/grailedCategory';
-import { cn, isCollabBrand, primaryBrand } from '@/lib/utils';
+import { cn, isCollabBrand, parsePrice, primaryBrand } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { CoverThumb } from '@/components/CoverThumb';
 import { Input } from '@/components/ui/input';
@@ -241,8 +241,8 @@ export function ConfirmCard({ item, fillOptions, pendingCatKey, onPendingCat, re
               placeholder="your price"
               className={cn(item.range?.median == null && 'border-dashed')}
               onChange={(e) => {
-                const v = e.target.value;
-                const median = v === '' ? null : Number(v);
+                // parsePrice: "$140" / "1,200" land as numbers, never NaN.
+                const median = parsePrice(e.target.value);
                 edit((d) => {
                   if (d.range) d.range.median = median;
                   else if (median != null) d.range = { currency: 'USD', low: null, median, high: null, mostRelevantComps: [] };

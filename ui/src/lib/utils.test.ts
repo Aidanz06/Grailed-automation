@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { agoLabel, cn, errorMessage, formatWhen, isCollabBrand, money, primaryBrand } from '@/lib/utils';
+import { agoLabel, cn, errorMessage, formatWhen, isCollabBrand, money, parsePrice, primaryBrand } from '@/lib/utils';
 
 describe('money', () => {
   it('formats with thousands separators', () => {
@@ -12,6 +12,26 @@ describe('money', () => {
     expect(money(0)).toBe('$0');
     expect(money(null)).toBe('—');
     expect(money(undefined)).toBe('—');
+  });
+
+  it('dashes non-finite values instead of rendering "$NaN" (UX audit #2)', () => {
+    expect(money(NaN)).toBe('—');
+    expect(money(Infinity)).toBe('—');
+  });
+});
+
+describe('parsePrice (UX audit #2 — price inputs must never store NaN)', () => {
+  it('parses prices the way people type them', () => {
+    expect(parsePrice('$140')).toBe(140);
+    expect(parsePrice('1,200')).toBe(1200);
+    expect(parsePrice('1,2x00')).toBe(1200);
+    expect(parsePrice('90 ')).toBe(90);
+  });
+
+  it('empty / non-numeric input is null, never NaN', () => {
+    expect(parsePrice('')).toBe(null);
+    expect(parsePrice('abc')).toBe(null);
+    expect(parsePrice('$')).toBe(null);
   });
 });
 
