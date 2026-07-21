@@ -121,6 +121,20 @@ export function useFillOrchestration({
   const changedFill = !!fillChanges?.lastFillAt && fillChanges.changes.length > 0;
   const changedCount = fillChanges?.changes.length ?? 0;
 
+  // "Stop" during a fill (audit #4): sets the main-side cancel flag; the
+  // driver finishes the in-flight field and skips the rest. The per-field
+  // results (and the outcome banner) stay truthful about what got filled.
+  const [stoppingFill, setStoppingFill] = useState(false);
+  const stopFill = () => {
+    setStoppingFill(true);
+    api
+      .cancelFill()
+      .then((r) => {
+        if (!r.ok && r.message) toast(r.message);
+      })
+      .catch((err) => toast(`Couldn’t stop the fill: ${errorMessage(err)}`));
+  };
+
   const startFill = (changedOnly = false) => {
     setFilling(true);
     setFillRun(emptyFillRun());
@@ -151,7 +165,13 @@ export function useFillOrchestration({
           else issues.push(r.reason ? `${name} — ${r.reason}` : name);
         }
         if (filled.length) setFillOutcome(filled); // persistent banner owns the not-saved warning
-        if (res.ok && filled.length) {
+        if (res.cancelled) {
+          toast(
+            filled.length
+              ? `Fill stopped — ${filled.join(', ')} already filled in Chrome. Nothing was submitted.`
+              : 'Fill stopped — nothing was filled. Nothing was submitted.'
+          );
+        } else if (res.ok && filled.length) {
           const manualTail = confirmed
             ? 'Double-check the category cascade fields there.'
             : 'Category/size/designer stayed manual (unconfirmed).';
@@ -168,7 +188,10 @@ export function useFillOrchestration({
         console.error('[api] fillListing failed', err);
         toast(`The fill didn’t finish — ${errorMessage(err)}. Nothing was submitted; check the Chrome window.`);
       })
-      .finally(() => setFilling(false));
+      .finally(() => {
+        setFilling(false);
+        setStoppingFill(false);
+      });
   };
 
   // Beta Part F: a brief one-time heads-up before the very FIRST fill ever
@@ -328,6 +351,8 @@ export function useFillOrchestration({
 
   return {
     filling,
+    stoppingFill,
+    stopFill,
     fillOutcome,
     setFillOutcome,
     fillRun,

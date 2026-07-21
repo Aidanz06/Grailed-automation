@@ -1097,11 +1097,16 @@ async function connect({ freshTab = false } = {}) {
  *     reason? }
  * Listener errors never break the fill.
  */
-async function fillListing(fields, onProgress) {
+async function fillListing(fields, onProgress, isCancelled) {
   const notify = (p) => {
     if (!onProgress) return;
     try { onProgress(p); } catch (err) { console.error('[autofill] onProgress listener failed:', err.message); }
   };
+  // UX audit #4: `isCancelled` (optional) is polled BETWEEN field steps only —
+  // never inside one. Once it reports true, the in-flight field finishes as
+  // normal, every remaining field reports skipped ("stopped by user"), and
+  // the result carries cancelled:true with the per-field results so far.
+  const cancelled = () => !!(isCancelled && isCancelled());
   // Bug F: any fill that carries photos gets its OWN brand-new /sell/new tab
   // (bound by target id — never a reused form, never the wrong tab among
   // several). Changed-only re-fills arrive with photoPaths nulled by
@@ -1170,6 +1175,14 @@ async function fillListing(fields, onProgress) {
     const STEP_CAP = Number(fillTiming.stepTimeoutMs) || 30000;
     const PHOTO_CAP = Number(fillTiming.photoStepTimeoutMs) || 180000;
     const step = async (field, run, capMs = STEP_CAP) => {
+      // The cancel boundary (audit #4): checked between steps, so a stopped
+      // run reports exactly which fields were already filled — nothing else
+      // about fill/submit semantics changes (the driver still never submits).
+      if (cancelled()) {
+        results[field] = { ok: false, skipped: true, reason: 'stopped by user' };
+        notify({ kind: 'field', field, status: 'skipped', reason: 'stopped by user' });
+        return results[field];
+      }
       notify({ kind: 'field', field, status: 'filling' });
       let r;
       let timer = null;
@@ -1325,6 +1338,7 @@ async function fillListing(fields, onProgress) {
       ok: Object.values(results).every((r) => r.ok),
       results,
       targetUrl: driver.targetUrl,
+      cancelled: cancelled() || undefined,
     };
   } finally {
     await driver.close();

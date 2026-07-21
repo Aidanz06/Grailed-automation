@@ -46,6 +46,9 @@ export function ImportScreen({ toast, onImported, onOpenItem, onOpenBoard, autoP
   // while the rest of the groups are still pricing/writing.
   const [earlyDraft, setEarlyDraft] = useState<{ id: number; title: string | null } | null>(null);
   const [savedCount, setSavedCount] = useState(0);
+  // Stop requested (audit #4) — the import ends at its next boundary; the
+  // button stays in "Stopping…" until the process promise resolves.
+  const [stopping, setStopping] = useState(false);
   const busyRef = useRef(false);
   useEffect(() => {
     const off = api.onBatchProgress((p) => {
@@ -95,9 +98,11 @@ export function ImportScreen({ toast, onImported, onOpenItem, onOpenBoard, autoP
       // Toast still matters for a BACKGROUND completion (user is on another
       // screen and can't see the summary); on-screen it just echoes it.
       toast(
-        `Imported ${res.photoCount} photo(s) → ${res.drafts} draft(s), ${res.review} to review.` +
-          (res.groupingNotice ? ` ${res.groupingNotice}` : '') +
-          (res.processingNotice ? ` ${res.processingNotice}` : '')
+        res.cancelled
+          ? `Stopped — ${res.drafts} draft(s) already saved; nothing was posted to Grailed.`
+          : `Imported ${res.photoCount} photo(s) → ${res.drafts} draft(s), ${res.review} to review.` +
+              (res.groupingNotice ? ` ${res.groupingNotice}` : '') +
+              (res.processingNotice ? ` ${res.processingNotice}` : '')
       );
       onImported(res);
     } catch (e) {
@@ -116,8 +121,22 @@ export function ImportScreen({ toast, onImported, onOpenItem, onOpenBoard, autoP
     } finally {
       setBusy(false);
       busyRef.current = false;
+      setStopping(false);
       setProgress(null);
     }
+  };
+
+  // "Stop import" (audit #4): sets the main-side cancel flag — the batch ends
+  // at its next boundary (the one in-flight AI call can't be interrupted).
+  // Everything already saved stays saved; nothing is posted to Grailed.
+  const stopImport = () => {
+    setStopping(true);
+    api
+      .cancelBatch()
+      .then((r) => {
+        if (!r.ok && r.message) toast(r.message);
+      })
+      .catch((e) => toast(`Couldn’t stop the import: ${errorMessage(e)}`));
   };
 
   // Audit §2.4: "New batch" opens the folder picker on entry. Fire once, only
@@ -189,9 +208,15 @@ export function ImportScreen({ toast, onImported, onOpenItem, onOpenBoard, autoP
       <div className="flex h-full items-start justify-center overflow-y-auto p-6">
         <div className="rise-in w-full max-w-2xl">
           <div className="mb-1 flex items-center gap-2.5">
-            <AnimatedCheck />
-            <h2 className="text-lg font-semibold">Import complete</h2>
+            {result.cancelled ? <AlertTriangle className="h-5 w-5 text-warning" /> : <AnimatedCheck />}
+            <h2 className="text-lg font-semibold">{result.cancelled ? 'Import stopped' : 'Import complete'}</h2>
           </div>
+          {result.cancelled && (
+            <div className="mb-1 text-sm- text-muted-foreground">
+              Stopped — {result.drafts} draft{result.drafts === 1 ? '' : 's'} already saved; nothing was posted to
+              Grailed. The remaining groups were never started.
+            </div>
+          )}
           <div className="mb-4 font-mono text-xs text-muted-foreground">
             {result.photoCount} photos → {result.groups} groups · {result.drafts} drafted · {result.review} to review
           </div>
@@ -310,6 +335,16 @@ export function ImportScreen({ toast, onImported, onOpenItem, onOpenBoard, autoP
           </>
         )}
       </button>
+      {/* "Stop import" lives OUTSIDE the drop-zone <button> (nested buttons
+          are invalid and the zone is disabled while running). Cancel takes
+          effect at the next boundary; saved drafts stay. */}
+      {running && (
+        <div className="mt-3 flex justify-center">
+          <Button variant="outline" size="sm" disabled={stopping} onClick={stopImport}>
+            {stopping ? 'Stopping — finishing the current step…' : 'Stop import'}
+          </Button>
+        </div>
+      )}
       {/* Streamed drafts: don't make the user wait for the whole batch —
           the first saved draft is editable the moment it exists. The import
           keeps running in the background (persistent top strip + summary). */}

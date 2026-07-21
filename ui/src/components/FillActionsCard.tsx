@@ -43,6 +43,8 @@ export function FillActionsCard({
 }: Props) {
   const {
     filling,
+    stoppingFill,
+    stopFill,
     fillOutcome,
     setFillOutcome,
     fillRun,
@@ -97,6 +99,14 @@ export function FillActionsCard({
         <span id={fillDescId} className="sr-only">
           {fillExplain}
         </span>
+        {/* Stop the running fill (audit #4): the current field finishes, the
+            rest are skipped, and what's already filled is reported truthfully.
+            Nothing was or will be submitted either way. */}
+        {filling && (
+          <Button variant="outline" size="sm" className="mt-2 w-full" disabled={stoppingFill} onClick={stopFill}>
+            {stoppingFill ? 'Stopping — finishing the current field…' : 'Stop'}
+          </Button>
+        )}
         {/* Beta Part F: one-time first-fill heads-up (localStorage-gated).
             Confirm proceeds with the exact click that was deferred. */}
         {firstFillPrompt && !filling && (

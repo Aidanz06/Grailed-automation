@@ -33,6 +33,9 @@ contextBridge.exposeInMainWorld('tailor', {
   // Slice 5: batch intake — folder picker + cluster/process/save.
   pickBatchFolder: () => ipcRenderer.invoke('batch:pickFolder'),
   processBatch: (folder) => ipcRenderer.invoke('batch:process', folder),
+  // UX audit #4: stop the running import at its next boundary (between
+  // groups). Already-saved drafts stay; nothing is posted to Grailed.
+  cancelBatch: () => ipcRenderer.invoke('batch:cancel'),
   // Batch progress stream (grouping → per-group processing). Returns an
   // unsubscribe function for the import screen's unmount cleanup.
   onBatchProgress: (cb) => {
@@ -47,6 +50,9 @@ contextBridge.exposeInMainWorld('tailor', {
   // Slice 6: autofill the sell form in the driven real Chrome (never submits).
   // opts.changedOnly = re-fill only the fields edited since the last fill.
   fillListing: (id, opts) => ipcRenderer.invoke('autofill:fill', id, opts),
+  // UX audit #4: stop the running fill at its next boundary (between fields).
+  // Fields already filled are reported; the driver still never submits.
+  cancelFill: () => ipcRenderer.invoke('autofill:cancel'),
   // What a re-fill would change (diff vs the last-fill snapshot). Read-only.
   getFillChanges: (id) => ipcRenderer.invoke('autofill:changes', id),
   // S3: per-field fill progress (plan + filling/ok/failed/skipped per field).

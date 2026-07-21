@@ -165,6 +165,16 @@ export interface BatchResult {
   groupingNotice?: string;
   /** Set when some groups errored during pricing/writing (parked in Review, non-fatal). */
   processingNotice?: string;
+  /** UX audit #4: the user stopped the import — counts cover what was saved
+   * before the stop; nothing was posted to Grailed. */
+  cancelled?: boolean;
+}
+
+/** Result of a cancel request (batch:cancel / autofill:cancel). `message` is
+ * the too-late/no-op explanation when ok is false (updater pattern). */
+export interface CancelResult {
+  ok: boolean;
+  message?: string;
 }
 
 /** One batch:progress event — drives the ImportScreen staged progress bar.
@@ -202,6 +212,9 @@ export interface FillResult {
   targetUrl?: string;
   /** Set by the mock impl only — surfaced in the toast. */
   message?: string;
+  /** UX audit #4: the user stopped the fill — `results` still reports every
+   * field that was already filled before the stop. Never submits either way. */
+  cancelled?: boolean;
 }
 
 /** Result of dock:start. `message` is set by the mock impl only. */
@@ -252,8 +265,10 @@ interface TailorBridge {
   openExternal(url: string): Promise<{ ok: boolean }>;
   pickBatchFolder(): Promise<string | null>;
   processBatch(folder: string): Promise<BatchResult>;
+  cancelBatch(): Promise<CancelResult>;
   onBatchProgress(cb: (p: BatchProgress) => void): () => void;
   fillListing(id: number, opts?: FillOpts): Promise<FillResult>;
+  cancelFill(): Promise<CancelResult>;
   getFillChanges(id: number): Promise<FillChanges>;
   onFillProgress(cb: (p: FillProgress) => void): () => void;
   getAutofillOptions(): Promise<AutofillOptions>;
@@ -403,11 +418,17 @@ export interface Api {
   /** Opens the native folder picker; resolves to the chosen path or null if canceled. */
   pickBatchFolder(): Promise<string | null>;
   processBatch(folder: string): Promise<BatchResult>;
+  /** UX audit #4: stop the running import at the next between-groups
+   * boundary. Saved drafts stay; ok:false = nothing was running. */
+  cancelBatch(): Promise<CancelResult>;
   /** Live stage/counts during processBatch; returns an unsubscribe fn. */
   onBatchProgress(cb: (p: BatchProgress) => void): () => void;
   /** Slice 6: autofill the sell form in the driven Chrome. Never submits.
    * opts.changedOnly re-fills only what changed since the last fill. */
   fillListing(id: number, opts?: FillOpts): Promise<FillResult>;
+  /** UX audit #4: stop the running fill at the next between-fields boundary.
+   * Already-filled fields stay reported; ok:false = nothing was running. */
+  cancelFill(): Promise<CancelResult>;
   /** What a re-fill would change (diff vs the last-fill snapshot). */
   getFillChanges(id: number): Promise<FillChanges>;
   /** S3: live per-field events during fillListing; returns an unsubscribe fn. */
@@ -822,27 +843,50 @@ const mockApi: Api = {
     // first fill arms it, a changedOnly re-fill consumes the demo changes.
     if (opts?.changedOnly) mockChangesConsumed.add(id);
     mockLastFillAt.set(id, new Date().toISOString());
+    mockFillCancel = false;
     // Simulate the S3 per-field stream so the live fill checklist is previewable.
     const emit = (p: FillProgress) => mockFillSubs.forEach((cb) => cb(p));
     const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const fields = opts?.changedOnly ? ['price', 'condition'] : ['title', 'description', 'price', 'condition', 'photos'];
     emit({ kind: 'plan', fields });
+    const results: FillResult['results'] = {};
     for (const field of fields.slice(0, 4)) {
+      // Same boundary the real driver honors: cancel lands between fields.
+      if (mockFillCancel) {
+        emit({ kind: 'field', field, status: 'skipped', reason: 'stopped by user' });
+        results[field] = { ok: false, skipped: true, reason: 'stopped by user' };
+        continue;
+      }
       emit({ kind: 'field', field, status: 'filling' });
       await wait(450);
       emit({ kind: 'field', field, status: 'ok' });
+      results[field] = { ok: true };
     }
-    emit({ kind: 'field', field: 'photos', status: 'filling', done: 0, total: 2 });
-    for (let i = 1; i <= 2; i++) {
-      await wait(500);
-      emit({ kind: 'field', field: 'photos', status: 'filling', done: i, total: 2 });
+    if (fields.includes('photos')) {
+      if (mockFillCancel) {
+        emit({ kind: 'field', field: 'photos', status: 'skipped', reason: 'stopped by user' });
+        results.photos = { ok: false, skipped: true, reason: 'stopped by user' };
+      } else {
+        emit({ kind: 'field', field: 'photos', status: 'filling', done: 0, total: 2 });
+        for (let i = 1; i <= 2; i++) {
+          await wait(500);
+          emit({ kind: 'field', field: 'photos', status: 'filling', done: i, total: 2 });
+        }
+        emit({ kind: 'field', field: 'photos', status: 'ok' });
+        results.photos = { ok: true, uploadPosts: 2 };
+      }
     }
-    emit({ kind: 'field', field: 'photos', status: 'ok' });
     return {
-      ok: true,
-      results: { title: { ok: true }, description: { ok: true }, price: { ok: true }, condition: { ok: true }, photos: { ok: true, uploadPosts: 2 } },
+      ok: Object.values(results).every((r) => r.ok),
+      results,
       targetUrl: 'https://www.grailed.com/sell/new',
+      cancelled: mockFillCancel || undefined,
     };
+  },
+  async cancelFill() {
+    console.log('[mock] cancelFill');
+    mockFillCancel = true;
+    return { ok: true };
   },
   onFillProgress(cb) {
     mockFillSubs.add(cb);
@@ -990,6 +1034,7 @@ const mockApi: Api = {
   },
   async processBatch(folder) {
     console.log(`[mock] processBatch(${folder}) — no clustering/pipeline`);
+    mockBatchCancel = false;
     // Simulate the real staged progress so the ImportScreen bar is previewable.
     const emit = (p: BatchProgress) => mockProgressSubs.forEach((cb) => cb(p));
     emit({ stage: 'grouping', done: 0, total: 0, label: 'Scanning folder…' });
@@ -1002,6 +1047,11 @@ const mockApi: Api = {
     await new Promise((r) => setTimeout(r, 1800));
     emit({ stage: 'grouped', done: 0, total: 2, label: '2 group(s) from 5 photo(s)' });
     await new Promise((r) => setTimeout(r, 400));
+    // Same boundary as the real handler: cancel lands between groups.
+    if (mockBatchCancel) {
+      emit({ stage: 'done', done: 0, total: 2, label: 'Import stopped — nothing was saved yet' });
+      return { photoCount: 5, groups: 2, drafts: 0, review: 0, processed: [], cancelled: true };
+    }
     emit({ stage: 'processing', done: 0, total: 2, label: 'Pricing + writing group 1/2…' });
     await new Promise((r) => setTimeout(r, 700));
     // Streamed item events: each saved group announces itself so the UI can
@@ -1011,6 +1061,17 @@ const mockApi: Api = {
       item: { groupId: 1, itemId: 1, status: 'draft', title: 'Mock grouped item' },
     });
     await new Promise((r) => setTimeout(r, 700));
+    if (mockBatchCancel) {
+      emit({ stage: 'done', done: 1, total: 2, label: 'Import stopped — 1 draft(s) already saved; nothing was posted to Grailed' });
+      return {
+        photoCount: 5,
+        groups: 2,
+        drafts: 1,
+        review: 0,
+        processed: [{ groupId: 1, itemId: null, status: 'draft', title: 'Mock grouped item' }],
+        cancelled: true,
+      };
+    }
     emit({
       stage: 'processing', done: 2, total: 2, label: 'Group 2/2 saved for review',
       item: { groupId: 2, itemId: 2, status: 'needs_review' },
@@ -1028,6 +1089,11 @@ const mockApi: Api = {
       ],
     };
   },
+  async cancelBatch() {
+    console.log('[mock] cancelBatch');
+    mockBatchCancel = true;
+    return { ok: true };
+  },
   onBatchProgress(cb) {
     mockProgressSubs.add(cb);
     return () => mockProgressSubs.delete(cb);
@@ -1037,6 +1103,9 @@ const mockApi: Api = {
 // Subscribers for the mock progress streams (browser preview only).
 const mockProgressSubs = new Set<(p: BatchProgress) => void>();
 const mockFillSubs = new Set<(p: FillProgress) => void>();
+// Preview-only cancel flags (audit #4) so the Stop buttons are walkable.
+let mockBatchCancel = false;
+let mockFillCancel = false;
 // Preview-only last-fill bookkeeping for the changes-since-last-fill card.
 const mockLastFillAt = new Map<number, string>();
 const mockChangesConsumed = new Set<number>();
@@ -1100,11 +1169,17 @@ function realApi(bridge: TailorBridge): Api {
     async processBatch(folder) {
       return bridge.processBatch(folder);
     },
+    async cancelBatch() {
+      return bridge.cancelBatch();
+    },
     onBatchProgress(cb) {
       return bridge.onBatchProgress(cb);
     },
     async fillListing(id, opts) {
       return bridge.fillListing(id, opts);
+    },
+    async cancelFill() {
+      return bridge.cancelFill();
     },
     async getFillChanges(id) {
       return bridge.getFillChanges(id);

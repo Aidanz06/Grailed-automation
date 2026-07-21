@@ -222,8 +222,40 @@ ipcMain.handle('photos:add', async (_e, itemId) => {
   return getStore().addPhotos(itemId, res.filePaths);
 });
 
+// UX audit #4: cancel for the two long-running jobs. One import and one fill
+// run at a time (the renderer gates both), so module-level flags suffice —
+// the handlers check them at their natural boundaries (between groups /
+// between fields; the single in-flight vision call is not interruptible, so
+// cancel takes effect at the next boundary). Mirrors updater.js's
+// cancelRequested flag + its too-late guard style. Busy flags double as the
+// quit guard's signal (audit #5).
+let batchRunning = false;
+let batchCancelRequested = false;
+let fillRunning = false;
+let fillCancelRequested = false;
+ipcMain.handle('batch:cancel', () => {
+  if (!batchRunning) return { ok: false, message: 'No import is running.' };
+  batchCancelRequested = true;
+  return { ok: true };
+});
+ipcMain.handle('autofill:cancel', () => {
+  if (!fillRunning) return { ok: false, message: 'No fill is running.' };
+  fillCancelRequested = true;
+  return { ok: true };
+});
+
 ipcMain.handle('batch:process', async (e, folder) => {
   const store = getStore();
+  batchRunning = true;
+  batchCancelRequested = false;
+  try {
+    return await runBatchProcess(e, folder, store);
+  } finally {
+    batchRunning = false;
+  }
+});
+
+async function runBatchProcess(e, folder, store) {
   // Live progress for the renderer (integration plan P1.4): grouping is one
   // ~25s call, then each auto-accepted group runs the full per-item pipeline
   // (attributes → comps → content). Stream stage/counts instead of a frozen
@@ -260,6 +292,12 @@ ipcMain.handle('batch:process', async (e, folder) => {
     throw new Error(`Photo grouping failed — nothing was imported. ${err.message}`);
   }
   const { photoCount, groups, meta } = grouped;
+  // Stopped during the grouping call: nothing has been saved yet — say so and
+  // stop before creating an album or touching the pipeline.
+  if (batchCancelRequested) {
+    progress({ stage: 'done', done: 0, total: groups.length, label: 'Import stopped — nothing was saved yet' });
+    return { photoCount, groups: groups.length, drafts: 0, review: 0, processed: [], cancelled: true };
+  }
   // §5.6 telemetry: record what the grouping did (strategy, fallback, per-group
   // confidence/flags) so later corrections have a baseline to compare against.
   try {
@@ -281,8 +319,15 @@ ipcMain.handle('batch:process', async (e, folder) => {
   const shared = makeCompProvider({}, (m) => console.error(m));
   const processed = [];
   const total = groups.length;
+  let cancelled = false;
   progress({ stage: 'grouped', done: 0, total, label: `${total} group(s) from ${photoCount} photo(s)` });
   for (let i = 0; i < groups.length; i++) {
+    // Cancel boundary (audit #4): between groups — whatever already saved
+    // stays saved; the remaining groups are simply never started.
+    if (batchCancelRequested) {
+      cancelled = true;
+      break;
+    }
     const g = groups[i];
     const base = {
       photos: g.photos.map((p) => ({ file_path: p, cluster_confidence: g.confidence })),
@@ -335,13 +380,22 @@ ipcMain.handle('batch:process', async (e, folder) => {
       announce(entry, `Group ${i + 1}/${total} saved for review`);
     }
   }
-  progress({ stage: 'done', done: total, total, label: 'Import complete' });
+  const draftCount = processed.filter((p) => p.status === 'draft').length;
+  progress({
+    stage: 'done',
+    done: processed.length,
+    total,
+    label: cancelled
+      ? `Import stopped — ${draftCount} draft(s) already saved; nothing was posted to Grailed`
+      : 'Import complete',
+  });
   return {
     photoCount,
     groups: groups.length,
-    drafts: processed.filter((p) => p.status === 'draft').length,
+    drafts: draftCount,
     review: processed.filter((p) => p.status === 'needs_review').length,
     processed,
+    cancelled: cancelled || undefined,
     // Non-fatal notice when the primary strategy failed and the fallback ran.
     groupingNotice: meta?.fallbackFrom
       ? `Grouping fell back to ${meta.strategy} (${meta.fallbackFrom} failed: ${meta.fallbackReason}).`
@@ -352,7 +406,7 @@ ipcMain.handle('batch:process', async (e, folder) => {
       return failed ? `${failed} group(s) hit an error while pricing/writing and were parked in Review.` : undefined;
     })(),
   };
-});
+}
 
 // Review-queue resolution (§5.1 / UX review S1): confirm, split, reassign —
 // the actions that let a flagged group LEAVE the review queue. Each records a
@@ -613,6 +667,16 @@ ipcMain.handle('autofill:changes', (_e, id) => {
 });
 
 ipcMain.handle('autofill:fill', async (e, id, opts = {}) => {
+  fillRunning = true;
+  fillCancelRequested = false;
+  try {
+    return await runAutofill(e, id, opts);
+  } finally {
+    fillRunning = false;
+  }
+});
+
+async function runAutofill(e, id, opts) {
   const { fillListing } = require('./autofill-driver');
   // S3: stream the driver's per-field events to the renderer's live checklist.
   const wc = e.sender;
@@ -640,7 +704,10 @@ ipcMain.handle('autofill:fill', async (e, id, opts = {}) => {
     photoPaths = null;
   }
 
-  const result = await fillListing({ ...fields, photoPaths }, onProgress);
+  // Cancel boundary (audit #4): the driver checks between field steps — the
+  // in-flight field finishes, the rest report skipped, and the per-field
+  // results stay truthful about what's already on the form.
+  const result = await fillListing({ ...fields, photoPaths }, onProgress, () => fillCancelRequested);
 
   // Merge this run into the snapshot: a field's stored value advances only
   // when the driver reported ok, so failed/skipped fields keep showing up as
@@ -657,7 +724,7 @@ ipcMain.handle('autofill:fill', async (e, id, opts = {}) => {
     console.error('[autofill] failed to persist last-fill snapshot:', err.message);
   }
   return result;
-});
+}
 
 // §5.5 window choreography ("dock Chrome"): make the two windows feel like
 // one by snapping the REAL Chrome window flush against the app window and

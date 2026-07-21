@@ -55,9 +55,19 @@ export function BatchProgressBar({ hidden = false }: Props) {
           {isError ? 'Import failed' : 'Importing photos'}
         </span>
         <span className="truncate text-muted-foreground">{progress.label}</span>
-        {pct != null && !isError && (
-          <span className="ml-auto tabular-nums text-muted-foreground">{Math.round(pct)}%</span>
-        )}
+        <span className="ml-auto flex shrink-0 items-center gap-2">
+          {pct != null && !isError && <span className="tabular-nums text-muted-foreground">{Math.round(pct)}%</span>}
+          {/* Stop from anywhere (audit #4) — the import runs app-wide, so the
+              escape hatch must too. Cancel lands at the next boundary. */}
+          {!isError && progress.stage !== 'done' && (
+            <button
+              className="rounded border border-input px-1.5 py-0.5 text-2xs text-muted-foreground transition-colors hover:border-destructive hover:text-destructive"
+              onClick={() => api.cancelBatch().catch(() => {})}
+            >
+              Stop
+            </button>
+          )}
+        </span>
       </div>
       <div className={`mt-1 h-1 w-full overflow-hidden rounded bg-muted ${!isError ? 'shimmer' : ''}`}>
         {isError ? (
