@@ -1,0 +1,135 @@
+{
+  "at": "2026-07-19T05:47:56.320Z",
+  "collab": {
+    "structure": {
+      "ok": true,
+      "chain": [
+        {
+          "tag": "span",
+          "id": null,
+          "role": null,
+          "cls": null,
+          "ariaHaspopup": null,
+          "ariaExpanded": null
+        },
+        {
+          "tag": "div",
+          "id": null,
+          "role": null,
+          "cls": "DesignersAndCollabs-module__cancelCollaboration___GOZbA",
+          "ariaHaspopup": null,
+          "ariaExpanded": null
+        },
+        {
+          "tag": "li",
+          "id": null,
+          "role": "menuitem",
+          "cls": "DesignersAndCollabs-module__option___WtIFa DesignersAndCollabs-module__cancel___Gmw3P",
+          "ariaHaspopup": null,
+          "ariaExpanded": null
+        },
+        {
+          "tag": "ul",
+          "id": null,
+          "role": "menu",
+          "cls": "DesignersAndCollabs-module__suggestionsContainer___ZV3oi",
+          "ariaHaspopup": null,
+          "ariaExpanded": null
+        },
+        {
+          "tag": "div",
+          "id": null,
+          "role": null,
+          "cls": "DesignersAndCollabs-module__container____DAeK",
+          "ariaHaspopup": null,
+          "ariaExpanded": null
+        },
+        {
+          "tag": "div",
+          "id": null,
+          "role": null,
+          "cls": "Designers-module__designersInput___mF13p",
+          "ariaHaspopup": null,
+          "ariaExpanded": null
+        }
+      ]
+    },
+    "open": {
+      "ok": true,
+      "clicked": {
+        "tag": "div",
+        "id": null,
+        "cls": "DesignersAndCollabs-module__cancelCollaboration___GOZbA"
+      }
+    },
+    "options": {
+      "via": "[role=\"menu\"] [role=\"menuitem\"]",
+      "items": [
+        "Select an approved collaborationCANCEL",
+        "Nike x 1017 ALYX 9SM",
+        "Nike x A Ma Maniere",
+        "Nike x A-COLD-WALL*",
+        "Nike x A.P.C.",
+        "Nike x Acronym",
+        "Nike x Alyx",
+        "Nike x Ambush Design",
+        "Nike x Andre Agassi",
+        "Nike x atmos",
+        "Nike x Billie Eilish",
+        "Nike x Bode",
+        "Nike x Bodega",
+        "Nike x Born X Raised",
+        "Nike x Cactus Plant Flea Market",
+        "Nike x Carhartt Wip",
+        "Nike x Carpet Company",
+        "Nike x Cav Empt",
+        "Nike x Civilist",
+        "Nike x CLOT",
+        "Nike x CNCPTS",
+        "Nike x Comme des Garcons",
+        "Nike x Comme des Garcons Homme Plus",
+        "Nike x Corteiz",
+        "Nike x Diamond Supply Co.",
+        "Nike x Dover Street Market",
+        "Nike x Drake",
+        "Nike x Fear of God",
+        "Nike x Feng Chen Wang",
+        "Nike x Fragment Design",
+        "Nike x Fragment Design x Travis Scott",
+        "Nike x FTC",
+        "Nike x Futura",
+        "Nike x Gatorade",
+        "Nike x Girls Don't Cry",
+        "Nike x Grateful Dead",
+        "Nike x Heron Preston",
+        "Nike x Huf",
+        "Nike x Jacquemus",
+        "Nike x John Elliott"
+      ]
+    },
+    "note": "picker opened but no Nocta option — see options.items",
+    "signals": {
+      "forbidden403": [],
+      "challengeHosts": [],
+      "loggedOut": []
+    }
+  },
+  "multiUpload": {
+    "census1": {
+      "inputs": [],
+      "imgsInPhotoSection": null,
+      "bgLikeDivs": null
+    },
+    "census2": {
+      "inputs": [],
+      "imgsInPhotoSection": null,
+      "bgLikeDivs": null
+    },
+    "uploadPosts": 12,
+    "signals": {
+      "forbidden403": [],
+      "challengeHosts": [],
+      "loggedOut": []
+    }
+  }
+}

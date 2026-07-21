@@ -1,0 +1,26 @@
+{
+  "at": "2026-07-19T05:49:25.993Z",
+  "photoCensus": {
+    "fileInputs": [],
+    "totalImgs": 16,
+    "mediaImgs": 13,
+    "mediaSrcSample": [
+      "https://media-assets.grailed.com/prd/avatar/4966383/9308b4cadf024a9691b38e6afb3d27cb",
+      "https://media-assets.grailed.com/prd/listing/temp/25dfe973f9234e92b2856184e4e7a7ad?w=255&h",
+      "https://media-assets.grailed.com/prd/listing/temp/d89f88e2026541c9a6612635e64440b0?w=123&h"
+    ],
+    "copy": [
+      "Photos"
+    ]
+  },
+  "nocta": {
+    "totalItems": 0,
+    "matches": [],
+    "found": false
+  },
+  "signals": {
+    "forbidden403": [],
+    "challengeHosts": [],
+    "loggedOut": []
+  }
+}

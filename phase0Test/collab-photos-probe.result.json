@@ -1,0 +1,266 @@
+{
+  "at": "2026-07-19T05:45:29.218Z",
+  "photos": {
+    "initial": {
+      "inputs": [
+        {
+          "id": "photo_input_0",
+          "accept": "image/*",
+          "aria": "Upload photo",
+          "multiple": true
+        },
+        {
+          "id": "photo_input_1",
+          "accept": "image/*",
+          "aria": "Upload photo",
+          "multiple": true
+        },
+        {
+          "id": "photo_input_2",
+          "accept": "image/*",
+          "aria": "Upload photo",
+          "multiple": true
+        },
+        {
+          "id": "photo_input_3",
+          "accept": "image/*",
+          "aria": "Upload photo",
+          "multiple": true
+        },
+        {
+          "id": "photo_input_4",
+          "accept": "image/*",
+          "aria": "Upload photo",
+          "multiple": true
+        },
+        {
+          "id": "photo_input_5",
+          "accept": "image/*",
+          "aria": "Upload photo",
+          "multiple": true
+        },
+        {
+          "id": "photo_input_6",
+          "accept": "image/*",
+          "aria": "Upload photo",
+          "multiple": true
+        },
+        {
+          "id": "photo_input_7",
+          "accept": "image/*",
+          "aria": "Upload photo",
+          "multiple": true
+        },
+        {
+          "id": "photo_input_8",
+          "accept": "image/*",
+          "aria": "Upload photo",
+          "multiple": true
+        }
+      ],
+      "copy": [
+        "Photos",
+        "Photo tips"
+      ]
+    },
+    "steps": [
+      {
+        "upload": 1,
+        "inputs": [
+          "photo_input_1",
+          "photo_input_2",
+          "photo_input_3",
+          "photo_input_4",
+          "photo_input_5",
+          "photo_input_6",
+          "photo_input_7",
+          "photo_input_8"
+        ],
+        "copy": [
+          "Photos",
+          "Photo tips"
+        ]
+      },
+      {
+        "upload": 2,
+        "inputs": [
+          "photo_input_2",
+          "photo_input_3",
+          "photo_input_4",
+          "photo_input_5",
+          "photo_input_6",
+          "photo_input_7",
+          "photo_input_8"
+        ],
+        "copy": [
+          "Photos",
+          "Photo tips"
+        ]
+      },
+      {
+        "upload": 3,
+        "inputs": [
+          "photo_input_3",
+          "photo_input_4",
+          "photo_input_5",
+          "photo_input_6",
+          "photo_input_7",
+          "photo_input_8"
+        ],
+        "copy": [
+          "Photos",
+          "Photo tips"
+        ]
+      },
+      {
+        "upload": 4,
+        "inputs": [
+          "photo_input_4",
+          "photo_input_5",
+          "photo_input_6",
+          "photo_input_7",
+          "photo_input_8"
+        ],
+        "copy": [
+          "Photos",
+          "Photo tips"
+        ]
+      },
+      {
+        "upload": 5,
+        "inputs": [
+          "photo_input_5",
+          "photo_input_6",
+          "photo_input_7",
+          "photo_input_8"
+        ],
+        "copy": [
+          "Photos",
+          "Photo tips"
+        ]
+      },
+      {
+        "upload": 6,
+        "inputs": [
+          "photo_input_6",
+          "photo_input_7",
+          "photo_input_8"
+        ],
+        "copy": [
+          "Photos",
+          "Photo tips"
+        ]
+      },
+      {
+        "upload": 7,
+        "inputs": [
+          "photo_input_7",
+          "photo_input_8"
+        ],
+        "copy": [
+          "Photos",
+          "Photo tips"
+        ]
+      },
+      {
+        "upload": 8,
+        "inputs": [
+          "photo_input_8"
+        ],
+        "copy": [
+          "Photos",
+          "Photo tips"
+        ]
+      },
+      {
+        "upload": 9,
+        "inputs": [],
+        "copy": [
+          "Photos",
+          "Photo tips"
+        ]
+      },
+      {
+        "upload": 10,
+        "note": "NO file inputs remain — form stopped offering slots",
+        "leftover": 3
+      }
+    ],
+    "uploadsObserved": 9
+  },
+  "collab": {
+    "category": {
+      "ok": true,
+      "triggerLabel": "Menswear / Outerwear",
+      "want": "Menswear / Outerwear"
+    },
+    "designer": {
+      "ok": true,
+      "value": "Nike",
+      "clicked": "Nike",
+      "attempt": 1
+    },
+    "scanAfterDesigner": [
+      {
+        "tag": "button",
+        "id": null,
+        "role": null,
+        "cls": "Button-module__button___gha04 Button-module__small___OaIRJ Button-module__secondary___PTcqW Designer",
+        "text": "Add A Collaboration",
+        "clickableAncestor": null,
+        "x": 489,
+        "y": 363,
+        "w": 375,
+        "h": 28
+      }
+    ],
+    "inputsAfterDesigner": [
+      {
+        "id": "designer-autocomplete",
+        "name": null,
+        "placeholder": "Search and add a Designer",
+        "aria": null,
+        "disabled": false,
+        "value": "Nike"
+      }
+    ],
+    "click": {
+      "ok": true,
+      "clicked": {
+        "tag": "button",
+        "id": null,
+        "text": "Add A Collaboration"
+      }
+    },
+    "inputsAfterClick": [
+      {
+        "id": "designer-autocomplete",
+        "name": null,
+        "placeholder": "Search and add a Designer",
+        "aria": null,
+        "disabled": false,
+        "value": "Nike"
+      }
+    ],
+    "scanAfterClick": [
+      {
+        "tag": "span",
+        "id": null,
+        "role": null,
+        "cls": null,
+        "text": "Select an approved collaboration",
+        "clickableAncestor": null,
+        "x": 506,
+        "y": 363,
+        "w": 204,
+        "h": 25
+      }
+    ],
+    "note": "no second designer-ish input appeared after the click — see scanAfterClick for what changed"
+  },
+  "signals": {
+    "forbidden403": [],
+    "challengeHosts": [],
+    "loggedOut": []
+  }
+}

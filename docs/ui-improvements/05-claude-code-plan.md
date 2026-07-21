@@ -191,6 +191,76 @@ with aria-label). Bulk select is reachable by expanding. Hand-verify at 900px wi
 J/K and selection unchanged.
 ```
 
+
+## Step 5 — Pricing comp match tiers (branch `comp-match-tiers`) — NEW FEATURE
+
+Surface how the estimate is supported: direct match ("N sales of this exact piece", success pill,
+only when the brand is confirmed), brand fallback ("K of M comps from {brand}", neutral pill),
+or loose ("loosely similar sales only", muted). Backend detection largely exists in
+pipeline/range.js (per-comp `exact` flag, `exactMatchCount`, `brandMatchFactor`); the work is
+exposing a brand-match count, adding the missing UI type fields, and rendering the tier pill in
+PricePanel (+ "exact" pills on comp rows, optional "· direct match" on board cards).
+Prompt:
+
+```
+Read docs/ui-improvements/01-ui-audit.md §2 (component map) and CLAUDE.md first.
+
+Feature: surface HOW the price estimate is supported, as three tiers — (1) direct match:
+sales of this exact piece; (2) brand fallback: similar garments from the same brand;
+(3) loose: only loosely similar sales. Backend detection mostly exists; expose it and
+reflect it in the UI.
+
+BACKEND — pipeline/range.js (do NOT touch priceProvider.js query logic or compGuard.js):
+1. brandMatchFactor (line ~90) returns 1.0 both for "brand matched" and "brand
+   unreliable/neutral". Refactor so the boolean is available separately (e.g. a
+   brandMatched(compTitle, brand, brandConfidence) helper used by brandMatchFactor) —
+   true ONLY when a reliable brand (conf >= 0.6, not 'unclear') actually appears in the
+   comp title. Numeric weighting must stay byte-identical (existing tests in
+   priceProvider.test.js lock the exact-tier math — they must pass unchanged).
+2. In the weighted map (line ~255-273), record per-comp brandMatch and count
+   brandMatchCount across usable comps. Add brandMatch to the topComps rows (~line 282,
+   next to the existing exact flag) and brandMatchCount to the returned range (~line 318,
+   next to exactMatchCount).
+3. Add a pipeline unit test: comps with/without brand in title -> brandMatchCount and
+   per-comp flags correct; neutral-brand case (confidence < 0.6) counts zero.
+
+TYPES — ui/src/types/index.ts:
+- Comp: add exact?: boolean; brandMatch?: boolean   (range.js already emits exact)
+- PriceRange: add exactMatchCount?: number; brandMatchCount?: number
+- RangeConfidence: add exactMatches?: number        (range.js already emits it; the UI
+  type is missing it)
+All optional — stored ranges predate these fields.
+
+UI — ui/src/components/PricePanel.tsx (primary surface):
+Under the price row (after the "list price — typically sells" line, before RangeBar),
+add a match-tier pill following the existing confidence-pill style (outlined,
+rounded-full, mono text-[11px], CONF_CLASS pattern at line ~14):
+- DIRECT (exactMatchCount >= 1 AND brand is confirmed — reuse the existing rule
+  brand_confidence >= 0.65 && resembles_brand set && !== 'unclear', as in
+  DraftEditor.tsx:88): success-outlined pill, text
+  "backed by N sale(s) of this exact piece". Also mark exact comps in the top-comps
+  and all-comps rows with a tiny "exact" success pill.
+- DIRECT-UNCONFIRMED (exact matches exist but brand NOT confirmed): warning-outlined
+  pill "possible exact matches — verify brand". Never claim "exact" while the brand
+  the match is based on is unverified.
+- BRAND fallback (no exact, brandMatchCount >= 1): neutral (border-input) pill
+  "based on K of M comps from {resembles_brand}".
+- LOOSE (neither): muted pill "loosely similar sales only". The confidence pill and
+  its explanation tooltip stay untouched.
+Guard everything for older stored ranges where the new fields are undefined (render
+nothing rather than a wrong tier).
+
+MOCK — ui/src/lib/api.ts: give the mock items' ranges/comps the new fields so ui:dev
+shows all four states (one item per tier is fine).
+
+OPTIONAL (small): TriageBoard.tsx price line (~267-279) may append "- direct match"
+when the tier is DIRECT. Nothing else changes; ConfirmCard untouched.
+
+Verify: npm test (pipeline) green with numeric outputs unchanged; ui:typecheck; then
+npm run ui:dev and eyeball all four tiers in the PricePanel, both themes. Commit on
+branch comp-match-tiers.
+```
+
 ---
 
 ## Order & gates summary
