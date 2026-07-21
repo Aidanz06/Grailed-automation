@@ -52,7 +52,7 @@ export function buildRows(item: Item): ReadinessRow[] {
         ? 'no photos in this group'
         : nPhotos > GRAILED_PHOTO_LIMIT
           ? `${nPhotos} photos — Grailed allows ${GRAILED_PHOTO_LIMIT}, remove ${nPhotos - GRAILED_PHOTO_LIMIT}`
-          : `${nPhotos} photo${nPhotos === 1 ? '' : 's'} — uploaded by Fill listing`,
+          : `${nPhotos} of ${GRAILED_PHOTO_LIMIT} photos — uploaded by Fill listing`,
       short:
         nPhotos > GRAILED_PHOTO_LIMIT
           ? `remove ${nPhotos - GRAILED_PHOTO_LIMIT} photo${nPhotos - GRAILED_PHOTO_LIMIT === 1 ? '' : 's'}`

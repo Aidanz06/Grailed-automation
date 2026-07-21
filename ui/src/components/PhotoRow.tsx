@@ -87,8 +87,13 @@ export function PhotoRow({ item, update }: Props) {
 
   return (
     <section className="mb-5">
+      {/* The count always shows Grailed's REAL cap ("12 / 25") — the
+          constraint is visible up front instead of appearing only as an
+          over-limit warning (owner request 2026-07-19, after the cap moved
+          9 → 25 with the multi-file upload fix). */}
       <label className="mb-2 block text-sm font-semibold uppercase tracking-wider text-foreground">
-        Photos (<span className={over > 0 ? 'text-warning' : undefined}>{item.photos.length}</span>){' '}
+        Photos (<span className={over > 0 ? 'text-warning' : undefined}>{item.photos.length}</span>
+        <span className="font-normal text-muted-foreground"> / {GRAILED_PHOTO_LIMIT}</span>){' '}
         <span className="font-normal normal-case tracking-normal text-muted-foreground">
           — drag to reorder · position 1 is the Grailed thumbnail
         </span>
