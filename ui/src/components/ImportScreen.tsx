@@ -49,6 +49,10 @@ export function ImportScreen({ toast, onImported, onOpenItem, onOpenBoard, autoP
   // Stop requested (audit #4) — the import ends at its next boundary; the
   // button stays in "Stopping…" until the process promise resolves.
   const [stopping, setStopping] = useState(false);
+  // A failed import stays ON SCREEN (audit #13): an inline card with the real
+  // error + Try again, instead of resetting to the picker with only a ≤9s
+  // toast. keyless = the friendly missing-API-key setup case.
+  const [importError, setImportError] = useState<{ message: string; keyless: boolean } | null>(null);
   const busyRef = useRef(false);
   useEffect(() => {
     const off = api.onBatchProgress((p) => {
@@ -90,6 +94,7 @@ export function ImportScreen({ toast, onImported, onOpenItem, onOpenBoard, autoP
       setEarlyDraft(null);
       setSavedCount(0);
       setResult(null);
+      setImportError(null);
       lastResult = null;
       setProgress({ stage: 'grouping', done: 0, total: 0, label: 'Starting…' });
       const res = await api.processBatch(folder);
@@ -111,13 +116,15 @@ export function ImportScreen({ toast, onImported, onOpenItem, onOpenBoard, autoP
       // Beta Part D/E: a keyless build fails here first — route that to the
       // friendly setup message instead of a raw pipeline error.
       const cfg = await api.getConfigStatus().catch(() => null);
-      if (cfg && !cfg.hasAnthropicKey) {
-        toast(
-          'This copy isn’t finished setting up (it’s missing an API key), so importing can’t work yet — reach out to whoever shared it with you.'
-        );
-      } else {
-        toast(msg.includes('grouping failed') ? `The import didn’t finish — ${msg}` : `The import didn’t finish — ${msg}. Try the folder again; nothing was posted to Grailed.`);
-      }
+      const keyless = !!cfg && !cfg.hasAnthropicKey;
+      // The inline card owns the on-screen story (audit #13); the toast still
+      // covers a user who navigated away mid-import.
+      setImportError({ message: msg, keyless });
+      toast(
+        keyless
+          ? 'This copy isn’t finished setting up (it’s missing an API key), so importing can’t work yet — reach out to whoever shared it with you.'
+          : `The import didn’t finish — ${msg}`
+      );
     } finally {
       setBusy(false);
       busyRef.current = false;
@@ -278,6 +285,41 @@ export function ImportScreen({ toast, onImported, onOpenItem, onOpenBoard, autoP
               Import another folder
             </Button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Failed import (audit #13): the error card replaces the picker instead of
+  // evaporating into a toast — the user who looked away still sees what
+  // happened and what to do. Try again reopens the folder picker.
+  if (importError && !running) {
+    return (
+      <div className="flex h-full items-center justify-center p-6">
+        <div className="rise-in w-full max-w-lg rounded-xl border border-l-[3px] border-l-destructive bg-card p-5">
+          <div className="mb-1 flex items-center gap-2.5">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            <h2 className="text-lg font-semibold">The import didn’t finish</h2>
+          </div>
+          <p className="text-sm- text-muted-foreground">
+            {importError.keyless
+              ? 'This copy isn’t finished setting up (it’s missing an API key), so importing can’t work yet — reach out to whoever shared it with you.'
+              : importError.message}
+          </p>
+          <p className="mt-1.5 text-sm- text-muted-foreground">
+            Nothing was imported; nothing was posted to Grailed.
+          </p>
+          {!importError.keyless && (
+            <Button
+              className="mt-4"
+              onClick={() => {
+                setImportError(null);
+                onClick(); // straight back into the folder picker
+              }}
+            >
+              Try again
+            </Button>
+          )}
         </div>
       </div>
     );
