@@ -207,6 +207,9 @@ export const MOCK_ITEMS: Item[] = [
       subcategory: 'box logo tee',
       era_style: 'modern streetwear',
       primary_color: 'red',
+      // One mock with a set Grailed color so the board card's swatch state
+      // (dot + name) is previewable next to the "set color" blanks.
+      grailed_color: 'Red',
       size: 'M',
       size_unclear: false,
       condition_rating: 'Gently used',
@@ -262,6 +265,7 @@ export const MOCK_ITEMS: Item[] = [
       subcategory: '501 jeans',
       era_style: 'vintage denim',
       primary_color: 'indigo',
+      grailed_color: 'Blue',
       size: '32x30',
       size_unclear: false,
       condition_rating: 'Used',

@@ -11,6 +11,7 @@ import { CoverThumb } from '@/components/CoverThumb';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ColorSelect } from '@/components/ColorSelect';
 import { CategorySelect } from '@/components/CategorySelect';
 import { AnimatedCheck } from '@/components/motion';
 import { ConditionChips } from '@/components/ConditionChips';
@@ -315,25 +316,18 @@ export function ConfirmCard({ item, fillOptions, pendingCatKey, onPendingCat, re
             />
           </Field>
           <Field label="Color">
-            <Select
-              value={attrs.grailed_color || undefined}
-              onValueChange={(v) =>
+            {/* Grailed-style dropdown (swatch circle + name) — same component
+                as the board card and draft editor. */}
+            <ColorSelect
+              value={attrs.grailed_color}
+              colors={fillOptions.colors}
+              placeholder="optional"
+              onChange={(v) =>
                 edit((d) => {
                   d.attributes.grailed_color = v;
                 })
               }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="optional" />
-              </SelectTrigger>
-              <SelectContent>
-                {fillOptions.colors.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
           </Field>
           <Field label="Style">
             <Select

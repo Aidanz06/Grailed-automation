@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ColorSelect } from '@/components/ColorSelect';
 import { CategorySelect } from '@/components/CategorySelect';
 import { PhotoRow } from '@/components/PhotoRow';
 import { TagEditor } from '@/components/TagEditor';
@@ -481,6 +482,23 @@ export function DraftForm({ item, update, toast, stylesRaw, onEditStyles, confir
               </span>
             )}
           </div>
+          {/* Color, promoted out of the collapsed "More details" (owner
+              request 2026-07-21): always visible in the middle column, with
+              the Grailed-style swatch dropdown. Auto-adopted from the AI's
+              primary_color when mappable; blank = skipped by the fill. */}
+          <div className="order-4 flex min-w-0 flex-col gap-1">
+            <span className={BAND_LABEL}>Color</span>
+            <ColorSelect
+              value={attrs.grailed_color}
+              colors={fillOptions.colors}
+              onChange={(v) =>
+                update((d) => {
+                  d.attributes.grailed_color = v;
+                  d.dirty = true;
+                })
+              }
+            />
+          </div>
         </div>
 
         {/* A1 staged confirmation: the Grailed category cascade. The suggestion
@@ -608,7 +626,9 @@ export function DraftForm({ item, update, toast, stylesRaw, onEditStyles, confir
           feels hidden. */}
       <section id="sec-more" className="mb-5 scroll-mt-4">
         {(() => {
-          const t3Set = [attrs.grailed_color, attrs.grailed_style, attrs.country_of_origin].filter(Boolean).length;
+          // Color moved up into the Tier-1 band (2026-07-21) — this section
+          // keeps only style + country.
+          const t3Set = [attrs.grailed_style, attrs.country_of_origin].filter(Boolean).length;
           return (
             <button
               type="button"
@@ -616,7 +636,7 @@ export function DraftForm({ item, update, toast, stylesRaw, onEditStyles, confir
               onClick={() => setMoreOpen((o) => !o)}
             >
               {moreOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-              More details — Grailed color · style · country
+              More details — Grailed style · country
               {t3Set > 0 && <span className="text-muted-foreground">({t3Set} set — filled even while collapsed)</span>}
             </button>
           );
@@ -627,29 +647,6 @@ export function DraftForm({ item, update, toast, stylesRaw, onEditStyles, confir
               These feed autofill. Blank fields are simply skipped — nothing is guessed for you.
             </p>
             <div className="flex flex-wrap gap-4">
-              <div className="flex min-w-[220px] flex-col gap-1">
-                <span className={FIELD_LABEL_CLS}>Color (Grailed)</span>
-                <Select
-                  value={attrs.grailed_color || undefined}
-                  onValueChange={(v) =>
-                    update((d) => {
-                      d.attributes.grailed_color = v;
-                      d.dirty = true;
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="not set — skipped" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {fillOptions.colors.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="flex min-w-[220px] flex-col gap-1">
                 <span className={FIELD_LABEL_CLS}>Style (Grailed)</span>
                 <Select
