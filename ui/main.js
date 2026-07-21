@@ -958,19 +958,72 @@ function buildAppMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
+/*
+ * Window state + launch flash (UX audit #19). Bounds persist in the existing
+ * settings table on close and restore on create, validated against the
+ * current display work area (a monitor that's gone must not strand the
+ * window off-screen). The launch backgroundColor matches the persisted theme
+ * — ThemeToggle mirrors its localStorage choice to the 'theme' setting — so
+ * light-theme users stop getting a dark flash before the renderer paints.
+ */
+const WINDOW_BOUNDS_KEY = 'windowBounds';
+const THEME_KEY = 'theme';
+// hsl(40 30% 97%) / hsl(220 20% 6.5%) — the index.css --background tokens.
+const LIGHT_BG = '#faf8f5';
+const DARK_BG = '#0d0f14';
+
+function savedWindowBounds() {
+  try {
+    const raw = getStore().getSetting(WINDOW_BOUNDS_KEY);
+    if (!raw) return null;
+    const b = JSON.parse(raw);
+    if (![b.x, b.y, b.width, b.height].every(Number.isFinite)) return null;
+    // Enough of the title bar must land inside SOME display's work area to
+    // be grabbable — otherwise fall back to the default centered window.
+    const wa = screen.getDisplayMatching(b).workArea;
+    const grabbable =
+      b.x + b.width > wa.x + 40 &&
+      b.x < wa.x + wa.width - 40 &&
+      b.y >= wa.y - 10 &&
+      b.y < wa.y + wa.height - 40;
+    return grabbable ? b : null;
+  } catch (err) {
+    console.error('[window] bounds restore failed (using defaults):', err.message);
+    return null;
+  }
+}
+
 function createWindow() {
+  const saved = savedWindowBounds();
+  let launchBg = DARK_BG;
+  try {
+    if (getStore().getSetting(THEME_KEY) === 'light') launchBg = LIGHT_BG;
+  } catch {
+    /* default dark, matching the pre-paint script's default */
+  }
   const win = new BrowserWindow({
-    width: 1240,
-    height: 840,
+    width: saved?.width ?? 1240,
+    height: saved?.height ?? 840,
+    ...(saved ? { x: saved.x, y: saved.y } : {}),
     minWidth: 900,
     minHeight: 600,
     title: 'Tailor Studio',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: launchBg,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+  if (saved?.maximized) win.maximize();
+  win.on('close', () => {
+    try {
+      const maximized = win.isMaximized();
+      const b = maximized ? win.getNormalBounds() : win.getBounds();
+      getStore().setSetting(WINDOW_BOUNDS_KEY, JSON.stringify({ x: b.x, y: b.y, width: b.width, height: b.height, maximized }));
+    } catch (err) {
+      console.error('[window] bounds save failed:', err.message);
+    }
   });
   // Standard right-click menu (UX audit #10): Electron ships none, and this
   // audience reaches for right-click before keyboard shortcuts. Editable

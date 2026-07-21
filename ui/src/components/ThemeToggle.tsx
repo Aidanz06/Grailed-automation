@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
+import { api } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 
 // Toggles the `dark` class on <html> and persists the choice. Initial value is
@@ -14,6 +15,10 @@ export function ThemeToggle() {
     } catch {
       /* ignore */
     }
+    // Mirror to the settings store (audit #19) so the NEXT launch's window
+    // background matches — main reads it only at createWindow. Deliberately a
+    // second copy of the choice; localStorage stays the renderer's truth.
+    api.setThemePreference(dark ? 'dark' : 'light').catch(() => {});
   }, [dark]);
 
   return (

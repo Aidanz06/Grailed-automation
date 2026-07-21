@@ -455,6 +455,11 @@ export interface Api {
    * → built-in presets, "Standard" active). Parse with resolveStyles(). */
   getDescriptionStyles(): Promise<string | null>;
   setDescriptionStyles(raw: string | null): Promise<void>;
+  /** Mirror the theme choice to the settings store (audit #19): the main
+   * process reads it at window creation to set a matching launch background
+   * (no dark flash for light-theme users). localStorage stays the renderer's
+   * own source of truth — this copy is ONLY read at createWindow. */
+  setThemePreference(theme: 'dark' | 'light'): Promise<void>;
   /** Read-only Chrome tab probe — header chip + fresh-Sell-form fill gate. */
   getChromeStatus(): Promise<ChromeStatus>;
   /** Launch the dedicated CDP Chrome (no-op if already up). Login stays manual. */
@@ -983,6 +988,9 @@ const mockApi: Api = {
       /* private mode — session-only */
     }
   },
+  // Browser preview: localStorage (which ThemeToggle already writes) is the
+  // only theme store — nothing to mirror.
+  async setThemePreference() {},
   // No CDP in the browser preview — reports per mockChromeState ('ready' by
   // default so the normal flow renders; flip it above to walk the other UI).
   async getChromeStatus() {
@@ -1228,6 +1236,9 @@ function realApi(bridge: TailorBridge): Api {
     },
     async setDescriptionStyles(raw) {
       await bridge.setSetting(DESCRIPTION_STYLES_KEY, raw && raw.trim() ? raw : null);
+    },
+    async setThemePreference(theme) {
+      await bridge.setSetting('theme', theme);
     },
     async getChromeStatus() {
       return bridge.getChromeStatus();
