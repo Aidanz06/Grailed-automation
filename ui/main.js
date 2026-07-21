@@ -942,6 +942,26 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
+// Quit guard (UX audit #5): Cmd+Q mid-import kills the remaining groups and
+// mid-fill abandons the Chrome form half-typed — ask first. Busy state is
+// tracked MAIN-side (the flags set inside the batch:process / autofill:fill
+// handlers), never trusted from renderer refs. Cancel is the default button.
+app.on('before-quit', (e) => {
+  if (!batchRunning && !fillRunning) return;
+  const what = batchRunning && fillRunning ? 'An import and a fill are' : batchRunning ? 'An import is' : 'A fill is';
+  const choice = dialog.showMessageBoxSync({
+    type: 'warning',
+    buttons: ['Cancel', 'Quit anyway'],
+    defaultId: 0,
+    cancelId: 0,
+    message: `${what} still running — quit anyway?`,
+    detail: batchRunning
+      ? 'Quitting stops the import mid-batch. Drafts already saved stay saved; nothing is posted to Grailed either way.'
+      : 'Quitting abandons the half-filled Sell form in Chrome. Nothing is submitted either way.',
+  });
+  if (choice === 0) e.preventDefault();
+});
+
 app.on('will-quit', () => {
   stopDock();
   if (store) {
