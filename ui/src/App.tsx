@@ -8,7 +8,7 @@ import { matchShortcut } from '@/lib/shortcuts';
 import { ChromeStatusChip } from '@/components/ChromeStatusChip';
 import { GuideMenu, type GuideSection } from '@/components/GuideMenu';
 import { Onboarding, ONBOARDED_KEY } from '@/components/Onboarding';
-import { CheckUpdatesButton, UpdateBanner, UpdateModal, useUpdater } from '@/components/Updater';
+import { CheckUpdatesButton, UpdateBanner, UpdateModal, WhatsNewModal, useUpdater } from '@/components/Updater';
 import { editsOf } from '@/lib/edits';
 import { Home } from '@/components/Home';
 import { ConfirmScreen } from '@/components/ConfirmScreen';
@@ -609,6 +609,7 @@ export default function App() {
 
       {/* Updater progress modal — App-rooted so navigation can't lose it. */}
       <UpdateModal u={updater} toast={setToastMsg} />
+      <WhatsNewModal u={updater} />
 
       {/* Description Styles editor — App-rooted, opens from Defaults and the
           draft editor's style row. Saving pushes the new raw value back and

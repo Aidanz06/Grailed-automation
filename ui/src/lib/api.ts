@@ -362,6 +362,9 @@ export interface UpdateCheck {
   updateAvailable?: boolean;
   /** Commits behind the tracking branch. */
   behind?: number;
+  /** What's-new overview: the pending commits' subjects, newest first
+   * (capped at 20). Present only when an update is available. */
+  changes?: string[];
   /** User-facing reason the check couldn't complete (offline, no upstream…). */
   error?: string;
 }
@@ -926,7 +929,14 @@ const mockApi: Api = {
   // mockUpdateAvailable below to walk the banner + modal. Apply simulates the
   // four-step stream (no git/npm in the browser preview).
   async checkForUpdate() {
-    return { supported: true, updateAvailable: mockUpdateAvailable, behind: mockUpdateAvailable ? 2 : 0 };
+    return {
+      supported: true,
+      updateAvailable: mockUpdateAvailable,
+      behind: mockUpdateAvailable ? 2 : 0,
+      changes: mockUpdateAvailable
+        ? ['Photos: board cards get an editable Grailed color', 'Stop buttons for a running import and fill']
+        : [],
+    };
   },
   async applyUpdate(opts) {
     if (opts?.busy) return { ok: false, failedStep: null, message: 'Finish the import or fill that’s running first, then update.', output: [] };

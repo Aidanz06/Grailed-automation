@@ -110,7 +110,15 @@ async function checkForUpdate(root = REPO_ROOT) {
     };
   }
   const behind = parseInt(count.out[count.out.length - 1], 10) || 0;
-  return { supported: true, updateAvailable: behind > 0, behind };
+  // What's-new overview (owner request 2026-07-21): the pending commits'
+  // subjects, newest first, capped — shown when the user checks for updates.
+  // Never fails the check: no subjects just means no overview.
+  let changes = [];
+  if (behind > 0) {
+    const log = await run('git', ['log', '--pretty=format:%s', '-n', '20', 'HEAD..@{u}'], root);
+    if (log.code === 0) changes = log.out;
+  }
+  return { supported: true, updateAvailable: behind > 0, behind, changes };
 }
 
 /*
