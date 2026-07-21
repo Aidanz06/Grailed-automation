@@ -62,6 +62,10 @@ export function StyleEditor({ stylesRaw, onSaved, onClose, toast }: Props) {
   );
   const [renaming, setRenaming] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // UX audit #3: a dirty template must survive EVERY exit, not just backdrop/
+  // Escape — the header X, the footer Close, and the style dropdown all route
+  // through this guard. null = no pending exit.
+  const [closeGuard, setCloseGuard] = useState<null | { kind: 'close' } | { kind: 'switch'; to: string }>(null);
 
   const current = resolved.styles.find((s) => s.name === selected);
   const isBuiltin = !!current?.builtin;
@@ -74,24 +78,40 @@ export function StyleEditor({ stylesRaw, onSaved, onClose, toast }: Props) {
   }, [template]);
   const footer = useMemo(() => styleFooter(template), [template]);
 
-  const switchTo = (name: string) => {
+  const doSwitch = (name: string) => {
     setSelected(name);
     setTemplate(resolved.styles.find((s) => s.name === name)?.template ?? '');
     setRenaming(null);
   };
 
-  const persist = (next: ResolvedStyles, note?: string) => {
+  const switchTo = (name: string) => {
+    if (name === selected) return;
+    if (dirty) setCloseGuard({ kind: 'switch', to: name });
+    else doSwitch(name);
+  };
+
+  const requestClose = () => {
+    if (dirty) setCloseGuard({ kind: 'close' });
+    else onClose();
+  };
+
+  /** Resolves true on a successful save — guard actions only proceed then. */
+  const persist = (next: ResolvedStyles, note?: string): Promise<boolean> => {
     setSaving(true);
     const raw = serializeStyles(next);
     const value = JSON.parse(raw).styles.length === 0 && next.active === DEFAULT_ACTIVE ? null : raw;
-    api
+    return api
       .setDescriptionStyles(value)
       .then(() => {
         setResolved(next);
         onSaved(value);
         if (note) toast(note);
+        return true;
       })
-      .catch((err) => toast(`Couldn’t save styles: ${errorMessage(err)}`))
+      .catch((err) => {
+        toast(`Couldn’t save styles: ${errorMessage(err)}`);
+        return false;
+      })
       .finally(() => setSaving(false));
   };
 
@@ -100,7 +120,27 @@ export function StyleEditor({ stylesRaw, onSaved, onClose, toast }: Props) {
       ...resolved,
       styles: resolved.styles.map((s) => (s.name === selected ? { ...s, template } : s)),
     };
-    persist(next, `Saved “${selected}”.`);
+    return persist(next, `Saved “${selected}”.`);
+  };
+
+  // The guard strip's actions. Save-and-proceed stays put if the save fails
+  // (the persist toast explains why) — edits are never dropped on an error.
+  const guardSave = () => {
+    const g = closeGuard;
+    if (!g) return;
+    saveTemplate().then((ok) => {
+      if (!ok) return;
+      setCloseGuard(null);
+      if (g.kind === 'close') onClose();
+      else doSwitch(g.to);
+    });
+  };
+  const guardDiscard = () => {
+    const g = closeGuard;
+    if (!g) return;
+    setCloseGuard(null);
+    if (g.kind === 'close') onClose();
+    else doSwitch(g.to);
   };
 
   const addStyle = () => {
@@ -144,7 +184,7 @@ export function StyleEditor({ stylesRaw, onSaved, onClose, toast }: Props) {
     // active rename — its historical meaning here — before it may close.
     <Modal
       title="Description styles"
-      onClose={onClose}
+      onClose={requestClose}
       closeOnBackdrop={!dirty}
       closeOnEscape={!dirty}
       onEscapeCapture={() => {
@@ -163,7 +203,7 @@ export function StyleEditor({ stylesRaw, onSaved, onClose, toast }: Props) {
             typed text is constant · chips fill from the item · empty chips drop their line
           </span>
           <span className="flex-1" />
-          <button aria-label="close style editor" className="text-muted-foreground hover:text-foreground" onClick={onClose}>
+          <button aria-label="close style editor" className="text-muted-foreground hover:text-foreground" onClick={requestClose}>
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -261,11 +301,32 @@ export function StyleEditor({ stylesRaw, onSaved, onClose, toast }: Props) {
           </div>
         </div>
 
+        {/* Dirty-exit guard (audit #3): an inline strip, not another modal —
+            same pattern as the two-step delete. Save failures keep it open. */}
+        {closeGuard && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-l-[3px] border-l-warning bg-secondary/40 p-2.5">
+            <span className="text-sm- text-muted-foreground">
+              Unsaved changes to “{selected}”
+              {closeGuard.kind === 'switch' ? ` — switch to “${closeGuard.to}”?` : ''}
+            </span>
+            <span className="flex-1" />
+            <Button size="sm" className="h-7 px-2 text-xs" disabled={saving} onClick={guardSave}>
+              {closeGuard.kind === 'switch' ? 'Save & switch' : 'Save & close'}
+            </Button>
+            <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={guardDiscard}>
+              {closeGuard.kind === 'switch' ? 'Discard & switch' : 'Discard'}
+            </Button>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => setCloseGuard(null)}>
+              Keep editing
+            </Button>
+          </div>
+        )}
+
         <div className="mt-3 flex items-center justify-end gap-2 border-t pt-3">
           <span className="mr-auto text-2xs text-muted-foreground">
             Applies to newly generated drafts (import, confirm, Regenerate). Existing text is untouched until you regenerate.
           </span>
-          <Button variant="outline" size="sm" onClick={onClose}>
+          <Button variant="outline" size="sm" onClick={requestClose}>
             Close
           </Button>
           <Button size="sm" disabled={!dirty || saving} onClick={saveTemplate}>
